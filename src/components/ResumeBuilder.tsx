@@ -3,6 +3,18 @@ import svgPaths from '../imports/svg-65zdysylli';
 import imgImageLandbase from 'figma:asset/636ded4fbbb48605dae08d3a89a37f53cf3273be.png';
 import { Download, Plus, Trash2, Eye, EyeOff, Upload, X, FileText, Check, ChevronDown, Star, Briefcase, MapPin, ArrowRight, Calendar } from 'lucide-react';
 
+import * as pdfjsLib from 'pdfjs-dist';
+import workerSrc from 'pdfjs-dist/build/pdf.worker.mjs?url';
+
+pdfjsLib.GlobalWorkerOptions.workerSrc = workerSrc;
+
+import { createWorker } from 'tesseract.js';
+import { InferenceClient } from '@huggingface/inference';
+
+const hf = new InferenceClient("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");
+
+
+
 // Export ResumeData type for use in other components
 export interface ResumeData {
   // Basic Information
@@ -116,6 +128,192 @@ interface ResumeBuilderProps {
   onResumeSubmit?: () => void;
 }
 
+const parsePdfToImages = async (pdfFile: File): Promise<HTMLImageElement> => {
+  const arrayBuffer = await pdfFile.arrayBuffer();
+  const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+
+  const numPages = Math.min(6, pdf.numPages);
+  const pages = [];
+
+  for (let i = 1; i <= numPages; i++) {
+    const page = await pdf.getPage(i);
+    const viewport = page.getViewport({ scale: 1.5 });
+    pages.push({ page, viewport });
+  }
+
+  const totalHeight = pages.reduce((sum, p) => sum + p.viewport.height, 0);
+  const maxWidth = Math.max(...pages.map(p => p.viewport.width));
+
+  const canvas = document.createElement('canvas');
+  const context = canvas.getContext('2d')!;
+  canvas.width = maxWidth;
+  canvas.height = totalHeight;
+
+  let yOffset = 0;
+  for (const { page, viewport } of pages) {
+    context.save();
+    context.translate(0, yOffset);
+    await page.render({ canvasContext: context, viewport, canvas }).promise;
+    context.restore();
+    yOffset += viewport.height;
+  }
+
+  const img = new Image();
+  img.src = canvas.toDataURL('image/png');
+  return img;
+};
+
+const parseResumeTesseract = async (resumeImg: HTMLImageElement): Promise<string> => {
+  const worker = await createWorker('eng', 1, {
+    logger: (m: { status: string; progress: number }) => {
+      console.log(`${m.status}: ${Math.round(m.progress * 100)}%`);
+    }
+  });
+
+  try {
+    const { data } = await worker.recognize(resumeImg);
+    return data.text;
+  } finally {
+    await worker.terminate();
+  }
+};
+
+const parseResumeLLM = async (resumeImg: HTMLImageElement): Promise<Record<string, unknown>> => {
+
+  const ocrText = await parseResumeTesseract(resumeImg)
+
+  const prompt = `Extract and structure the information from the following OCR text into a clean JSON format.
+    
+    <ocr_text>
+    ${ocrText}
+    </ocr_text>
+    
+    ### TARGET JSON STRUCTURE ###
+    {
+        "personal_info": {
+            "first_name": "",
+            "middle_initial": "",
+            "last_name": "",
+            "date_of_birth": "",
+            "city": "",
+            "province": "",
+            "country": "",
+            "email": "",
+            "phone": "",
+            "edu_attainment": ""
+        },
+        "experiences": [
+            {
+                "position": "",
+                "company": "",
+                "city": "",
+                "province": "",
+                "country": "",
+                "startDate": "",
+                "endDate": "",
+                "current": false,
+                "description": ""
+            }
+        ],
+        "education": [
+            {
+                "degree": "",
+                "school": "",
+                "city": "",
+                "province": "",
+                "country": "",
+                "grade": "",
+                "grade_honors": "",
+                "startDate": "",
+                "endDate": "",
+                "educational_level": "",
+                "info": ""
+            }
+        ],
+        "skills": [
+            {
+                "skill_name": "",
+                "proficiency_level": "",
+                "skill_category": ""
+            }
+        ],
+        "certificates": [
+            {
+                "certificate_title": "",
+                "issuer": "",
+                "date_obtained": "",
+                "cred_type": ""
+            }
+        ]
+    }
+    
+    ### INSTRUCTIONS ###
+    1. Extract only the information present in the OCR text above. Do not hallucinate or invent
+       missing details. Clean up obvious OCR errors (e.g., 0/O confusion, 1/l/I confusion,
+       broken hyphenation, merged words) and normalize text.
+    2. For work experience and education entries, concatenate all descriptions and details into
+       a single coherent paragraph per entry.
+    3. If information is missing, use an empty string "" for text fields, false for boolean
+       fields, or an empty list [] for arrays.
+    4. Output strictly raw, valid JSON. Do not include any introductory text, concluding
+       remarks, or Markdown formatting (do not use \`\`\`json blocks).
+    5. Date Formatting: Format all dates in ISO 8601 format (YYYY-MM-DD). If only month and
+       year are provided, use the first day of that month (e.g., "August 2022" → "2022-08-01").
+    6. Current roles: If a position or program is ongoing, set "endDate" to "Present" and
+       "current" to true. Otherwise set "current" to false.
+    7. Skills: Assign each skill to exactly one category:
+       - technical: learned technical skills (software, tools, methods)
+       - physical: manual or physical skills
+       - soft: attitude, character traits, workmanship
+       - language: spoken or written languages
+       - interest: hobbies and personal interests
+    8. proficiency_level: Use the resume's exact wording if stated. If not stated, leave blank.
+       Do not infer or guess.
+    9. Vocational education: If an education entry is vocational (e.g., TESDA courses, trade
+       programs, NC II certifications), place it in the certificates array instead of education.
+       Map fields as: certificate_title → course or program name, issuer → school or issuing
+       body, date_obtained → completion or end date, cred_type → "Certificate".
+    10. educational_level: For each education entry, use exactly one of:
+        "High School", "Undergraduate", "Graduate", "Postgraduate".
+    11. edu_attainment: Set to the highest level of education found. Use one of:
+        "High School", "Vocational", "Bachelor's", "Master's", "Doctorate".
+        Use "Vocational" only if the candidate has no formal academic education beyond
+        high school.
+    12. grade: The GPA or numeric score on a 100-point scale, as a string. Leave blank if
+        not found.
+    13. grade_honors: Use exactly one of "Summa cum Laude", "Magna cum Laude", "cum Laude",
+        or leave blank if not applicable.
+    14. cred_type: Classify each certificate as exactly one of: "Certificate", "Training",
+        or "License".
+    15. Ignore any resume sections not represented in the schema (e.g., Summary, Objective,
+        References, Awards).`;
+
+  const response = await hf.chatCompletion({
+    model: "Qwen/Qwen2.5-1.5B-Instruct:featherless-ai",
+    messages: [{
+      role: "system",
+      content: "You are an expert resume parsing engine. Extract the information from the provided text and output ONLY valid JSON. Do not wrap the output in markdown blocks (e.g., ```json) and do not include any conversational text."
+    },{
+      role: "user",
+      content: prompt
+    }],
+    // response_format: { type: "json_object" }, // Optional: Uncomment if your HF endpoint supports strict JSON mode
+    max_tokens: 4096,
+    temperature: 0.1,
+    top_p: 0.15
+  });
+
+  let content = response.choices[0].message.content?.trim() ?? "";
+
+  if (content.includes("</think>")) {
+    content = content.split("</think>")[1].trim();
+  }
+
+  content = content.replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/, "").trim();
+
+  return JSON.parse(content) as Record<string, unknown>;
+}
+
 export function ResumeBuilder({ onResumeSubmit }: ResumeBuilderProps = {}) {
   const [currentStep, setCurrentStep] = useState(1);
   const [showPreview, setShowPreview] = useState(false);
@@ -206,34 +404,6 @@ export function ResumeBuilder({ onResumeSubmit }: ResumeBuilderProps = {}) {
 
   const handleUploadClick = () => {
     fileInputRef.current?.click();
-  };
-
-  const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (file) {
-      // Check file type
-      const validTypes = ['application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'];
-      if (!validTypes.includes(file.type)) {
-        alert('Please upload a PDF or Word document (.pdf, .doc, .docx)');
-        return;
-      }
-      
-      // Check file size (max 5MB)
-      if (file.size > 5 * 1024 * 1024) {
-        alert('File size must be less than 5MB');
-        return;
-      }
-
-      setResumeUploaded(true);
-      setShowUploadModal(true);
-      
-      // In a real application, you would parse the file here
-      // For now, we'll just show a success message
-      setTimeout(() => {
-        setShowUploadModal(false);
-        alert(`Resume "${file.name}" uploaded successfully! You can now edit or submit your resume.`);
-      }, 1500);
-    }
   };
 
   const addWorkExperience = () => {
@@ -341,6 +511,145 @@ export function ResumeBuilder({ onResumeSubmit }: ResumeBuilderProps = {}) {
     updated[index] = { ...updated[index], [field]: value };
     setCertifications(updated);
   };
+
+  const handleUploadResumeFieldsPopulation = (resumeJSON: Record<string, unknown>) => {
+    // --- Personal Info ---
+    const p = resumeJSON.personal_info as Record<string, string> | undefined;
+    if (p) {
+      setPersonalInfo({
+        firstName:     p.first_name      ?? '',
+        middleInitial: p.middle_initial  ?? '',
+        lastName:      p.last_name       ?? '',
+        dateOfBirth:   p.date_of_birth   ?? '',   // was missing
+        city:          p.city            ?? '',
+        province:      p.province        ?? '',
+        country:       p.country         ?? '',
+        email:         p.email           ?? '',
+        phone:         p.phone           ?? '',
+      });
+    }
+
+    // --- Work Experience ---
+    const experiences = resumeJSON.experiences as Record<string, unknown>[] | undefined;
+    if (experiences && experiences.length > 0) {
+      setWorkExperiences(experiences.map((exp) => ({
+        position:      (exp.position     as string)  ?? '',
+        company:       (exp.company      as string)  ?? '',
+        city:          (exp.city         as string)  ?? '',
+        stateProvince: (exp.province     as string)  ?? '',
+        country:       (exp.country      as string)  ?? '',   // was missing
+        startDate:     (exp.startDate    as string)  ?? '',
+        endDate:       (exp.endDate      as string)  ?? '',
+        current:       (exp.current      as boolean) ?? false,
+        description:   (exp.description  as string)  ?? '',
+      })));
+    }
+
+    // --- Education ---
+    const educationEntries = resumeJSON.education as Record<string, unknown>[] | undefined;
+    if (educationEntries && educationEntries.length > 0) {
+      setEducation(educationEntries.map((edu) => ({
+        level:         (edu.educational_level as string) ?? '',   // was missing
+        degree:        (edu.degree            as string) ?? '',
+        school:        (edu.school            as string) ?? '',
+        city:          (edu.city              as string) ?? '',
+        stateProvince: (edu.province          as string) ?? '',
+        country:       (edu.country           as string) ?? '',   // was missing
+        startDate:     (edu.startDate         as string) ?? '',
+        endDate:       (edu.endDate           as string) ?? '',
+        grade:         (edu.grade             as string) ?? '',   // was missing
+        description:   (edu.info              as string) ?? '',   // was missing / wrong key
+        achievements:  (edu.grade_honors      as string) ?? '',   // more accurate mapping
+      })));
+    }
+
+    // --- Skills ---
+    const skillEntries = resumeJSON.skills as Record<string, string>[] | undefined;
+    if (skillEntries && skillEntries.length > 0) {
+      setSkills(skillEntries.map((skill) => {
+        const cat = skill.skill_category;
+        const category: 'technical' | 'soft' =
+          cat === 'technical' ? 'technical' : 'soft';   // normalize extras to 'soft'
+        return {
+          name:     skill.skill_name        ?? '',
+          level:    skill.proficiency_level ?? '',
+          category,
+        };
+      }));
+    }
+
+    // --- Certifications ---
+    const certEntries = resumeJSON.certificates as Record<string, string>[] | undefined;
+    if (certEntries && certEntries.length > 0) {
+      setCertifications(certEntries.map((cert) => {
+        const rawType = (cert.cred_type ?? '').toLowerCase();
+        const type: 'certificate' | 'training' =
+          rawType === 'training' ? 'training' : 'certificate';   // was missing
+        return {
+          name:          cert.certificate_title ?? '',
+          type,
+          organization:  cert.issuer            ?? '',
+          dateIssued:    cert.date_obtained     ?? '',
+          proofFile:     null,
+          proofFileName: '',
+        };
+      }));
+    }
+  };
+
+  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      // Check file type
+
+      const imgFileTypes = ['image/jpeg', 'image/png', 'image/webp']
+      const validTypes = [
+        'application/pdf',
+        'application/msword',
+        'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+        ...imgFileTypes
+      ];
+      if (!validTypes.includes(file.type)) {
+        alert('Please upload a PDF or Word document (.pdf, .doc, .docx)');
+        return;
+      }
+
+      // Check file size (max 5MB)
+      if (file.size > 5 * 1024 * 1024) {
+        alert('File size must be less than 5MB');
+        return;
+      }
+
+      try {
+        let resumeImg: HTMLImageElement;
+
+        if (imgFileTypes.includes(file.type)) {
+          resumeImg = new Image();
+          resumeImg.src = URL.createObjectURL(file);
+          // setShowUploadModal(false);
+        } else if (file.type === 'application/pdf') {
+          resumeImg = await parsePdfToImages(file);
+          // setShowUploadModal(false);
+        } else {
+          alert('Word documents are not yet supported for auto-parsing.');
+          setShowUploadModal(false);
+          return;
+        }
+
+        const resumeJSON = await parseResumeLLM(resumeImg);
+        handleUploadResumeFieldsPopulation(resumeJSON);
+        setResumeUploaded(true);
+        setShowUploadModal(false);
+        alert(`Resume "${file.name}" parsed and fields populated successfully!`);
+
+      } catch (err) {
+        console.error('Resume parsing failed:', err);
+        setShowUploadModal(false);
+        alert('Failed to parse resume. Please fill in the fields manually.');
+      }
+    }
+  };
+
 
   const steps = [
     { number: 1, title: 'Personal\nInformation', icon: 'personal' },
