@@ -589,7 +589,7 @@ export function JobPortal({ onApply, onSaveJob, savedJobIds = [], onNavigateToPr
                   </div>
                   
                   <h2 className="text-xl sm:text-2xl md:text-3xl font-bold text-[#101828] mb-4">
-                    QCON - Excellent Opportunities in Qatar Qatar Qatar
+                    QCON - Excellent Opportunities in Qatar
                   </h2>
                   
                   <div className="bg-gradient-to-r from-blue-50 to-green-50 rounded-lg p-4 mb-6">
