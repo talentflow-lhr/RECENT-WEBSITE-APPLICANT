@@ -241,7 +241,7 @@ export function Header({ currentPage = 'jobs', onNavigate, isLoggedIn = false, o
                     </g>
                   </svg>
                 </div>
-                <span className="text-[16px] font-bold leading-[24px] text-[#101828]">John</span>
+                <span className="text-[16px] font-bold leading-[24px] text-[#101828]">{account?.t_applicant?.app_first_name}</span>
               </div>
 
               <div className="space-y-1">
