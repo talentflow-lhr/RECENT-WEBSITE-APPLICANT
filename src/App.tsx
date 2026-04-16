@@ -125,7 +125,12 @@ export default function App() {
   return (
     <div className="min-h-screen bg-gray-50">
       {!isLoggedIn ? (
-        <LoginPage onLogin={() => setIsLoggedIn(true)} />
+        <LoginPage 
+          onLogin={() => {
+            setIsLoggedIn(true);
+            setCurrentPage('dashboard'); // LANDING PAGE
+          }} 
+        />
       ) : (
         <>
           <Header
