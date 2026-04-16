@@ -1,6 +1,42 @@
 import { useState } from 'react';
 import { User, Mail, Phone, MapPin, Camera, Save, Lock, Upload, FileText, Check, X, Calendar, AlertCircle, Briefcase } from 'lucide-react';
 import { useAuth } from "./AuthPass";
+import { useEffect } from 'react';
+
+interface Applicant {
+  app_first_name?: string;
+  app_middle_name?: string;
+  app_last_name?: string;
+  app_email?: string;
+  app_present_tele_mobile?: string;
+  app_present_address_country?: string;
+  app_present_address_province?: string;
+  app_present_address_city?: string;
+  app_dob_day?: string;
+  app_dob_month?: string;
+  app_dob_year?: string;
+  app_marital_status?: string;
+  app_height?: string;
+  app_weight?: string;
+  app_passport_number?: string;
+  app_passport_place?: string;
+  app_passport_issue_date?: string;
+  app_passport_expiry_date?: string;
+  app_nationality?: string;
+  app_preference?: string[];
+}
+
+interface Account {
+  account_id: number;
+  applicant_id: number;
+  acc_username: string;
+  acc_email: string;
+  is_active: boolean;
+  acc_password: string;
+  // for the other table
+  t_applicant?: Applicant;
+}
+
 
 export function ProfileSettings() {
   /***
@@ -57,33 +93,16 @@ export function ProfileSettings() {
   const { account } = useAuth();
 
   useEffect(() => {
-  if (!account?.t_applicant) return;
-
-  const data = account.t_applicant;
-
-  setProfile({
+    if (!account?.t_applicant) return;
+  
+    const data = account.t_applicant;
+  
+    setProfile({
       firstName: data.app_first_name || '',
-      middleName: data.app_middle_name || '',
-      lastName: data.app_last_name || '',
-      email: data.app_email || '',
-      phone: data.app_present_tele_mobile || '',
-      country: data.app_present_address_country || '',
-      province: data.app_present_address_province || '',
-      city: data.app_present_address_city || '',
-      birthDay: data.app_dob_day || '',
-      birthMonth: data.app_dob_month || '',
-      birthYear: data.app_dob_year || '',
-      maritalStatus: data.app_marital_status || '',
-      height: data.app_height || '',
-      weight: data.app_weight || '',
-      passportNumber: data.app_passport_number || '',
-      passportPlace: data.app_passport_place || '',
-      passportIssueDate: data.app_passport_issue_date || '',
-      passportExpiryDate: data.app_passport_expiry_date || '',
-      nationality: data.app_nationality || '',
-      preferredJobFields: data.app_preference || [],
+      ...
     });
   }, [account]);
+
   
   const [profileImage, setProfileImage] = useState<string | null>(null);
   const [sameAsPresent, setSameAsPresent] = useState(false);
