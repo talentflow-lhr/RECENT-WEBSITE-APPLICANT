@@ -13,6 +13,7 @@ import {
   FilePlus,
   Sparkles,
 } from "lucide-react";
+import { useAuth } from "./AuthPass";
 
 interface ResumeAnalysisPreviewProps {
   onNavigateToResumeBuilder?: () => void;
@@ -23,7 +24,8 @@ export function ResumeAnalysisPreview({
   onNavigateToResumeBuilder,
   onBackToHome,
 }: ResumeAnalysisPreviewProps) {
-  const applicantName = "John";
+  const { account } = useAuth();
+  //const applicantName = "John";
 
   const previewAnalysis = [
     {
@@ -115,7 +117,7 @@ export function ResumeAnalysisPreview({
         {/* Welcome Section */}
         <div className="mb-6 md:mb-8">
           <h1 className="text-gray-900 mb-2 text-xl sm:text-2xl md:text-3xl">
-            Hello, {applicantName}!
+            Hello, {account?.t_applicant?.app_first_name || "User"}!
           </h1>
           <p className="text-gray-600 text-sm sm:text-base">
             Complete your Resume Builder to unlock your Resume
