@@ -226,8 +226,6 @@ export function LoginPage({ onLogin }: LoginPageProps) {
       await checkUsername(username);
     }
   };
-
-  console.log("FULL DATA:", data);
   
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#f5f7f0] to-[#e8f5e3] flex items-center justify-center p-4 sm:p-6 md:p-8">
