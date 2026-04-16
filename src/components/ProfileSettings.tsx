@@ -126,32 +126,42 @@ export function ProfileSettings() {
     });
 
      useEffect(() => {
-      if (!account?.t_applicant) return;
+      if (!account) return;
     
-      const data = account.t_applicant;
+      const applicant = account.t_applicant;
     
       setProfile(prev => ({
         ...prev,
-        firstName: data.app_first_name || '',
-        middleName: data.app_middle_name || '',
-        lastName: data.app_last_name || '',
-        email: data.app_email || '',
-        phone: data.app_present_tele_mobile || '',
-        country: data.app_present_address_country || '',
-        province: data.app_present_address_province || '',
-        city: data.app_present_address_city || '',
-        birthDay: data.app_dob_day || '',
-        birthMonth: data.app_dob_month || '',
-        birthYear: data.app_dob_year || '',
-        maritalStatus: data.app_marital_status || '',
-        height: data.app_height || '',
-        weight: data.app_weight || '',
-        passportNumber: data.app_passport_number || '',
-        passportPlace: data.app_passport_place || '',
-        passportIssueDate: data.app_passport_issue_date || '',
-        passportExpiryDate: data.app_passport_expiry_date || '',
-        nationality: data.app_nationality || '',
-        preferredJobFields: data.app_preference || [],
+    
+        // 🔥 FROM t_account
+        username: account.acc_username || '',
+        email: account.acc_email || applicant?.app_email || '',
+    
+        // 🔥 FROM t_applicant
+        firstName: applicant?.app_first_name || '',
+        middleName: applicant?.app_middle_name || '',
+        lastName: applicant?.app_last_name || '',
+        phone: applicant?.app_present_tele_mobile || '',
+    
+        country: applicant?.app_present_address_country || '',
+        province: applicant?.app_present_address_province || '',
+        city: applicant?.app_present_address_city || '',
+    
+        birthDay: applicant?.app_dob_day || '',
+        birthMonth: applicant?.app_dob_month || '',
+        birthYear: applicant?.app_dob_year || '',
+    
+        maritalStatus: applicant?.app_marital_status || '',
+        height: applicant?.app_height || '',
+        weight: applicant?.app_weight || '',
+    
+        passportNumber: applicant?.app_passport_number || '',
+        passportPlace: applicant?.app_passport_place || '',
+        passportIssueDate: applicant?.app_passport_issue_date || '',
+        passportExpiryDate: applicant?.app_passport_expiry_date || '',
+    
+        nationality: applicant?.app_nationality || '',
+        preferredJobFields: applicant?.app_preference || [],
       }));
     }, [account]);
   
