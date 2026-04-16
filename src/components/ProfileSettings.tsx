@@ -1,5 +1,6 @@
-import { useState } from 'react';
 import { User, Mail, Phone, MapPin, Lock, FileText, Check, X, Calendar, AlertCircle, Briefcase, Edit2, Save } from 'lucide-react';
+import { useAuth } from "./AuthPass";
+import { useState, useEffect } from 'react';
 
 export function ProfileSettings() {
   const [profile, setProfile] = useState({
