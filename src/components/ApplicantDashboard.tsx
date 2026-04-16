@@ -24,8 +24,6 @@ import {
 import logo from 'figma:asset/636ded4fbbb48605dae08d3a89a37f53cf3273be.png';
 import { useAuth } from "./AuthPass";
 
-const { account } = useAuth();
-
 interface SkillAssessment {
   name: string;
   score: number;
@@ -58,6 +56,7 @@ export function ApplicantDashboard({
   onNavigateToResumeBuilder,
   hasResume = false 
 }: ApplicantDashboardProps) {
+  const { account } = useAuth();
   const applicantName = "John";
   const overallScore = 78;
   const applicationStatus = "Under Review";
