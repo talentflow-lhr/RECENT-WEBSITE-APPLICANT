@@ -1,4 +1,3 @@
-import { useState } from 'react';
 import { User, Mail, Phone, MapPin, Camera, Save, Lock, Upload, FileText, Check, X, Calendar, AlertCircle, Briefcase } from 'lucide-react';
 import { useAuth } from "./AuthPass";
 import { useState, useEffect } from 'react';
@@ -92,16 +91,70 @@ export function ProfileSettings() {
 
   const { account } = useAuth();
 
+  const [profile, setProfile] = useState({
+    firstName: '',
+    middleName: '',
+    lastName: '',
+    birthDay: '',
+    birthMonth: '',
+    birthYear: '',
+    username: '',
+    nationality: '',
+    email: '',
+    phone: '',
+    maritalStatus: '',
+    height: '',
+    weight: '',
+    preferredJobFields: [] as string[],
+    country: '',
+    province: '',
+    city: '',
+    emergencyContactName: '',
+    emergencyRelationship: '',
+    emergencyContactNumber: '',
+    provincialCountry: '',
+    provincialProvince: '',
+    provincialCity: '',
+    provincialContactPerson: '',
+    provincialMobile: '',
+    passportNumber: '',
+    passportPlace: '',
+    passportIssueDate: '',
+    passportExpiryDate: '',
+    currentPassword: '',
+    newPassword: '',
+    confirmPassword: '',
+  });
+  
   useEffect(() => {
-    if (!account?.t_applicant) return;
-  
-    const data = account.t_applicant;
-  
-    setProfile({
-      firstName: data.app_first_name || '',
-      ...
-    });
-  }, [account]);
+  if (!account?.t_applicant) return;
+
+  const data = account.t_applicant;
+
+  setProfile(prev => ({
+    ...prev,
+    firstName: data.app_first_name || '',
+    middleName: data.app_middle_name || '',
+    lastName: data.app_last_name || '',
+    email: data.app_email || '',
+    phone: data.app_present_tele_mobile || '',
+    country: data.app_present_address_country || '',
+    province: data.app_present_address_province || '',
+    city: data.app_present_address_city || '',
+    birthDay: data.app_dob_day || '',
+    birthMonth: data.app_dob_month || '',
+    birthYear: data.app_dob_year || '',
+    maritalStatus: data.app_marital_status || '',
+    height: data.app_height || '',
+    weight: data.app_weight || '',
+    passportNumber: data.app_passport_number || '',
+    passportPlace: data.app_passport_place || '',
+    passportIssueDate: data.app_passport_issue_date || '',
+    passportExpiryDate: data.app_passport_expiry_date || '',
+    nationality: data.app_nationality || '',
+    preferredJobFields: data.app_preference || [],
+  }));
+}, [account]);
 
   
   const [profileImage, setProfileImage] = useState<string | null>(null);
