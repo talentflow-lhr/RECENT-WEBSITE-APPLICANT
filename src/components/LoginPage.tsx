@@ -132,6 +132,8 @@ export function LoginPage({ onLogin }: LoginPageProps) {
         .select()
         .single();
 
+      console.log("APPLICANT INSERT RESULT:", applicantData, applicantError);
+
       if (applicantError) {
         setError(applicantError.message);
         setLoading(false);
