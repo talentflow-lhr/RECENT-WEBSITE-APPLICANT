@@ -12,6 +12,7 @@ import { Footer } from './components/Footer';
 import { JobApplication } from './components/JobApplication';
 import { SavedJobs } from './components/SavedJobs';
 import { LoginPage } from './components/LoginPage';
+import { AuthProvider } from "./components/AuthPass";
 
 interface JobData {
   title: string;
@@ -114,22 +115,24 @@ export default function App() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {!isLoggedIn ? (
-        <LoginPage onLogin={() => setIsLoggedIn(true)} />
-      ) : (
-        <>
-          <Header
-            currentPage={currentPage}
-            onNavigate={setCurrentPage}
-            isLoggedIn={isLoggedIn}
-            onAuthClick={() => setIsLoggedIn(!isLoggedIn)}
-          />
-          {renderPage()}
-          {currentPage === 'jobs' && <ChatBot />}
-          <Footer onNavigate={setCurrentPage} />
-        </>
-      )}
-    </div>
+    <AuthProvider>
+      <div className="min-h-screen bg-gray-50">
+        {!isLoggedIn ? (
+          <LoginPage onLogin={() => setIsLoggedIn(true)} />
+        ) : (
+          <>
+            <Header
+              currentPage={currentPage}
+              onNavigate={setCurrentPage}
+              isLoggedIn={isLoggedIn}
+              onAuthClick={() => setIsLoggedIn(!isLoggedIn)}
+            />
+            {renderPage()}
+            {currentPage === 'jobs' && <ChatBot />}
+            <Footer onNavigate={setCurrentPage} />
+          </>
+        )}
+      </div>
+    </AuthProvider>
   );
 }
