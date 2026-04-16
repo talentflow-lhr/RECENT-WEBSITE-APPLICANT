@@ -61,40 +61,28 @@ export function ApplicantDashboard({
 
   const skillsAssessment: SkillAssessment[] = [
     {
-      name: "Communication Skills",
+      name: "Experience",
       score: 85,
       status: 'excellent',
-      recommendation: "Example: Strong communication skills demonstrated in resume"
+      recommendation: "Strong work history with relevant positions and achievements"
     },
     {
-      name: "Technical Skills",
-      score: 72,
-      status: 'good',
-      recommendation: "Example: Consider adding certifications to strengthen this area"
-    },
-    {
-      name: "Work Experience",
-      score: 65,
-      status: 'needs-improvement',
-      recommendation: "Example: Highlight specific achievements and quantify results"
-    },
-    {
-      name: "Education",
-      score: 90,
-      status: 'excellent',
-      recommendation: "Example: Well-documented educational background"
-    },
-    {
-      name: "Language Proficiency",
+      name: "Overall Skills",
       score: 88,
       status: 'excellent',
-      recommendation: "Example: Excellent multilingual capabilities"
+      recommendation: "Well-rounded skill set that matches industry requirements"
     },
     {
-      name: "Certifications",
-      score: 60,
-      status: 'needs-improvement',
-      recommendation: "Example: Add industry-specific certifications to stand out"
+      name: "Quality of Description",
+      score: 75,
+      status: 'good',
+      recommendation: "Good descriptions but could be more detailed and quantified"
+    },
+    {
+      name: "Completeness of Resume",
+      score: 82,
+      status: 'excellent',
+      recommendation: "Resume contains most essential sections with adequate detail"
     }
   ];
 
@@ -358,11 +346,11 @@ export function ApplicantDashboard({
         {/* Resume Analysis Content - Show for logged in users */}
         {isLoggedIn && (
           <>
-            {/* Skills Assessment */}
+            {/* Resume Analysis */}
             <div className="mb-6 md:mb-8">
               <div className="flex items-center gap-2 mb-4 sm:mb-6">
                 <FileText className="w-6 h-6 text-[#17960b]" />
-                <h2 className="text-gray-900">Skills Assessment</h2>
+                <h2 className="text-gray-900">Resume Analysis</h2>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
