@@ -6,6 +6,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { Check, X, Eye, EyeOff, AlertCircle } from 'lucide-react';
 import logo from 'figma:asset/636ded4fbbb48605dae08d3a89a37f53cf3273be.png';
 import { ForgotPassword } from './ForgotPassword';
+import { supabase } from "./supabaseClient";
+import { useAuth } from "./AuthPass";
 
 interface LoginPageProps {
   onLogin: () => void;
@@ -32,7 +34,8 @@ export function LoginPage({ onLogin }: LoginPageProps) {
   });
 
   // Mock list of taken usernames (in real app, this would be checked via API)
-  const takenUsernames = ['admin', 'user', 'test', 'john', 'jane', 'naomi', 'landbase'];
+  //const takenUsernames = ['admin', 'user', 'test', 'john', 'jane', 'naomi', 'landbase'];
+
 
   // Password validation function
   const validatePassword = (password: string): string[] => {
@@ -64,33 +67,138 @@ export function LoginPage({ onLogin }: LoginPageProps) {
     }
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const { setAccount } = useAuth();
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    setLoading(true);
     e.preventDefault();
-    // Simple validation for demo
+  
     if (isLogin) {
-      if (formData.username && formData.password) {
-        onLogin();
+      const username = formData.username.trim();
+      
+      const { data, error } = await supabase
+        .from("t_account")
+        .select(`
+          account_id,
+          acc_username,
+          acc_email,
+          is_active,
+          applicant_id,
+          t_applicant (
+            applicant_id,
+            app_first_name,
+            app_middle_name,
+            app_last_name
+          )
+        `)
+        .eq("acc_username", username)
+        .eq("acc_password", formData.password)
+        .eq("is_active", true)
+        .single();
+  
+      if (error || !data) {
+        alert("Invalid username or password");
+        return setLoading(false);
       }
+  
+      setAccount(data);
+      localStorage.setItem("account", JSON.stringify(data));
+      onLogin();
+      setLoading(false);
     } else {
-      if (formData.firstName && formData.lastName && formData.email && formData.password && formData.confirmPassword) {
-        if (!usernameAvailable) {
-          alert('Please choose an available username');
-          return;
-        }
-        
-        // Validate password requirements
-        const errors = validatePassword(formData.password);
-        if (errors.length > 0) {
-          alert('Password must meet all requirements: ' + errors.join(', '));
-          return;
-        }
-        
-        if (formData.password === formData.confirmPassword) {
-          onLogin();
-        } else {
-          alert('Passwords do not match!');
-        }
+
+      const cleanedData = {
+        firstName: formData.firstName.trim(),
+        middleName: formData.middleName.trim(),
+        lastName: formData.lastName.trim(),
+        email: formData.email.trim(),
+        username: formData.signupUsername.trim(),
+      };
+      
+      // password match
+      if (formData.password !== formData.confirmPassword) {
+        alert("Passwords do not match");
+        return setLoading(false);
       }
+  
+      // password rules
+      const errors = validatePassword(formData.password);
+      if (errors.length > 0) {
+        alert("Password must meet requirements");
+        return setLoading(false);
+      }
+  
+      if (usernameAvailable === false) {
+        alert("Username already taken");
+        return setLoading(false);
+      }
+      
+      if (usernameAvailable === null) {
+        alert("Please wait for username check");
+        return setLoading(false);
+      }
+  
+      // insert applicant
+      const { data: applicant, error: appError } = await supabase
+        .from("t_applicant")
+        .insert([
+          {
+            app_first_name: cleanedData.firstName,
+            app_middle_name: cleanedData.middleName,
+            app_last_name: cleanedData.lastName,
+            app_email: cleanedData.email,
+          },
+        ])
+        .select()
+        .single();
+  
+      if (appError) {
+        alert(appError.message);
+        return setLoading(false);
+      }
+  
+      // insert account
+      const { error: accError } = await supabase
+        .from("t_account")
+        .insert([
+          {
+            applicant_id: applicant.applicant_id,
+            acc_username: cleanedData.username,
+            acc_email: cleanedData.email,
+            acc_password: formData.password,
+            acc_hear: formData.heardFrom,
+            is_active: true,
+          },
+        ]);
+  
+      if (accError) {
+        await supabase
+          .from("t_applicant")
+          .delete()
+          .eq("applicant_id", applicant.applicant_id);
+      
+        alert(accError.message);
+        return setLoading(false);
+      }
+  
+      alert("Account created successfully!");
+      setIsLogin(true);
+
+      setFormData({
+        username: '',
+        email: '',
+        password: '',
+        confirmPassword: '',
+        firstName: '',
+        middleName: '',
+        lastName: '',
+        signupUsername: '',
+        heardFrom: ''
+      });
+      
+      setUsernameAvailable(null);
+      setPasswordErrors([]);
+      setLoading(false);
     }
   };
 
@@ -108,23 +216,30 @@ export function LoginPage({ onLogin }: LoginPageProps) {
     });
   };
 
-  const checkUsername = (username: string) => {
+  const checkUsername = async (username: string) => {
     if (username.length < 3) {
       setUsernameAvailable(null);
       return;
     }
-
+  
     setUsernameChecking(true);
+  
+    const { data, error } = await supabase
+      .from("t_account")
+      .select("account_id")
+      .eq("acc_username", username)
+      .maybeSingle();
     
-    // Simulate API call delay
-    setTimeout(() => {
-      const isTaken = takenUsernames.includes(username.toLowerCase());
-      setUsernameAvailable(!isTaken);
-      setUsernameChecking(false);
-    }, 500);
+    if (error) {
+      setUsernameAvailable(null);
+    } else {
+      setUsernameAvailable(!data);
+    }
+
+    setUsernameChecking(false);
   };
 
-  const handleUsernameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleUsernameChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const username = e.target.value;
     setFormData({
       ...formData,
@@ -139,6 +254,8 @@ export function LoginPage({ onLogin }: LoginPageProps) {
       checkUsername(username);
     }
   };
+
+  const [loading, setLoading] = useState(false);
 
   return (
     <>
@@ -473,9 +590,10 @@ export function LoginPage({ onLogin }: LoginPageProps) {
 
               <Button
                 type="submit"
+                disabled={loading}
                 className="w-full h-12 bg-[#17960b] hover:bg-[#0d5e06] text-white font-bold text-base rounded-lg shadow-lg"
               >
-                {isLogin ? 'Login' : 'Create Account'}
+                {loading ? "Processing..." : isLogin ? "Login" : "Create Account"}
               </Button>
 
               {!isLogin && (
