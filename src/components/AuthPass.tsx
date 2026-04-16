@@ -20,10 +20,21 @@ const AuthContext = createContext<AuthContextType>({
 });
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [account, setAccount] = useState<Account | null>(() => {
+  const [account, setAccountState] = useState<Account | null>(() => {
     const stored = localStorage.getItem("account");
     return stored ? JSON.parse(stored) : null;
   });
+
+  //
+  const setAccount = (acc: Account | null) => {
+    setAccountState(acc);
+
+    if (acc) {
+      localStorage.setItem("account", JSON.stringify(acc));
+    } else {
+      localStorage.removeItem("account");
+    }
+  };
 
   return (
     <AuthContext.Provider value={{ account, setAccount }}>
@@ -31,6 +42,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     </AuthContext.Provider>
   );
 }
+
 
 export function useAuth() {
   return useContext(AuthContext);
