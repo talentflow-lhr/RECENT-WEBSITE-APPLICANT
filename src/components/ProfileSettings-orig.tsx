@@ -1,4 +1,4 @@
-import { User, Mail, Phone, MapPin, Camera, Save, Lock, Upload, FileText, Check, X, Calendar, AlertCircle, Briefcase } from 'lucide-react';
+import { User, Mail, Phone, MapPin, Lock, FileText, Check, X, Calendar, AlertCircle, Briefcase, Edit2, Save } from 'lucide-react';
 import { useAuth } from "./AuthPass";
 import { useState, useEffect } from 'react';
 
