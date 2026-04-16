@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { User, Briefcase, Settings, LogOut, Menu, X, Bookmark } from 'lucide-react';
 import imgLogo from 'figma:asset/636ded4fbbb48605dae08d3a89a37f53cf3273be.png';
 import svgPaths from '../imports/svg-3nnvnkmfcx';
+import { useAuth } from "./AuthPass";
 
 interface HeaderProps {
   currentPage?: 'jobs' | 'resume' | 'about' | 'dashboard' | 'applications' | 'profile' | 'jobsforyou' | 'apply' | 'savedjobs';
@@ -11,6 +12,7 @@ interface HeaderProps {
 }
 
 export function Header({ currentPage = 'jobs', onNavigate, isLoggedIn = false, onAuthClick }: HeaderProps) {
+  const { account } = useAuth();
   const [profileMenuOpen, setProfileMenuOpen] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
@@ -91,7 +93,7 @@ export function Header({ currentPage = 'jobs', onNavigate, isLoggedIn = false, o
                     </g>
                   </svg>
                 </div>
-                <span className="text-[16px] font-bold leading-[24px] text-[#101828]">John</span>
+                <span className="text-[16px] font-bold leading-[24px] text-[#101828]">{account?.t_applicant?.app_first_name}</span>
                 <svg className="block w-4 h-4" fill="none" preserveAspectRatio="none" viewBox="0 0 16 16">
                   <g>
                     <path d={svgPaths.pb7adf00} stroke="#99A1AF" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.33333" />
