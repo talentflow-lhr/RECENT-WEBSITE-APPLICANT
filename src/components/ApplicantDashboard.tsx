@@ -22,6 +22,9 @@ import {
   FilePlus
 } from 'lucide-react';
 import logo from 'figma:asset/636ded4fbbb48605dae08d3a89a37f53cf3273be.png';
+import { useAuth } from "./AuthPass";
+
+const { account } = useAuth();
 
 interface SkillAssessment {
   name: string;
@@ -269,7 +272,7 @@ export function ApplicantDashboard({
         {/* Welcome Section */}
         {isLoggedIn && (
           <div className="mb-6 md:mb-8">
-            <h1 className="text-gray-900 mb-2 text-xl sm:text-2xl md:text-3xl">Welcome, {applicantName}!</h1>
+            <h1 className="text-gray-900 mb-2 text-xl sm:text-2xl md:text-3xl">Welcome, {account?.t_applicant?.app_first_name}!</h1>
             <p className="text-gray-600 text-sm sm:text-base">
               {hasResume ? "Here's your comprehensive resume analysis report." : "Here's a preview of what your resume analysis will look like."}
             </p>
