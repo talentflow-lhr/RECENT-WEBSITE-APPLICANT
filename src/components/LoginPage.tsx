@@ -43,7 +43,19 @@ export function LoginPage({ onLogin }: LoginPageProps) {
       // LOGIN FLOW
       const { data, error: loginError } = await supabase
         .from("t_account")
-        .select("*")
+        .select(`
+          account_id,
+          acc_username,
+          acc_email,
+          is_active,
+          applicant_id,
+          t_applicant (
+            applicant_id,
+            app_first_name,
+            app_middle_name,
+            app_last_name
+          )
+        `)
         .eq("acc_username", formData.username)
         .eq("acc_password", formData.password)
         .eq("is_active", true)
@@ -214,6 +226,9 @@ export function LoginPage({ onLogin }: LoginPageProps) {
       await checkUsername(username);
     }
   };
+
+  console.log("FULL DATA:", data);
+  
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#f5f7f0] to-[#e8f5e3] flex items-center justify-center p-4 sm:p-6 md:p-8">
       <div className="w-full max-w-6xl grid grid-cols-1 lg:grid-cols-2 gap-6 sm:gap-8 lg:gap-16 items-center">
