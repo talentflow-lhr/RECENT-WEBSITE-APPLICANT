@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { User, Mail, Phone, MapPin, Lock, FileText, Check, X, Calendar, AlertCircle, Briefcase, Edit2, Save } from 'lucide-react';
+import { User, Mail, Phone, MapPin, Lock, FileText, Check, X, Calendar, AlertCircle, Briefcase, Edit2, Save, Upload, Image as ImageIcon } from 'lucide-react';
 
 export function ProfileSettings() {
   const [profile, setProfile] = useState({
@@ -45,6 +45,7 @@ export function ProfileSettings() {
     passportPlace: 'Manila, Philippines',
     passportIssueDate: '2020-01-15',
     passportExpiryDate: '2030-01-15',
+    passportPicture: '',
     
     // Password
     currentPassword: '',
@@ -59,7 +60,9 @@ export function ProfileSettings() {
   const [sameAsPresent, setSameAsPresent] = useState(false);
   const [usernameChecking, setUsernameChecking] = useState(false);
   const [usernameAvailable, setUsernameAvailable] = useState<boolean | null>(null);
-  const [passportUploaded, setPassportUploaded] = useState(true);
+  const [passportUploaded, setPassportUploaded] = useState(false);
+  const [passportFileName, setPassportFileName] = useState('');
+  
 
   // Mock list of taken usernames
   const takenUsernames = ['admin', 'user', 'test', 'john', 'jane', 'naomi', 'landbase'];
@@ -166,6 +169,7 @@ export function ProfileSettings() {
       }
 
       setPassportUploaded(true);
+      setPassportFileName(file.name);
     }
   };
 
@@ -1002,6 +1006,38 @@ export function ProfileSettings() {
                   />
                 </div>
               </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-gray-700 font-medium mb-2">
+                    Upload Passport <span className="text-red-500">*</span>
+                  </label>
+                  <div className="space-y-3">
+                    <input
+                      type="file"
+                      id="passport-upload"
+                      accept="image/jpeg, image/png, image/jpg, application/pdf"
+                      onChange={handlePassportUpload}
+                      className="hidden"
+                    />
+                    <label
+                      htmlFor="passport-upload"
+                      className="flex items-center justify-center gap-2 px-6 py-3 bg-gradient-to-r from-[#ffca1a] to-[#17960b] text-white font-semibold rounded-lg cursor-pointer hover:shadow-lg transition-all duration-200 hover:scale-[1.02]"
+                    >
+                      <Upload className="w-5 h-5" />
+                      Choose File
+                    </label>
+                    {passportFileName && (
+                      <div className="flex items-center gap-2 px-4 py-2 bg-green-50 border border-green-200 rounded-lg">
+                        <ImageIcon className="w-5 h-5 text-[#17960b]" />
+                        <span className="text-sm text-gray-700 font-medium truncate">{passportFileName}</span>
+                      </div>
+                    )}
+                    {!passportFileName && (
+                      <p className="text-xs text-gray-500">Accepted formats: JPG, PNG, PDF (Max 5MB)</p>
+                    )}
+                  </div>
+                </div>
+              </div>
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-4">
@@ -1020,6 +1056,19 @@ export function ProfileSettings() {
               <div>
                 <p className="text-sm text-gray-500 mb-1">Expiry Date</p>
                 <p className="text-gray-900 font-medium">{profile.passportExpiryDate}</p>
+              </div>
+              <div>
+                <p className="text-sm text-gray-500 mb-1">Passport Document</p>
+                <div className="flex items-center gap-2">
+                  {passportUploaded || passportFileName ? (
+                    <>
+                      <ImageIcon className="w-5 h-5 text-[#17960b]" />
+                      <p className="text-gray-900 font-medium">{passportFileName || 'Passport uploaded'}</p>
+                    </>
+                  ) : (
+                    <p className="text-gray-500">No document uploaded</p>
+                  )}
+                </div>
               </div>
             </div>
           )}
