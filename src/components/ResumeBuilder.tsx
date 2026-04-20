@@ -2,6 +2,16 @@ import { useState, useRef, useEffect } from 'react';
 import svgPaths from '../imports/svg-65zdysylli';
 import imgImageLandbase from 'figma:asset/636ded4fbbb48605dae08d3a89a37f53cf3273be.png';
 import { Download, Plus, Trash2, Eye, EyeOff, Upload, X, FileText, Check, ChevronDown, Star, Briefcase, MapPin, ArrowRight, Calendar } from 'lucide-react';
+import { useAuth } from "./AuthPass";
+
+import * as pdfjsLib from 'pdfjs-dist';
+import workerSrc from 'pdfjs-dist/build/pdf.worker.mjs?url';
+
+pdfjsLib.GlobalWorkerOptions.workerSrc = workerSrc;
+
+import { createWorker } from 'tesseract.js';
+
+import {supabase} from "./supabaseClient";
 
 // Export ResumeData type for use in other components
 export interface ResumeData {
@@ -116,6 +126,127 @@ interface ResumeBuilderProps {
   onResumeSubmit?: () => void;
 }
 
+const loadImage = (src: string): Promise<HTMLImageElement> => {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => resolve(img);
+    img.onerror = reject;
+    img.src = src;
+  });
+};
+
+const parsePdfToImages = async (pdfFile: File): Promise<HTMLImageElement> => {
+  const arrayBuffer = await pdfFile.arrayBuffer();
+  const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+
+  const numPages = Math.min(6, pdf.numPages);
+  const pages = [];
+
+  for (let i = 1; i <= numPages; i++) {
+    const page = await pdf.getPage(i);
+    const viewport = page.getViewport({ scale: 1.5 });
+    pages.push({ page, viewport });
+  }
+
+  const totalHeight = pages.reduce((sum, p) => sum + p.viewport.height, 0);
+  const maxWidth = Math.max(...pages.map(p => p.viewport.width));
+
+  const canvas = document.createElement('canvas');
+  const context = canvas.getContext('2d')!;
+  canvas.width = maxWidth;
+  canvas.height = totalHeight;
+
+  let yOffset = 0;
+  for (const { page, viewport } of pages) {
+    context.save();
+    context.translate(0, yOffset);
+    await page.render({ canvasContext: context, viewport, canvas }).promise;
+    context.restore();
+    yOffset += viewport.height;
+  }
+
+  const img = new Image();
+  const dataUrl = canvas.toDataURL('image/png');
+  return loadImage(dataUrl);
+};
+
+const parseResumeTesseract = async (resumeImg: HTMLImageElement | HTMLCanvasElement): Promise<string> => {
+
+  const worker = await createWorker('eng', 1, {
+    logger: (m: { status: string; progress: number }) => {
+      console.log(`${m.status}: ${Math.round(m.progress * 100)}%`);
+    }
+  });
+
+  try {
+    const { data } = await worker.recognize(resumeImg);
+    return data.text;
+  } finally {
+    await worker.terminate();
+  }
+};
+
+
+/**
+ * Converts an image or canvas to a grayscale canvas.
+ * @param source - HTMLImageElement or HTMLCanvasElement
+ * @returns HTMLCanvasElement with grayscale image data
+ */
+function convertToGrayscale(source: HTMLImageElement | HTMLCanvasElement): HTMLCanvasElement {
+    // Create a canvas element
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d');
+    if (!ctx) throw new Error('Unable to get 2D context');
+
+    // Set canvas dimensions to match the source
+    canvas.width = source.width;
+    canvas.height = source.height;
+
+    // Draw the source image onto the canvas
+    if (source instanceof HTMLImageElement) {
+        ctx.drawImage(source, 0, 0, canvas.width, canvas.height);
+    } else if (source instanceof HTMLCanvasElement) {
+        ctx.drawImage(source, 0, 0);
+    }
+
+    // Get pixel data
+    const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+    const data = imageData.data;
+
+    // Convert each pixel to grayscale using luminosity formula
+    for (let i = 0; i < data.length; i += 4) {
+        const r = data[i];
+        const g = data[i + 1];
+        const b = data[i + 2];
+        // Standard luminosity formula: 0.299*R + 0.587*G + 0.114*B
+        const gray = Math.round(0.299 * r + 0.587 * g + 0.114 * b);
+        data[i] = gray;     // Red
+        data[i + 1] = gray; // Green
+        data[i + 2] = gray; // Blue
+        // Alpha remains unchanged (data[i+3])
+    }
+
+    // Put the modified data back
+    ctx.putImageData(imageData, 0, 0);
+
+    return canvas;
+}
+
+const parseResumeLLM = async (resumeImg: HTMLImageElement): Promise<Record<string, unknown>> => {
+
+  const grayscaleCanvas = convertToGrayscale(resumeImg);
+
+  const ocrText = await parseResumeTesseract(grayscaleCanvas)
+
+  const { data, error } = await supabase.functions.invoke('Resume-LLM-Structure', {
+    body: { ocrText },
+  })
+
+  if (error) throw new Error(error.message)
+
+  return data.message as Record<string, unknown>
+};
+
 export function ResumeBuilder({ onResumeSubmit }: ResumeBuilderProps = {}) {
   const [currentStep, setCurrentStep] = useState(1);
   const [showPreview, setShowPreview] = useState(false);
@@ -206,34 +337,6 @@ export function ResumeBuilder({ onResumeSubmit }: ResumeBuilderProps = {}) {
 
   const handleUploadClick = () => {
     fileInputRef.current?.click();
-  };
-
-  const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (file) {
-      // Check file type
-      const validTypes = ['application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'];
-      if (!validTypes.includes(file.type)) {
-        alert('Please upload a PDF or Word document (.pdf, .doc, .docx)');
-        return;
-      }
-      
-      // Check file size (max 5MB)
-      if (file.size > 5 * 1024 * 1024) {
-        alert('File size must be less than 5MB');
-        return;
-      }
-
-      setResumeUploaded(true);
-      setShowUploadModal(true);
-      
-      // In a real application, you would parse the file here
-      // For now, we'll just show a success message
-      setTimeout(() => {
-        setShowUploadModal(false);
-        alert(`Resume "${file.name}" uploaded successfully! You can now edit or submit your resume.`);
-      }, 1500);
-    }
   };
 
   const addWorkExperience = () => {
@@ -340,6 +443,141 @@ export function ResumeBuilder({ onResumeSubmit }: ResumeBuilderProps = {}) {
     const updated = [...certifications];
     updated[index] = { ...updated[index], [field]: value };
     setCertifications(updated);
+  };
+
+  const handleUploadResumeFieldsPopulation = (resumeJSON: Record<string, unknown>) => {
+    // --- Personal Info ---
+    const p = resumeJSON.personal_info as Record<string, string> | undefined;
+    if (p) {
+      setPersonalInfo({
+        firstName:     p.first_name      ?? '',
+        middleInitial: p.middle_initial  ?? '',
+        lastName:      p.last_name       ?? '',
+        dateOfBirth:   p.date_of_birth   ?? '',   // was missing
+        city:          p.city            ?? '',
+        province:      p.province        ?? '',
+        country:       p.country         ?? '',
+        email:         p.email           ?? '',
+        phone:         p.phone           ?? '',
+      });
+    }
+
+    // --- Work Experience ---
+    const experiences = resumeJSON.experiences as Record<string, unknown>[] | undefined;
+    if (experiences && experiences.length > 0) {
+      setWorkExperiences(experiences.map((exp) => ({
+        position:      (exp.position     as string)  ?? '',
+        company:       (exp.company      as string)  ?? '',
+        city:          (exp.city         as string)  ?? '',
+        stateProvince: (exp.province     as string)  ?? '',
+        country:       (exp.country      as string)  ?? '',   // was missing
+        startDate:     (exp.startDate    as string)  ?? '',
+        endDate:       (exp.endDate      as string)  ?? '',
+        current:       (exp.current      as boolean) ?? false,
+        description:   (exp.description  as string)  ?? '',
+      })));
+    }
+
+    // --- Education ---
+    const educationEntries = resumeJSON.education as Record<string, unknown>[] | undefined;
+    if (educationEntries && educationEntries.length > 0) {
+      setEducation(educationEntries.map((edu) => ({
+        level:         (edu.educational_level as string) ?? '',   // was missing
+        degree:        (edu.degree            as string) ?? '',
+        school:        (edu.school            as string) ?? '',
+        city:          (edu.city              as string) ?? '',
+        stateProvince: (edu.province          as string) ?? '',
+        country:       (edu.country           as string) ?? '',   // was missing
+        startDate:     (edu.startDate         as string) ?? '',
+        endDate:       (edu.endDate           as string) ?? '',
+        grade:         (edu.grade             as string) ?? '',   // was missing
+        description:   (edu.info              as string) ?? '',   // was missing / wrong key
+        achievements:  (edu.grade_honors      as string) ?? '',   // more accurate mapping
+      })));
+    }
+
+    // --- Skills ---
+    const skillEntries = resumeJSON.skills as Record<string, string>[] | undefined;
+    if (skillEntries && skillEntries.length > 0) {
+      setSkills(skillEntries.map((skill) => {
+        const cat = skill.skill_category;
+        const category: 'technical' | 'soft' =
+          cat === 'technical' ? 'technical' : 'soft';   // normalize extras to 'soft'
+        return {
+          name:     skill.skill_name        ?? '',
+          level:    skill.proficiency_level ?? '',
+          category,
+        };
+      }));
+    }
+
+    // --- Certifications ---
+    const certEntries = resumeJSON.certificates as Record<string, string>[] | undefined;
+    if (certEntries && certEntries.length > 0) {
+      setCertifications(certEntries.map((cert) => {
+        const rawType = (cert.cred_type ?? '').toLowerCase();
+        const type: 'certificate' | 'training' =
+          rawType === 'training' ? 'training' : 'certificate';   // was missing
+        return {
+          name:          cert.certificate_title ?? '',
+          type,
+          organization:  cert.issuer            ?? '',
+          dateIssued:    cert.date_obtained     ?? '',
+          proofFile:     null,
+          proofFileName: '',
+        };
+      }));
+    }
+  };
+
+  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      // Check file type
+
+      const imgFileTypes = ['image/jpeg', 'image/png', 'image/webp']
+      const validTypes = [
+        'application/pdf',
+        'application/msword',
+        'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+        ...imgFileTypes
+      ];
+      if (!validTypes.includes(file.type)) {
+        alert('Please upload a PDF or Word document (.pdf, .doc, .docx)');
+        return;
+      }
+
+      // Check file size (max 5MB)
+      if (file.size > 5 * 1024 * 1024) {
+        alert('File size must be less than 5MB');
+        return;
+      }
+
+      try {
+        let resumeImg: HTMLImageElement;
+
+        if (imgFileTypes.includes(file.type)) {
+          resumeImg = await loadImage(URL.createObjectURL(file));
+        } else if (file.type === 'application/pdf') {
+          resumeImg = await parsePdfToImages(file);
+        } else {
+          alert('Word documents are not yet supported for auto-parsing.');
+          setShowUploadModal(false);
+          return;
+        }
+
+        const resumeJSON = await parseResumeLLM(resumeImg);
+        handleUploadResumeFieldsPopulation(resumeJSON);
+        setResumeUploaded(true);
+        setShowUploadModal(false);
+        alert(`Resume "${file.name}" parsed and fields populated successfully!`);
+
+      } catch (err) {
+        console.error('Resume parsing failed:', err);
+        setShowUploadModal(false);
+        alert('Failed to parse resume. Please fill in the fields manually.');
+      }
+    }
   };
 
   const steps = [
