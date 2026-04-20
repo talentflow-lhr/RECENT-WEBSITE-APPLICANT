@@ -23,6 +23,8 @@ interface Applicant {
   app_passport_expiry_date?: string;
   app_nationality?: string;
   app_preference?: string[];
+  // line 27
+  app_gender?: string;
 }
 
 interface Account {
@@ -48,6 +50,8 @@ export function ProfileSettings() {
     birthYear: '1995',
     username: 'johndoe',
     nationality: 'Filipino',
+    // line 53
+    gender: 'male',
     email: 'john.doe@email.com',
     phone: '09345234576',
     
@@ -106,6 +110,8 @@ export function ProfileSettings() {
       height: '',
       weight: '',
       preferredJobFields: [] as string[],
+      // line 111
+      gender: '',
       country: '',
       province: '',
       city: '',
@@ -163,6 +169,8 @@ export function ProfileSettings() {
     
         nationality: applicant?.app_nationality || '',
         preferredJobFields: applicant?.app_preference || [],
+        // line 173
+        gender: applicant?.app_gender || '',
       }));
     }, [account]);
   
@@ -500,6 +508,25 @@ export function ProfileSettings() {
                   </select>
                 </div>
               </div>
+// line 511-529
+              {/* Gender */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-gray-700 font-medium mb-2">
+                    Gender <span className="text-red-500">*</span>
+                  </label>
+                  <select
+                    value={tempProfile.gender}
+                    onChange={(e) => setTempProfile({ ...tempProfile, gender: e.target.value })}
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#17960b] focus:border-transparent"
+                  >
+                    <option value="male">Male</option>
+                    <option value="female">Female</option>
+                    <option value="other">Other</option>
+                    <option value="prefer-not-to-say">Prefer not to say</option>
+                  </select>
+                </div>
+              </div>
 
               {/* Email and Phone */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -600,6 +627,11 @@ export function ProfileSettings() {
               <div>
                 <p className="text-sm text-gray-500 mb-1">Nationality</p>
                 <p className="text-gray-900 font-medium">{profile.nationality}</p>
+              </div>
+              <div>
+                <p className="text-sm text-gray-500 mb-1">Gender</p>
+                // line 634
+                <p className="text-gray-900 font-medium capitalize">{profile.gender?.replace('-', ' ') || 'Not set'}</p>
               </div>
               <div>
                 <p className="text-sm text-gray-500 mb-1">Email Address</p>
