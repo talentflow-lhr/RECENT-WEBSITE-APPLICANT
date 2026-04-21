@@ -2,7 +2,9 @@ import { useState, useRef, useEffect } from 'react';
 import svgPaths from '../imports/svg-65zdysylli';
 import imgImageLandbase from 'figma:asset/636ded4fbbb48605dae08d3a89a37f53cf3273be.png';
 import { Download, Plus, Trash2, Eye, EyeOff, Upload, X, FileText, Check, ChevronDown, Star, Briefcase, MapPin, ArrowRight, Calendar } from 'lucide-react';
+import { supabase } from "./supabaseClient";
 import { useAuth } from "./AuthPass";
+const { account } = useAuth()
 
 import * as pdfjsLib from 'pdfjs-dist';
 import workerSrc from 'pdfjs-dist/build/pdf.worker.mjs?url';
@@ -11,7 +13,6 @@ pdfjsLib.GlobalWorkerOptions.workerSrc = workerSrc;
 
 import { createWorker } from 'tesseract.js';
 
-import {supabase} from "./supabaseClient";
 
 // Export ResumeData type for use in other components
 export interface ResumeData {
@@ -327,6 +328,29 @@ export function ResumeBuilder({ onResumeSubmit }: ResumeBuilderProps = {}) {
   };
 
   const handleSubmit = () => {
+
+    if (!account) return null;
+    const applicant_id = account.applicant_id;
+
+    // creating new resume entry
+    const {data: t_res_data, error: t_res_error} = await supabase
+      .from("t_resume")
+      .insert({
+        applicant_id: applicant_id,
+        res_last_updated: new Date().toISOString()
+      })
+      .select("resume_id")
+      .single();
+
+    if (t_res_error) {
+      console.error(t_res_error);
+      alert('Submission failed.');
+      return;
+    }
+
+    alert('Submitted successfully!');
+    if (onResumeSubmit) onResumeSubmit();
+
     alert('Resume submitted successfully to Naomi Cuerdo (09345234576)!');
     if (onResumeSubmit) {
       onResumeSubmit();
