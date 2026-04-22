@@ -4,7 +4,7 @@ import imgImageLandbase from 'figma:asset/636ded4fbbb48605dae08d3a89a37f53cf3273
 import { Download, Plus, Trash2, Eye, EyeOff, Upload, X, FileText, Check, ChevronDown, Star, Briefcase, MapPin, ArrowRight, Calendar } from 'lucide-react';
 import { supabase } from "./supabaseClient";
 import { useAuth } from "./AuthPass";
-const { account } = useAuth()
+
 
 import * as pdfjsLib from 'pdfjs-dist';
 import workerSrc from 'pdfjs-dist/build/pdf.worker.mjs?url';
@@ -121,6 +121,7 @@ interface Certification {
   dateIssued: string;
   proofFile?: File | null;
   proofFileName?: string;
+  proofUrl?: string | null;
 }
 
 interface ResumeBuilderProps {
@@ -249,6 +250,9 @@ const parseResumeLLM = async (resumeImg: HTMLImageElement): Promise<Record<strin
 };
 
 export function ResumeBuilder({ onResumeSubmit }: ResumeBuilderProps = {}) {
+
+  const { account } = useAuth();
+
   const [currentStep, setCurrentStep] = useState(1);
   const [showPreview, setShowPreview] = useState(false);
   const [showUploadModal, setShowUploadModal] = useState(false);
@@ -327,34 +331,72 @@ export function ResumeBuilder({ onResumeSubmit }: ResumeBuilderProps = {}) {
     }
   };
 
-  const handleSubmit = () => {
+  const uploadCertProof = async (file: File, resumeId: number) => {
+    const filePath = `cert-proofs/${resumeId}/${file.name}`;
+
+    const { error } = await supabase.storage
+      .from('certificates')        // your storage bucket name
+      .upload(filePath, file, { upsert: true });
+
+    if (error) throw error;
+
+    // get the public URL back
+    const { data } = supabase.storage
+      .from('certificates')
+      .getPublicUrl(filePath);
+
+    return data.publicUrl;         // store this in your DB
+  };
+
+  const handleSubmit = async () => {
 
     if (!account) return null;
-    const applicant_id = account.applicant_id;
 
-    // creating new resume entry
-    const {data: t_res_data, error: t_res_error} = await supabase
-      .from("t_resume")
-      .insert({
-        applicant_id: applicant_id,
-        res_last_updated: new Date().toISOString()
+    const list_of_education_levels = [
+      "elementary",
+      "junior_high_school",
+      "senior_high_school",
+      "college_graduate",
+      "masters",
+      "phd"
+    ];
+
+    const highestEducation = education.reduce((highest, edu) => {
+      const currentIndex = list_of_education_levels.indexOf(edu.level);
+      const highestIndex = list_of_education_levels.indexOf(highest);
+      return currentIndex > highestIndex ? edu.level : highest;
+    }, '');
+
+    const certificationsWithUrls = await Promise.all(
+      certifications.map(async (cert) => {
+        if (cert.proofFile) {
+          cert.proofUrl = await uploadCertProof(cert.proofFile, account.applicant_id);
+        }
+        const { proofFile, proofFileName, ...rest } = cert;
+        return rest;  // proofUrl is now included, File objects are stripped
       })
-      .select("resume_id")
-      .single();
+    );
 
-    if (t_res_error) {
-      console.error(t_res_error);
+    const {dob_year, dob_month, dob_day} = personalInfo.dateOfBirth;
+
+    const { data, error } = await supabase.rpc('submit_resume', {
+      p_applicant_id: account.applicant_id,
+      p_highest_edu: highestEducation,
+      p_education: education,
+      p_work_experiences: workExperiences,
+      p_skills: skills,
+      p_certifications: certificationsWithUrls,
+    });
+
+    if (error) {
+      console.error(error);
       alert('Submission failed.');
       return;
     }
 
+    console.log('Created resume_id:', data); // the returned v_resume_id
     alert('Submitted successfully!');
     if (onResumeSubmit) onResumeSubmit();
-
-    alert('Resume submitted successfully to Naomi Cuerdo (09345234576)!');
-    if (onResumeSubmit) {
-      onResumeSubmit();
-    }
   };
 
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -455,7 +497,8 @@ export function ResumeBuilder({ onResumeSubmit }: ResumeBuilderProps = {}) {
       organization: '',
       dateIssued: '',
       proofFile: null,
-      proofFileName: ''
+      proofFileName: '',
+      proofUrl: ''
     }]);
   };
 
