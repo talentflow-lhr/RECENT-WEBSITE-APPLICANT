@@ -508,7 +508,6 @@ export function ProfileSettings() {
                   </select>
                 </div>
               </div>
-// line 511-529
               {/* Gender */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
