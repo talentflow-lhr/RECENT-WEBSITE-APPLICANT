@@ -362,12 +362,6 @@ export function ProfileSettings() {
     }
   };
 
-  const handleCancel = () => {
-    setTempProfile(profile);
-    setEditingSection(null);
-    setUsernameAvailable(null);
-  };
-
   const handleSameAsPresent = (checked: boolean) => {
     setSameAsPresent(checked);
     if (checked) {
