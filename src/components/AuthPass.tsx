@@ -56,7 +56,7 @@ const INACTIVITY_TIMEOUT = 30 * 60 * 1000; // 30 minutes
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [account, setAccountState] = useState<Account | null>(() => {
-    // Check if session already expired before restoring
+    // Check expiry before restoring session
     const expiry = localStorage.getItem("session_expiry");
     if (expiry && Date.now() > parseInt(expiry)) {
       localStorage.removeItem("account");
@@ -73,40 +73,40 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setAccountState(acc);
     if (acc) {
       localStorage.setItem("account", JSON.stringify(acc));
+      // Set expiry immediately on login
+      const expiry = Date.now() + INACTIVITY_TIMEOUT;
+      localStorage.setItem("session_expiry", expiry.toString());
     } else {
       localStorage.removeItem("account");
       localStorage.removeItem("session_expiry");
     }
   };
 
-  const logout = () => {
-    setAccount(null);
-  };
-
-  const resetTimer = () => {
-    if (inactivityTimer.current) clearTimeout(inactivityTimer.current);
-
-    const expiry = Date.now() + INACTIVITY_TIMEOUT;
-    localStorage.setItem("session_expiry", expiry.toString());
-
-    inactivityTimer.current = setTimeout(() => {
-      logout();
-      alert("You have been logged out due to inactivity.");
-    }, INACTIVITY_TIMEOUT);
-  };
-
   useEffect(() => {
     if (!account) return;
 
-    const events = ["mousemove", "mousedown", "keypress", "scroll", "touchstart", "click"];
-    const handleActivity = () => resetTimer();
+    const resetTimer = () => {
+      if (inactivityTimer.current) clearTimeout(inactivityTimer.current);
 
-    resetTimer(); // start timer on login
-    events.forEach(event => window.addEventListener(event, handleActivity));
+      const expiry = Date.now() + INACTIVITY_TIMEOUT;
+      localStorage.setItem("session_expiry", expiry.toString());
+
+      inactivityTimer.current = setTimeout(() => {
+        setAccountState(null);
+        localStorage.removeItem("account");
+        localStorage.removeItem("session_expiry");
+        alert("You have been logged out due to inactivity.");
+      }, INACTIVITY_TIMEOUT);
+    };
+
+    const events = ["mousemove", "mousedown", "keypress", "scroll", "touchstart", "click"];
+
+    resetTimer(); // start timer when logged in
+    events.forEach(event => window.addEventListener(event, resetTimer));
 
     return () => {
       if (inactivityTimer.current) clearTimeout(inactivityTimer.current);
-      events.forEach(event => window.removeEventListener(event, handleActivity));
+      events.forEach(event => window.removeEventListener(event, resetTimer));
     };
   }, [account]);
 
