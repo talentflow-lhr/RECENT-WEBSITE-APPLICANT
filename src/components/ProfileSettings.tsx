@@ -1,6 +1,7 @@
 import { User, Mail, Phone, MapPin, Lock, FileText, Check, X, Calendar, AlertCircle, Briefcase, Edit2, Save, Upload, Image as ImageIcon } from 'lucide-react';
 import { useAuth } from "./AuthPass";
 import { useState, useEffect } from 'react';
+import { supabase } from "./supabaseClient";
 
 interface Applicant {
   app_first_name?: string;
@@ -23,8 +24,16 @@ interface Applicant {
   app_passport_expiry_date?: string;
   app_nationality?: string;
   app_preference?: string[];
-  // line 27
   app_gender?: string;
+  emergency_contact_name?: string;
+  emergency_relationship?: string;
+  emergency_contact_number?: string;
+  provincial_country?: string;
+  provincial_province?: string;
+  provincial_city?: string;
+  provincial_contact_person?: string;
+  provincial_mobile?: string;
+}
 }
 
 interface Account {
@@ -93,7 +102,7 @@ export function ProfileSettings() {
     confirmPassword: '',
   });*/
 
-  const { account } = useAuth();
+  const { account, setAccount } = useAuth();
 
   const [profile, setProfile] = useState({
       firstName: '',
@@ -169,8 +178,17 @@ export function ProfileSettings() {
     
         nationality: applicant?.app_nationality || '',
         preferredJobFields: applicant?.app_preference || [],
-        // line 173
+
         gender: applicant?.app_gender || '',
+        
+        emergencyContactName: applicant?.emergency_contact_name || '',
+        emergencyRelationship: applicant?.emergency_relationship || '',
+        emergencyContactNumber: applicant?.emergency_contact_number || '',
+        provincialCountry: applicant?.provincial_country || '',
+        provincialProvince: applicant?.provincial_province || '',
+        provincialCity: applicant?.provincial_city || '',
+        provincialContactPerson: applicant?.provincial_contact_person || '',
+        provincialMobile: applicant?.provincial_mobile || '',
       }));
     }, [account]);
   
@@ -187,26 +205,30 @@ export function ProfileSettings() {
   // Mock list of taken usernames
   const takenUsernames = ['admin', 'user', 'test', 'john', 'jane', 'naomi', 'landbase'];
 
-  const checkUsername = (username: string) => {
+  const checkUsername = async (username: string) => {
     if (username.length < 3) {
       setUsernameAvailable(null);
       return;
     }
-
     setUsernameChecking(true);
-    
-    setTimeout(() => {
-      const isTaken = takenUsernames.includes(username.toLowerCase());
-      setUsernameAvailable(!isTaken);
-      setUsernameChecking(false);
-    }, 500);
+  
+    const { data } = await supabase
+      .from("t_account")
+      .select("account_id")
+      .eq("acc_username", username)
+      .neq("account_id", account?.account_id) // exclude current user
+      .maybeSingle();
+  
+    setUsernameAvailable(!data);
+    setUsernameChecking(false);
   };
-
-  const handleUsernameChange = (value: string) => {
+  
+  // also make handleUsernameChange async
+  const handleUsernameChange = async (value: string) => {
     setTempProfile({ ...tempProfile, username: value });
     setUsernameAvailable(null);
     if (value.length >= 3) {
-      checkUsername(value);
+      checkUsername(value); // now calls supabase
     }
   };
 
@@ -325,8 +347,62 @@ export function ProfileSettings() {
   
         if (error) throw error;
       }
+
+      if (section === "password") {
+        if (!tempProfile.currentPassword) {
+          alert("Please enter your current password");
+          return;
+        }
+        if (tempProfile.newPassword !== tempProfile.confirmPassword) {
+          alert("New passwords do not match");
+          return;
+        }
+        if (tempProfile.newPassword.length < 8) {
+          alert("Password must be at least 8 characters");
+          return;
+        }
+      
+        // Verify current password first
+        const { data: check } = await supabase
+          .from("t_account")
+          .select("account_id")
+          .eq("account_id", account.account_id)
+          .eq("acc_password", tempProfile.currentPassword)
+          .maybeSingle();
+      
+        if (!check) {
+          alert("Current password is incorrect");
+          return;
+        }
+      
+        const { error } = await supabase
+          .from("t_account")
+          .update({ acc_password: tempProfile.newPassword })
+          .eq("account_id", account.account_id);
+      
+        if (error) throw error;
+      }
   
       // 🔥 Success
+      const { data: refreshed } = await supabase
+        .from("t_account")
+        .select(`
+          account_id, applicant_id, acc_username, acc_email, is_active,
+          t_applicant (
+            app_first_name, app_middle_name, app_last_name, app_email,
+            app_present_tele_mobile, app_present_address_country,
+            app_present_address_province, app_present_address_city,
+            app_dob_day, app_dob_month, app_dob_year, app_marital_status,
+            app_height, app_weight, app_passport_number, app_passport_place,
+            app_passport_issue_date, app_passport_expiry_date,
+            app_nationality, app_preference, app_gender
+          )
+        `)
+        .eq("account_id", account.account_id)
+        .single();
+      
+      if (refreshed) setAccount(refreshed); // updates context AND localStorage
+      
       setProfile(tempProfile);
       setEditingSection(null);
       alert("Saved successfully!");
