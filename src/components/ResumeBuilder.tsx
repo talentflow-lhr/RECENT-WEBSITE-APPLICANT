@@ -377,10 +377,17 @@ export function ResumeBuilder({ onResumeSubmit }: ResumeBuilderProps = {}) {
       })
     );
 
-    const {dob_year, dob_month, dob_day} = personalInfo.dateOfBirth;
+    // Separating date of birth parts first, since they are separated in the database
+    let [dob_year, dob_month, dob_day] = personalInfo.dateOfBirth
+    ? personalInfo.dateOfBirth.split('-').map(Number)  // ← convert to numbers here
+    : [null, null, null];
 
+    // submitting data to a transaction function in the database, to gurantee atomicity
     const { data, error } = await supabase.rpc('submit_resume', {
       p_applicant_id: account.applicant_id,
+      p_dob_year: dob_year,
+      p_dob_month: dob_month,
+      p_dob_day: dob_day,
       p_highest_edu: highestEducation,
       p_education: education,
       p_work_experiences: workExperiences,
