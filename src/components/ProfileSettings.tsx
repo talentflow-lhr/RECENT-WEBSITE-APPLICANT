@@ -629,7 +629,6 @@ export function ProfileSettings() {
               </div>
               <div>
                 <p className="text-sm text-gray-500 mb-1">Gender</p>
-                // line 634
                 <p className="text-gray-900 font-medium capitalize">{profile.gender?.replace('-', ' ') || 'Not set'}</p>
               </div>
               <div>
