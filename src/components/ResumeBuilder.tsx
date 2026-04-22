@@ -2,6 +2,17 @@ import { useState, useRef, useEffect } from 'react';
 import svgPaths from '../imports/svg-65zdysylli';
 import imgImageLandbase from 'figma:asset/636ded4fbbb48605dae08d3a89a37f53cf3273be.png';
 import { Download, Plus, Trash2, Eye, EyeOff, Upload, X, FileText, Check, ChevronDown, Star, Briefcase, MapPin, ArrowRight, Calendar } from 'lucide-react';
+import { supabase } from "./supabaseClient";
+import { useAuth } from "./AuthPass";
+
+
+import * as pdfjsLib from 'pdfjs-dist';
+import workerSrc from 'pdfjs-dist/build/pdf.worker.mjs?url';
+
+pdfjsLib.GlobalWorkerOptions.workerSrc = workerSrc;
+
+import { createWorker } from 'tesseract.js';
+
 
 // Export ResumeData type for use in other components
 export interface ResumeData {
@@ -110,13 +121,143 @@ interface Certification {
   dateIssued: string;
   proofFile?: File | null;
   proofFileName?: string;
+  proofUrl?: string | null;
 }
 
 interface ResumeBuilderProps {
   onResumeSubmit?: () => void;
 }
 
+const formatDateToMonthYear = (dateString: string): string => {
+  const [year, month] = dateString.split('-');
+  return `${['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][parseInt(month,10)-1]} ${year}`;
+};
+
+const loadImage = (src: string): Promise<HTMLImageElement> => {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => resolve(img);
+    img.onerror = reject;
+    img.src = src;
+  });
+};
+
+const parsePdfToImages = async (pdfFile: File): Promise<HTMLImageElement> => {
+  const arrayBuffer = await pdfFile.arrayBuffer();
+  const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+
+  const numPages = Math.min(6, pdf.numPages);
+  const pages = [];
+
+  for (let i = 1; i <= numPages; i++) {
+    const page = await pdf.getPage(i);
+    const viewport = page.getViewport({ scale: 1.5 });
+    pages.push({ page, viewport });
+  }
+
+  const totalHeight = pages.reduce((sum, p) => sum + p.viewport.height, 0);
+  const maxWidth = Math.max(...pages.map(p => p.viewport.width));
+
+  const canvas = document.createElement('canvas');
+  const context = canvas.getContext('2d')!;
+  canvas.width = maxWidth;
+  canvas.height = totalHeight;
+
+  let yOffset = 0;
+  for (const { page, viewport } of pages) {
+    context.save();
+    context.translate(0, yOffset);
+    await page.render({ canvasContext: context, viewport, canvas }).promise;
+    context.restore();
+    yOffset += viewport.height;
+  }
+
+  const img = new Image();
+  const dataUrl = canvas.toDataURL('image/png');
+  return loadImage(dataUrl);
+};
+
+const parseResumeTesseract = async (resumeImg: HTMLImageElement | HTMLCanvasElement): Promise<string> => {
+
+  const worker = await createWorker('eng', 1, {
+    logger: (m: { status: string; progress: number }) => {
+      console.log(`${m.status}: ${Math.round(m.progress * 100)}%`);
+    }
+  });
+
+  try {
+    const { data } = await worker.recognize(resumeImg);
+    return data.text;
+  } finally {
+    await worker.terminate();
+  }
+};
+
+
+/**
+ * Converts an image or canvas to a grayscale canvas.
+ * @param source - HTMLImageElement or HTMLCanvasElement
+ * @returns HTMLCanvasElement with grayscale image data
+ */
+function convertToGrayscale(source: HTMLImageElement | HTMLCanvasElement): HTMLCanvasElement {
+    // Create a canvas element
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d');
+    if (!ctx) throw new Error('Unable to get 2D context');
+
+    // Set canvas dimensions to match the source
+    canvas.width = source.width;
+    canvas.height = source.height;
+
+    // Draw the source image onto the canvas
+    if (source instanceof HTMLImageElement) {
+        ctx.drawImage(source, 0, 0, canvas.width, canvas.height);
+    } else if (source instanceof HTMLCanvasElement) {
+        ctx.drawImage(source, 0, 0);
+    }
+
+    // Get pixel data
+    const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+    const data = imageData.data;
+
+    // Convert each pixel to grayscale using luminosity formula
+    for (let i = 0; i < data.length; i += 4) {
+        const r = data[i];
+        const g = data[i + 1];
+        const b = data[i + 2];
+        // Standard luminosity formula: 0.299*R + 0.587*G + 0.114*B
+        const gray = Math.round(0.299 * r + 0.587 * g + 0.114 * b);
+        data[i] = gray;     // Red
+        data[i + 1] = gray; // Green
+        data[i + 2] = gray; // Blue
+        // Alpha remains unchanged (data[i+3])
+    }
+
+    // Put the modified data back
+    ctx.putImageData(imageData, 0, 0);
+
+    return canvas;
+}
+
+const parseResumeLLM = async (resumeImg: HTMLImageElement): Promise<Record<string, unknown>> => {
+
+  const grayscaleCanvas = convertToGrayscale(resumeImg);
+
+  const ocrText = await parseResumeTesseract(grayscaleCanvas)
+
+  const { data, error } = await supabase.functions.invoke('Resume-LLM-Structure', {
+    body: { ocrText },
+  })
+
+  if (error) throw new Error(error.message)
+
+  return data.message as Record<string, unknown>
+};
+
 export function ResumeBuilder({ onResumeSubmit }: ResumeBuilderProps = {}) {
+
+  const { account } = useAuth();
+
   const [currentStep, setCurrentStep] = useState(1);
   const [showPreview, setShowPreview] = useState(false);
   const [showUploadModal, setShowUploadModal] = useState(false);
@@ -195,45 +336,85 @@ export function ResumeBuilder({ onResumeSubmit }: ResumeBuilderProps = {}) {
     }
   };
 
-  const handleSubmit = () => {
-    alert('Resume submitted successfully to Naomi Cuerdo (09345234576)!');
-    if (onResumeSubmit) {
-      onResumeSubmit();
+  const uploadCertProof = async (file: File, resumeId: number) => {
+    const filePath = `cert-proofs/${resumeId}/${file.name}`;
+
+    const { error } = await supabase.storage
+      .from('certificates')        // your storage bucket name
+      .upload(filePath, file, { upsert: true });
+
+    if (error) throw error;
+
+    // get the public URL back
+    const { data } = supabase.storage
+      .from('certificates')
+      .getPublicUrl(filePath);
+
+    return data.publicUrl;         // store this in your DB
+  };
+
+  const handleSubmit = async () => {
+
+    if (!account) return null;
+
+    const list_of_education_levels = [
+      "elementary",
+      "junior_high_school",
+      "senior_high_school",
+      "college_graduate",
+      "masters",
+      "phd"
+    ];
+
+    const highestEducation = education.reduce((highest, edu) => {
+      const currentIndex = list_of_education_levels.indexOf(edu.level);
+      const highestIndex = list_of_education_levels.indexOf(highest);
+      return currentIndex > highestIndex ? edu.level : highest;
+    }, '');
+
+    const certificationsWithUrls = await Promise.all(
+      certifications.map(async (cert) => {
+        if (cert.proofFile) {
+          cert.proofUrl = await uploadCertProof(cert.proofFile, account.applicant_id);
+        }
+        const { proofFile, proofFileName, ...rest } = cert;
+        return rest;  // proofUrl is now included, File objects are stripped
+      })
+    );
+
+    // Separating date of birth parts first, since they are separated in the database
+    let [dob_year, dob_month, dob_day] = personalInfo.dateOfBirth
+    ? personalInfo.dateOfBirth.split('-').map(Number)  // ← convert to numbers here
+    : [null, null, null];
+
+    // submitting data to a transaction function in the database, to gurantee atomicity
+    const { data, error } = await supabase.rpc('submit_resume', {
+      p_applicant_id: account.applicant_id,
+      p_dob_year: dob_year,
+      p_dob_month: dob_month,
+      p_dob_day: dob_day,
+      p_highest_edu: highestEducation,
+      p_education: education,
+      p_work_experiences: workExperiences,
+      p_skills: skills,
+      p_certifications: certificationsWithUrls,
+    });
+
+    if (error) {
+      console.error(error);
+      alert('Submission failed.');
+      return;
     }
+
+    console.log('Created resume_id:', data); // the returned v_resume_id
+    alert('Submitted successfully!');
+    if (onResumeSubmit) onResumeSubmit();
   };
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleUploadClick = () => {
     fileInputRef.current?.click();
-  };
-
-  const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (file) {
-      // Check file type
-      const validTypes = ['application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'];
-      if (!validTypes.includes(file.type)) {
-        alert('Please upload a PDF or Word document (.pdf, .doc, .docx)');
-        return;
-      }
-      
-      // Check file size (max 5MB)
-      if (file.size > 5 * 1024 * 1024) {
-        alert('File size must be less than 5MB');
-        return;
-      }
-
-      setResumeUploaded(true);
-      setShowUploadModal(true);
-      
-      // In a real application, you would parse the file here
-      // For now, we'll just show a success message
-      setTimeout(() => {
-        setShowUploadModal(false);
-        alert(`Resume "${file.name}" uploaded successfully! You can now edit or submit your resume.`);
-      }, 1500);
-    }
   };
 
   const addWorkExperience = () => {
@@ -328,7 +509,8 @@ export function ResumeBuilder({ onResumeSubmit }: ResumeBuilderProps = {}) {
       organization: '',
       dateIssued: '',
       proofFile: null,
-      proofFileName: ''
+      proofFileName: '',
+      proofUrl: ''
     }]);
   };
 
@@ -340,6 +522,141 @@ export function ResumeBuilder({ onResumeSubmit }: ResumeBuilderProps = {}) {
     const updated = [...certifications];
     updated[index] = { ...updated[index], [field]: value };
     setCertifications(updated);
+  };
+
+  const handleUploadResumeFieldsPopulation = (resumeJSON: Record<string, unknown>) => {
+    // --- Personal Info ---
+    const p = resumeJSON.personal_info as Record<string, string> | undefined;
+    if (p) {
+      setPersonalInfo({
+        firstName:     p.first_name      ?? '',
+        middleInitial: p.middle_initial  ?? '',
+        lastName:      p.last_name       ?? '',
+        dateOfBirth:   p.date_of_birth   ?? '',   // was missing
+        city:          p.city            ?? '',
+        province:      p.province        ?? '',
+        country:       p.country         ?? '',
+        email:         p.email           ?? '',
+        phone:         p.phone           ?? '',
+      });
+    }
+
+    // --- Work Experience ---
+    const experiences = resumeJSON.experiences as Record<string, unknown>[] | undefined;
+    if (experiences && experiences.length > 0) {
+      setWorkExperiences(experiences.map((exp) => ({
+        position:      (exp.position     as string)  ?? '',
+        company:       (exp.company      as string)  ?? '',
+        city:          (exp.city         as string)  ?? '',
+        stateProvince: (exp.province     as string)  ?? '',
+        country:       (exp.country      as string)  ?? '',   // was missing
+        startDate:     (exp.startDate    as string)  ?? '',
+        endDate:       (exp.endDate      as string)  ?? '',
+        current:       (exp.current      as boolean) ?? false,
+        description:   (exp.description  as string)  ?? '',
+      })));
+    }
+
+    // --- Education ---
+    const educationEntries = resumeJSON.education as Record<string, unknown>[] | undefined;
+    if (educationEntries && educationEntries.length > 0) {
+      setEducation(educationEntries.map((edu) => ({
+        level:         (edu.educational_level as string) ?? '',   // was missing
+        degree:        (edu.degree            as string) ?? '',
+        school:        (edu.school            as string) ?? '',
+        city:          (edu.city              as string) ?? '',
+        stateProvince: (edu.province          as string) ?? '',
+        country:       (edu.country           as string) ?? '',   // was missing
+        startDate:     (edu.startDate         as string) ?? '',
+        endDate:       (edu.endDate           as string) ?? '',
+        grade:         (edu.grade             as string) ?? '',   // was missing
+        description:   (edu.info              as string) ?? '',   // was missing / wrong key
+        achievements:  (edu.grade_honors      as string) ?? '',   // more accurate mapping
+      })));
+    }
+
+    // --- Skills ---
+    const skillEntries = resumeJSON.skills as Record<string, string>[] | undefined;
+    if (skillEntries && skillEntries.length > 0) {
+      setSkills(skillEntries.map((skill) => {
+        const cat = skill.skill_category;
+        const category: 'technical' | 'soft' =
+          cat === 'technical' ? 'technical' : 'soft';   // normalize extras to 'soft'
+        return {
+          name:     skill.skill_name        ?? '',
+          level:    skill.proficiency_level ?? '',
+          category,
+        };
+      }));
+    }
+
+    // --- Certifications ---
+    const certEntries = resumeJSON.certificates as Record<string, string>[] | undefined;
+    if (certEntries && certEntries.length > 0) {
+      setCertifications(certEntries.map((cert) => {
+        const rawType = (cert.cred_type ?? '').toLowerCase();
+        const type: 'certificate' | 'training' =
+          rawType === 'training' ? 'training' : 'certificate';   // was missing
+        return {
+          name:          cert.certificate_title ?? '',
+          type,
+          organization:  cert.issuer            ?? '',
+          dateIssued:    cert.date_obtained     ?? '',
+          proofFile:     null,
+          proofFileName: '',
+        };
+      }));
+    }
+  };
+
+  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      // Check file type
+
+      const imgFileTypes = ['image/jpeg', 'image/png', 'image/webp']
+      const validTypes = [
+        'application/pdf',
+        'application/msword',
+        'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+        ...imgFileTypes
+      ];
+      if (!validTypes.includes(file.type)) {
+        alert('Please upload a PDF or Word document (.pdf, .doc, .docx)');
+        return;
+      }
+
+      // Check file size (max 5MB)
+      if (file.size > 5 * 1024 * 1024) {
+        alert('File size must be less than 5MB');
+        return;
+      }
+
+      try {
+        let resumeImg: HTMLImageElement;
+
+        if (imgFileTypes.includes(file.type)) {
+          resumeImg = await loadImage(URL.createObjectURL(file));
+        } else if (file.type === 'application/pdf') {
+          resumeImg = await parsePdfToImages(file);
+        } else {
+          alert('Word documents are not yet supported for auto-parsing.');
+          setShowUploadModal(false);
+          return;
+        }
+
+        const resumeJSON = await parseResumeLLM(resumeImg);
+        handleUploadResumeFieldsPopulation(resumeJSON);
+        setResumeUploaded(true);
+        setShowUploadModal(false);
+        alert(`Resume "${file.name}" parsed and fields populated successfully!`);
+
+      } catch (err) {
+        console.error('Resume parsing failed:', err);
+        setShowUploadModal(false);
+        alert('Failed to parse resume. Please fill in the fields manually.');
+      }
+    }
   };
 
   const steps = [
@@ -385,7 +702,7 @@ export function ResumeBuilder({ onResumeSubmit }: ResumeBuilderProps = {}) {
                             </p>
                           </div>
                           <p className="text-sm text-[#4a5565] whitespace-nowrap ml-4">
-                            {exp.startDate} - {exp.current ? 'Present' : exp.endDate}
+                            {formatDateToMonthYear(exp.startDate)} - {exp.current ? 'Present' : formatDateToMonthYear(exp.endDate)}
                           </p>
                         </div>
                         {exp.description && (
@@ -425,7 +742,7 @@ export function ResumeBuilder({ onResumeSubmit }: ResumeBuilderProps = {}) {
                             </p>
                           </div>
                           <p className="text-sm text-[#4a5565] whitespace-nowrap ml-4">
-                            {edu.startDate} - {edu.endDate}
+                            {formatDateToMonthYear(edu.startDate)} - {formatDateToMonthYear(edu.endDate)}
                           </p>
                         </div>
                         {edu.achievements && (
@@ -504,7 +821,7 @@ export function ResumeBuilder({ onResumeSubmit }: ResumeBuilderProps = {}) {
                         </p>
                         {cert.dateIssued && (
                           <p className="text-sm text-[#4a5565]">
-                            Date Issued: {cert.dateIssued}
+                            Date Issued: { formatDateToMonthYear(cert.dateIssued)}
                           </p>
                         )}
                       </div>
@@ -818,24 +1135,33 @@ export function ResumeBuilder({ onResumeSubmit }: ResumeBuilderProps = {}) {
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                               <div>
                                 <label className="block text-sm font-medium text-[#364153] mb-2">Start Date</label>
-                                <input
-                                  type="text"
-                                  value={exp.startDate}
-                                  onChange={(e) => updateWorkExperience(index, 'startDate', e.target.value)}
-                                  className="w-full bg-[#f3f3f5] rounded-lg px-3 py-2.5 text-sm text-gray-900 border-0 outline-none focus:ring-2 focus:ring-[#17960b]"
-                                  placeholder="Jan 2020"
-                                />
+                                <div className="relative">
+                                  <input
+                                    type="date"
+                                    value={exp.startDate}
+                                    onChange={(e) => updateWorkExperience(index, 'startDate', e.target.value)}
+                                    className="w-full bg-[#f3f3f5] rounded-lg pl-10 pr-3 py-2.5 text-sm text-gray-900 border-0 outline-none focus:ring-2 focus:ring-[#17960b]"
+                                  />
+                                  <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-500 pointer-events-none" />
+                                </div>
                               </div>
                               <div>
                                 <label className="block text-sm font-medium text-[#364153] mb-2">End Date</label>
-                                <input
-                                  type="text"
-                                  value={exp.current ? 'Present' : exp.endDate}
-                                  onChange={(e) => updateWorkExperience(index, 'endDate', e.target.value)}
-                                  className="w-full bg-[#f3f3f5] rounded-lg px-3 py-2.5 text-sm text-gray-900 border-0 outline-none focus:ring-2 focus:ring-[#17960b]"
-                                  placeholder="Present"
-                                  disabled={exp.current}
-                                />
+                                {exp.current ? (
+                                  <div className="w-full bg-[#f3f3f5] rounded-lg px-3 py-2.5 text-sm text-gray-900">
+                                    Present
+                                  </div>
+                                ) : (
+                                  <div className="relative">
+                                    <input
+                                      type="date"
+                                      value={exp.endDate}
+                                      onChange={(e) => updateWorkExperience(index, 'endDate', e.target.value)}
+                                      className="w-full bg-[#f3f3f5] rounded-lg pl-10 pr-3 py-2.5 text-sm text-gray-900 border-0 outline-none focus:ring-2 focus:ring-[#17960b]"
+                                    />
+                                    <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-500 pointer-events-none" />
+                                  </div>
+                                )}
                               </div>
                             </div>
                             <div className="flex items-center gap-2">
@@ -966,23 +1292,27 @@ export function ResumeBuilder({ onResumeSubmit }: ResumeBuilderProps = {}) {
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                               <div>
                                 <label className="block text-sm font-medium text-[#364153] mb-2">Start Date</label>
-                                <input
-                                  type="text"
-                                  value={edu.startDate}
-                                  onChange={(e) => updateEducation(index, 'startDate', e.target.value)}
-                                  className="w-full bg-[#f3f3f5] rounded-lg px-3 py-2.5 text-sm text-gray-900 border-0 outline-none focus:ring-2 focus:ring-[#17960b]"
-                                  placeholder="Aug 2016"
-                                />
+                                <div className="relative">
+                                  <input
+                                    type="date"
+                                    value={edu.startDate}
+                                    onChange={(e) => updateEducation(index, 'startDate', e.target.value)}
+                                    className="w-full bg-[#f3f3f5] rounded-lg pl-10 pr-3 py-2.5 text-sm text-gray-900 border-0 outline-none focus:ring-2 focus:ring-[#17960b]"
+                                  />
+                                  <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-500 pointer-events-none" />
+                                </div>
                               </div>
                               <div>
                                 <label className="block text-sm font-medium text-[#364153] mb-2">End Date</label>
-                                <input
-                                  type="text"
-                                  value={edu.endDate}
-                                  onChange={(e) => updateEducation(index, 'endDate', e.target.value)}
-                                  className="w-full bg-[#f3f3f5] rounded-lg px-3 py-2.5 text-sm text-gray-900 border-0 outline-none focus:ring-2 focus:ring-[#17960b]"
-                                  placeholder="Apr 2020"
-                                />
+                                <div className="relative">
+                                  <input
+                                    type="date"
+                                    value={edu.endDate}
+                                    onChange={(e) => updateEducation(index, 'endDate', e.target.value)}
+                                    className="w-full bg-[#f3f3f5] rounded-lg pl-10 pr-3 py-2.5 text-sm text-gray-900 border-0 outline-none focus:ring-2 focus:ring-[#17960b]"
+                                  />
+                                  <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-500 pointer-events-none" />
+                                </div>
                               </div>
                             </div>
                             <div>
@@ -1161,13 +1491,15 @@ export function ResumeBuilder({ onResumeSubmit }: ResumeBuilderProps = {}) {
                               </div>
                               <div>
                                 <label className="block text-sm font-medium text-[#364153] mb-2">Date Issued</label>
-                                <input
-                                  type="text"
-                                  value={cert.dateIssued}
-                                  onChange={(e) => updateCertification(index, 'dateIssued', e.target.value)}
-                                  className="w-full bg-[#f3f3f5] rounded-lg px-3 py-2.5 text-sm text-gray-900 border-0 outline-none focus:ring-2 focus:ring-[#17960b]"
-                                  placeholder="January 13, 2024"
-                                />
+                                <div className="relative">
+                                  <input
+                                    type="date"
+                                    value={cert.dateIssued}
+                                    onChange={(e) => updateCertification(index, 'dateIssued', e.target.value)}
+                                    className="w-full bg-[#f3f3f5] rounded-lg pl-10 pr-3 py-2.5 text-sm text-gray-900 border-0 outline-none focus:ring-2 focus:ring-[#17960b]"
+                                  />
+                                  <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-500 pointer-events-none" />
+                                </div>
                               </div>
                             </div>
                             <div>
