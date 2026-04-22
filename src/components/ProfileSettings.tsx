@@ -34,7 +34,6 @@ interface Applicant {
   provincial_contact_person?: string;
   provincial_mobile?: string;
 }
-}
 
 interface Account {
   account_id: number;
@@ -203,7 +202,7 @@ export function ProfileSettings() {
   const [passportFileName, setPassportFileName] = useState('');
 
   // Mock list of taken usernames
-  const takenUsernames = ['admin', 'user', 'test', 'john', 'jane', 'naomi', 'landbase'];
+ // const takenUsernames = ['admin', 'user', 'test', 'john', 'jane', 'naomi', 'landbase'];
 
   const checkUsername = async (username: string) => {
     if (username.length < 3) {
