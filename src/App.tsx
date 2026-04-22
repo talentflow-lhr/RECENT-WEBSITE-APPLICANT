@@ -94,7 +94,7 @@ export default function App() {
       case 'jobsforyou':
         return <JobsForYou onApply={handleApplyToJob} onSaveJob={handleSaveJob} savedJobIds={savedJobs.map(job => parseInt(job.id))} onNavigateToResume={() => setCurrentPage('resume')} />;
       case 'resume':
-        return <ResumeBuilder onResumeSubmit={() => setHasResume(true)} />;
+        return <ResumeBuilder onResumeSubmit={() => setCurrentPage('dashboard')} />;
       case 'dashboard':
         // Show preview if user hasn't completed resume, otherwise show full dashboard
         return hasResume ? (
