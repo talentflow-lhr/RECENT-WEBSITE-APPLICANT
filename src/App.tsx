@@ -14,6 +14,7 @@ import { JobApplication } from './components/JobApplication';
 import { SavedJobs } from './components/SavedJobs';
 import { LoginPage } from './components/LoginPage';
 import { AuthProvider } from "./components/AuthPass";
+import { useHasResume } from "./components/hooks/useHasResume";
 
 interface JobData {
   title: string;
@@ -37,7 +38,8 @@ export default function App() {
   const [isLoggedIn, setIsLoggedIn] = useState(false); // Set to false to show login page first
   const [selectedJob, setSelectedJob] = useState<JobData | undefined>(undefined);
   const [savedJobs, setSavedJobs] = useState<SavedJobData[]>([]);
-  const [hasResume, setHasResume] = useState(false); // Track if user has created/uploaded a resume
+  // const [hasResume, setHasResume] = useState(false); // Track if user has created/uploaded a resume
+  const hasResume = useHasResume()
 
   // Scroll to top whenever the page changes
   useEffect(() => {
