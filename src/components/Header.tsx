@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { User, Briefcase, Settings, LogOut, Menu, X, Bookmark } from 'lucide-react';
 import imgLogo from 'figma:asset/636ded4fbbb48605dae08d3a89a37f53cf3273be.png';
 import svgPaths from '../imports/svg-3nnvnkmfcx';
@@ -15,6 +15,18 @@ export function Header({ currentPage = 'jobs', onNavigate, isLoggedIn = false, o
   const { account } = useAuth();
   const [profileMenuOpen, setProfileMenuOpen] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
+        setProfileMenuOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
 
   return (
     <header className="bg-white border-b-[0.8px] border-[#e5e7eb] sticky top-0 z-50">
@@ -80,7 +92,7 @@ export function Header({ currentPage = 'jobs', onNavigate, isLoggedIn = false, o
 
           {/* Desktop User Profile Button */}
           {isLoggedIn && (
-            <div className="relative hidden lg:block">
+            <div className="relative hidden lg:block" ref={dropdownRef}>
               <button
                 onClick={() => setProfileMenuOpen(!profileMenuOpen)}
                 className="flex items-center gap-2 px-4 py-2 border-[0.8px] border-[#d1d5dc] rounded-[10px] hover:bg-gray-50 transition-colors"
@@ -147,8 +159,10 @@ export function Header({ currentPage = 'jobs', onNavigate, isLoggedIn = false, o
                   <div className="border-t border-gray-200 my-2" />
                   <button
                     onClick={() => {
-                      setProfileMenuOpen(false);
-                      onAuthClick?.();
+                      if (window.confirm("Are you sure you want to logout?")) {
+                        setProfileMenuOpen(false);
+                        onAuthClick?.();
+                      }
                     }}
                     className="w-full flex items-center gap-3 px-4 py-3 text-left text-red-600 hover:bg-red-50 transition-colors"
                   >
@@ -288,8 +302,10 @@ export function Header({ currentPage = 'jobs', onNavigate, isLoggedIn = false, o
                 <div className="border-t border-gray-200 my-2" />
                 <button
                   onClick={() => {
-                    setMobileMenuOpen(false);
-                    onAuthClick?.();
+                    if (window.confirm("Are you sure you want to logout?")) {
+                      setMobileMenuOpen(false);
+                      onAuthClick?.();
+                    }
                   }}
                   className="w-full flex items-center gap-3 px-4 py-3 text-left text-red-600 hover:bg-red-50 rounded-lg transition-colors"
                 >
