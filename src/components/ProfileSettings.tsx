@@ -25,14 +25,17 @@ interface Applicant {
   app_nationality?: string;
   app_preference?: string[];
   app_gender?: string;
-  emergency_contact_name?: string;
-  emergency_relationship?: string;
-  emergency_contact_number?: string;
-  provincial_country?: string;
-  provincial_province?: string;
-  provincial_city?: string;
-  provincial_contact_person?: string;
-  provincial_mobile?: string;
+   // Emergency
+  app_present_contact_person?: string;
+  app_emergency_relationship?: string;
+  app_emergency_contact_number?: string;
+  
+ // Provincial
+  app_province_address_country?: string;
+  app_province_address_province?: string;
+  app_province_address_city?: string;
+  app_province_contact_person?: string;
+  app_province_tele_mobile?: string;
 }
 
 interface Account {
@@ -180,14 +183,15 @@ export function ProfileSettings() {
 
         gender: applicant?.app_gender || '',
         
-        emergencyContactName: applicant?.emergency_contact_name || '',
-        emergencyRelationship: applicant?.emergency_relationship || '',
-        emergencyContactNumber: applicant?.emergency_contact_number || '',
-        provincialCountry: applicant?.provincial_country || '',
-        provincialProvince: applicant?.provincial_province || '',
-        provincialCity: applicant?.provincial_city || '',
-        provincialContactPerson: applicant?.provincial_contact_person || '',
-        provincialMobile: applicant?.provincial_mobile || '',
+        emergencyContactName:   applicant?.app_present_contact_person || '',
+        emergencyRelationship:  applicant?.app_emergency_relationship || '',
+        emergencyContactNumber: applicant?.app_emergency_contact_number || '',
+        
+        pprovincialCountry:       applicant?.app_province_address_country || '',
+        provincialProvince:      applicant?.app_province_address_province || '',
+        provincialCity:          applicant?.app_province_address_city || '',
+        provincialContactPerson: applicant?.app_province_contact_person || '',
+        provincialMobile:        applicant?.app_province_tele_mobile || '',
       }));
     }, [account]);
   
@@ -266,15 +270,15 @@ export function ProfileSettings() {
             app_first_name: tempProfile.firstName,
             app_middle_name: tempProfile.middleName,
             app_last_name: tempProfile.lastName,
-            app_dob_day: tempProfile.birthDay,
-            app_dob_month: tempProfile.birthMonth,
-            app_dob_year: tempProfile.birthYear,
+            app_dob_day:   tempProfile.birthDay   ? parseInt(tempProfile.birthDay)   : null,
+            app_dob_month: tempProfile.birthMonth ? parseInt(tempProfile.birthMonth) : null,
+            app_dob_year:  tempProfile.birthYear  ? parseInt(tempProfile.birthYear)  : null,
             app_gender: tempProfile.gender,
             app_nationality: tempProfile.nationality,
             app_present_tele_mobile: tempProfile.phone,
             app_marital_status: tempProfile.maritalStatus,
-            app_height: tempProfile.height,
-            app_weight: tempProfile.weight,
+            app_height: tempProfile.height ? parseFloat(tempProfile.height) : null,
+            app_weight: tempProfile.weight ? parseFloat(tempProfile.weight) : null,
           })
           .eq("applicant_id", account.applicant_id);
   
@@ -323,12 +327,11 @@ export function ProfileSettings() {
         const { error } = await supabase
           .from("t_applicant")
           .update({
-            emergency_contact_name: tempProfile.emergencyContactName,
-            emergency_relationship: tempProfile.emergencyRelationship,
-            emergency_contact_number: tempProfile.emergencyContactNumber,
+            app_present_contact_person:   tempProfile.emergencyContactName,
+            app_emergency_relationship:   tempProfile.emergencyRelationship,
+            app_emergency_contact_number: tempProfile.emergencyContactNumber,
           })
           .eq("applicant_id", account.applicant_id);
-  
         if (error) throw error;
       }
   
@@ -336,14 +339,13 @@ export function ProfileSettings() {
         const { error } = await supabase
           .from("t_applicant")
           .update({
-            provincial_country: tempProfile.provincialCountry,
-            provincial_province: tempProfile.provincialProvince,
-            provincial_city: tempProfile.provincialCity,
-            provincial_contact_person: tempProfile.provincialContactPerson,
-            provincial_mobile: tempProfile.provincialMobile,
+            app_province_address_country:  tempProfile.provincialCountry,
+            app_province_address_province: tempProfile.provincialProvince,
+            app_province_address_city:     tempProfile.provincialCity,
+            app_province_contact_person:   tempProfile.provincialContactPerson,
+            app_province_tele_mobile:      tempProfile.provincialMobile,
           })
           .eq("applicant_id", account.applicant_id);
-  
         if (error) throw error;
       }
 
@@ -391,10 +393,15 @@ export function ProfileSettings() {
             app_first_name, app_middle_name, app_last_name, app_email,
             app_present_tele_mobile, app_present_address_country,
             app_present_address_province, app_present_address_city,
+            app_present_contact_person,
             app_dob_day, app_dob_month, app_dob_year, app_marital_status,
             app_height, app_weight, app_passport_number, app_passport_place,
             app_passport_issue_date, app_passport_expiry_date,
-            app_nationality, app_preference, app_gender
+            app_nationality, app_preference, app_gender,
+            app_emergency_relationship, app_emergency_contact_number,
+            app_province_address_country, app_province_address_province,
+            app_province_address_city, app_province_contact_person,
+            app_province_tele_mobile
           )
         `)
         .eq("account_id", account.account_id)
