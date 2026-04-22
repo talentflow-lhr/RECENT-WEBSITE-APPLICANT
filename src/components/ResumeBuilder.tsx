@@ -128,6 +128,11 @@ interface ResumeBuilderProps {
   onResumeSubmit?: () => void;
 }
 
+const formatDateToMonthYear = (dateString: string): string => {
+  const [year, month] = dateString.split('-');
+  return `${['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][parseInt(month,10)-1]} ${year}`;
+};
+
 const loadImage = (src: string): Promise<HTMLImageElement> => {
   return new Promise((resolve, reject) => {
     const img = new Image();
@@ -697,7 +702,7 @@ export function ResumeBuilder({ onResumeSubmit }: ResumeBuilderProps = {}) {
                             </p>
                           </div>
                           <p className="text-sm text-[#4a5565] whitespace-nowrap ml-4">
-                            {exp.startDate} - {exp.current ? 'Present' : exp.endDate}
+                            {formatDateToMonthYear(exp.startDate)} - {exp.current ? 'Present' : formatDateToMonthYear(exp.endDate)}
                           </p>
                         </div>
                         {exp.description && (
@@ -737,7 +742,7 @@ export function ResumeBuilder({ onResumeSubmit }: ResumeBuilderProps = {}) {
                             </p>
                           </div>
                           <p className="text-sm text-[#4a5565] whitespace-nowrap ml-4">
-                            {edu.startDate} - {edu.endDate}
+                            {formatDateToMonthYear(edu.startDate)} - {formatDateToMonthYear(edu.endDate)}
                           </p>
                         </div>
                         {edu.achievements && (
@@ -816,7 +821,7 @@ export function ResumeBuilder({ onResumeSubmit }: ResumeBuilderProps = {}) {
                         </p>
                         {cert.dateIssued && (
                           <p className="text-sm text-[#4a5565]">
-                            Date Issued: {cert.dateIssued}
+                            Date Issued: { formatDateToMonthYear(cert.dateIssued)}
                           </p>
                         )}
                       </div>
@@ -1130,24 +1135,33 @@ export function ResumeBuilder({ onResumeSubmit }: ResumeBuilderProps = {}) {
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                               <div>
                                 <label className="block text-sm font-medium text-[#364153] mb-2">Start Date</label>
-                                <input
-                                  type="text"
-                                  value={exp.startDate}
-                                  onChange={(e) => updateWorkExperience(index, 'startDate', e.target.value)}
-                                  className="w-full bg-[#f3f3f5] rounded-lg px-3 py-2.5 text-sm text-gray-900 border-0 outline-none focus:ring-2 focus:ring-[#17960b]"
-                                  placeholder="Jan 2020"
-                                />
+                                <div className="relative">
+                                  <input
+                                    type="date"
+                                    value={exp.startDate}
+                                    onChange={(e) => updateWorkExperience(index, 'startDate', e.target.value)}
+                                    className="w-full bg-[#f3f3f5] rounded-lg pl-10 pr-3 py-2.5 text-sm text-gray-900 border-0 outline-none focus:ring-2 focus:ring-[#17960b]"
+                                  />
+                                  <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-500 pointer-events-none" />
+                                </div>
                               </div>
                               <div>
                                 <label className="block text-sm font-medium text-[#364153] mb-2">End Date</label>
-                                <input
-                                  type="text"
-                                  value={exp.current ? 'Present' : exp.endDate}
-                                  onChange={(e) => updateWorkExperience(index, 'endDate', e.target.value)}
-                                  className="w-full bg-[#f3f3f5] rounded-lg px-3 py-2.5 text-sm text-gray-900 border-0 outline-none focus:ring-2 focus:ring-[#17960b]"
-                                  placeholder="Present"
-                                  disabled={exp.current}
-                                />
+                                {exp.current ? (
+                                  <div className="w-full bg-[#f3f3f5] rounded-lg px-3 py-2.5 text-sm text-gray-900">
+                                    Present
+                                  </div>
+                                ) : (
+                                  <div className="relative">
+                                    <input
+                                      type="date"
+                                      value={exp.endDate}
+                                      onChange={(e) => updateWorkExperience(index, 'endDate', e.target.value)}
+                                      className="w-full bg-[#f3f3f5] rounded-lg pl-10 pr-3 py-2.5 text-sm text-gray-900 border-0 outline-none focus:ring-2 focus:ring-[#17960b]"
+                                    />
+                                    <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-500 pointer-events-none" />
+                                  </div>
+                                )}
                               </div>
                             </div>
                             <div className="flex items-center gap-2">
@@ -1278,23 +1292,27 @@ export function ResumeBuilder({ onResumeSubmit }: ResumeBuilderProps = {}) {
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                               <div>
                                 <label className="block text-sm font-medium text-[#364153] mb-2">Start Date</label>
-                                <input
-                                  type="text"
-                                  value={edu.startDate}
-                                  onChange={(e) => updateEducation(index, 'startDate', e.target.value)}
-                                  className="w-full bg-[#f3f3f5] rounded-lg px-3 py-2.5 text-sm text-gray-900 border-0 outline-none focus:ring-2 focus:ring-[#17960b]"
-                                  placeholder="Aug 2016"
-                                />
+                                <div className="relative">
+                                  <input
+                                    type="date"
+                                    value={edu.startDate}
+                                    onChange={(e) => updateEducation(index, 'startDate', e.target.value)}
+                                    className="w-full bg-[#f3f3f5] rounded-lg pl-10 pr-3 py-2.5 text-sm text-gray-900 border-0 outline-none focus:ring-2 focus:ring-[#17960b]"
+                                  />
+                                  <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-500 pointer-events-none" />
+                                </div>
                               </div>
                               <div>
                                 <label className="block text-sm font-medium text-[#364153] mb-2">End Date</label>
-                                <input
-                                  type="text"
-                                  value={edu.endDate}
-                                  onChange={(e) => updateEducation(index, 'endDate', e.target.value)}
-                                  className="w-full bg-[#f3f3f5] rounded-lg px-3 py-2.5 text-sm text-gray-900 border-0 outline-none focus:ring-2 focus:ring-[#17960b]"
-                                  placeholder="Apr 2020"
-                                />
+                                <div className="relative">
+                                  <input
+                                    type="date"
+                                    value={edu.endDate}
+                                    onChange={(e) => updateEducation(index, 'endDate', e.target.value)}
+                                    className="w-full bg-[#f3f3f5] rounded-lg pl-10 pr-3 py-2.5 text-sm text-gray-900 border-0 outline-none focus:ring-2 focus:ring-[#17960b]"
+                                  />
+                                  <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-500 pointer-events-none" />
+                                </div>
                               </div>
                             </div>
                             <div>
@@ -1473,13 +1491,15 @@ export function ResumeBuilder({ onResumeSubmit }: ResumeBuilderProps = {}) {
                               </div>
                               <div>
                                 <label className="block text-sm font-medium text-[#364153] mb-2">Date Issued</label>
-                                <input
-                                  type="text"
-                                  value={cert.dateIssued}
-                                  onChange={(e) => updateCertification(index, 'dateIssued', e.target.value)}
-                                  className="w-full bg-[#f3f3f5] rounded-lg px-3 py-2.5 text-sm text-gray-900 border-0 outline-none focus:ring-2 focus:ring-[#17960b]"
-                                  placeholder="January 13, 2024"
-                                />
+                                <div className="relative">
+                                  <input
+                                    type="date"
+                                    value={cert.dateIssued}
+                                    onChange={(e) => updateCertification(index, 'dateIssued', e.target.value)}
+                                    className="w-full bg-[#f3f3f5] rounded-lg pl-10 pr-3 py-2.5 text-sm text-gray-900 border-0 outline-none focus:ring-2 focus:ring-[#17960b]"
+                                  />
+                                  <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-500 pointer-events-none" />
+                                </div>
                               </div>
                             </div>
                             <div>
