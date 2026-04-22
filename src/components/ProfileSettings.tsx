@@ -210,28 +210,157 @@ export function ProfileSettings() {
     }
   };
 
-  const handleEdit = (section: string) => {
+ const handleEdit = (section: string) => {
     setEditingSection(section);
     setTempProfile(profile);
   };
+  
+  const handleCancel = () => {
+    setTempProfile(profile);
+    setEditingSection(null);
+    setUsernameAvailable(null);
+  };
+
 
   const handleSave = async (section: string) => {
-    if (!user) return;
+    if (!account) return;
   
-    const { error } = await supabase
-      .from('profiles')
-      .update(tempProfile)
-      .eq('id', user.id);
+    try {
+      // 🔹 BASIC INFORMATION
+      if (section === "basic") {
+        const { error: accError } = await supabase
+          .from("t_account")
+          .update({
+            acc_username: tempProfile.username,
+            acc_email: tempProfile.email,
+          })
+          .eq("account_id", account.account_id);
   
-    if (error) {
-      console.error(error);
-      alert("Failed to save");
-      return;
+        if (accError) throw accError;
+  
+        const { error: appError } = await supabase
+          .from("t_applicant")
+          .update({
+            app_first_name: tempProfile.firstName,
+            app_middle_name: tempProfile.middleName,
+            app_last_name: tempProfile.lastName,
+            app_dob_day: tempProfile.birthDay,
+            app_dob_month: tempProfile.birthMonth,
+            app_dob_year: tempProfile.birthYear,
+            app_gender: tempProfile.gender,
+            app_nationality: tempProfile.nationality,
+            app_present_tele_mobile: tempProfile.phone,
+            app_marital_status: tempProfile.maritalStatus,
+            app_height: tempProfile.height,
+            app_weight: tempProfile.weight,
+          })
+          .eq("applicant_id", account.applicant_id);
+  
+        if (appError) throw appError;
+      }
+  
+      // 🔹 PRESENT ADDRESS
+      if (section === "address") {
+        const { error } = await supabase
+          .from("t_applicant")
+          .update({
+            app_present_address_country: tempProfile.country,
+            app_present_address_province: tempProfile.province,
+            app_present_address_city: tempProfile.city,
+          })
+          .eq("applicant_id", account.applicant_id);
+  
+        if (error) throw error;
+      }
+  
+      // 🔹 JOB PREFERENCES
+      if (section === "jobs") {
+        const { error } = await supabase
+          .from("t_applicant")
+          .update({
+            app_preference: tempProfile.preferredJobFields,
+          })
+          .eq("applicant_id", account.applicant_id);
+  
+        if (error) throw error;
+      }
+  
+      // 🔹 PASSPORT INFO
+      if (section === "passport") {
+        const { error } = await supabase
+          .from("t_applicant")
+          .update({
+            app_passport_number: tempProfile.passportNumber,
+            app_passport_place: tempProfile.passportPlace,
+            app_passport_issue_date: tempProfile.passportIssueDate,
+            app_passport_expiry_date: tempProfile.passportExpiryDate,
+            // optional if you store file link:
+            // app_passport_pic_link: uploadedFileUrl
+          })
+          .eq("applicant_id", account.applicant_id);
+  
+        if (error) throw error;
+      }
+  
+      // 🔹 EMERGENCY CONTACT (using your NEW columns)
+      if (section === "emergency") {
+        const { error } = await supabase
+          .from("t_applicant")
+          .update({
+            app_emergency_contact_name: tempProfile.emergencyContactName,
+            app_emergency_relationship: tempProfile.emergencyRelationship,
+            app_emergency_contact_number: tempProfile.emergencyContactNumber,
+          })
+          .eq("applicant_id", account.applicant_id);
+  
+        if (error) throw error;
+      }
+  
+      // 🔹 PROVINCIAL ADDRESS
+      if (section === "provincial") {
+        const { error } = await supabase
+          .from("t_applicant")
+          .update({
+            app_province_address_country: tempProfile.provincialCountry,
+            app_province_address_province: tempProfile.provincialProvince,
+            app_province_address_city: tempProfile.provincialCity,
+            app_province_contact_person: tempProfile.provincialContactPerson,
+            app_province_tele_mobile: tempProfile.provincialMobile,
+          })
+          .eq("applicant_id", account.applicant_id);
+  
+        if (error) throw error;
+      }
+  
+      // 🔹 PASSWORD (as requested, simple version only)
+      if (section === "password") {
+        if (tempProfile.newPassword !== tempProfile.confirmPassword) {
+          alert("Passwords do not match");
+          return;
+        }
+  
+        const { error } = await supabase
+          .from("t_account")
+          .update({
+            acc_password: tempProfile.newPassword,
+          })
+          .eq("account_id", account.account_id);
+  
+        if (error) throw error;
+      }
+  
+      // ✅ SUCCESS UI UPDATE
+      setProfile(tempProfile);
+      setEditingSection(null);
+      setUsernameAvailable(null);
+  
+      alert("Saved successfully!");
+  
+    } catch (err) {
+      console.error(err);
+      alert("Failed to save changes");
     }
-
-  setProfile(tempProfile);
-  setEditingSection(null);
-};
+  };
 
   const handleCancel = () => {
     setTempProfile(profile);
