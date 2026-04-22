@@ -13,7 +13,7 @@ import { Footer } from './components/Footer';
 import { JobApplication } from './components/JobApplication';
 import { SavedJobs } from './components/SavedJobs';
 import { LoginPage } from './components/LoginPage';
-import { AuthProvider } from "./components/AuthPass";
+import { AuthProvider, useAuth } from "./components/AuthPass";
 
 interface JobData {
   title: string;
@@ -32,14 +32,17 @@ interface SavedJobData {
   savedDate: Date;
 }
 
-export default function App() {
-  const [currentPage, setCurrentPage] = useState<'jobs' | 'resume' | 'about' | 'dashboard' | 'applications' | 'profile' | 'jobsforyou' | 'apply' | 'savedjobs'>('jobs');
-  const [isLoggedIn, setIsLoggedIn] = useState(false); // Set to false to show login page first
+
+// ✅ Separate inner component so it can use useAuth inside AuthProvider
+function AppContent() {
+  const { account } = useAuth();
+  const isLoggedIn = !!account; // ✅ derived from context, persists on refresh
+
+  const [currentPage, setCurrentPage] = useState<'jobs' | 'resume' | 'about' | 'dashboard' | 'applications' | 'profile' | 'jobsforyou' | 'apply' | 'savedjobs'>('dashboard');
   const [selectedJob, setSelectedJob] = useState<JobData | undefined>(undefined);
   const [savedJobs, setSavedJobs] = useState<SavedJobData[]>([]);
-  const [hasResume, setHasResume] = useState(false); // Track if user has created/uploaded a resume
+  const [hasResume, setHasResume] = useState(false);
 
-  // Scroll to top whenever the page changes
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }, [currentPage]);
@@ -50,21 +53,17 @@ export default function App() {
   };
 
   const handleSaveJob = (job: any) => {
-    // Check if job is already saved
     const isAlreadySaved = savedJobs.some(savedJob => savedJob.id === job.id.toString());
-    
     if (isAlreadySaved) {
-      // Remove from saved jobs
       setSavedJobs(savedJobs.filter(savedJob => savedJob.id !== job.id.toString()));
     } else {
-      // Add to saved jobs
       const savedJob: SavedJobData = {
         id: job.id.toString(),
         title: job.title,
         company: job.company,
         location: job.location,
         salary: job.salary,
-        vacancies: '5', // Default value
+        vacancies: '5',
         posted: job.posted,
         savedDate: new Date()
       };
@@ -94,11 +93,10 @@ export default function App() {
       case 'resume':
         return <ResumeBuilder onResumeSubmit={() => setHasResume(true)} />;
       case 'dashboard':
-        // Show preview if user hasn't completed resume, otherwise show full dashboard
         return hasResume ? (
-          <ApplicantDashboard 
-            isLoggedIn={isLoggedIn} 
-            onBackToHome={() => setCurrentPage('jobs')} 
+          <ApplicantDashboard
+            isLoggedIn={isLoggedIn}
+            onBackToHome={() => setCurrentPage('jobs')}
             onNavigateToResumeBuilder={() => setCurrentPage('resume')}
             hasResume={hasResume}
           />
@@ -107,7 +105,7 @@ export default function App() {
             onNavigateToResumeBuilder={() => setCurrentPage('resume')}
             onBackToHome={() => setCurrentPage('jobs')}
           />
-        ); 
+        );
       case 'about':
         return <AboutUs />;
       case 'applications':
@@ -124,29 +122,33 @@ export default function App() {
   };
 
   return (
-    <AuthProvider>
-      <div className="min-h-screen bg-gray-50">
-        {!isLoggedIn ? (
-          <LoginPage 
-            onLogin={() => {
-              setIsLoggedIn(true);
-              setCurrentPage('dashboard'); // LANDING PAGE
-            }} 
+    <div className="min-h-screen bg-gray-50">
+      {!isLoggedIn ? (
+        <LoginPage
+          onLogin={() => setCurrentPage('dashboard')} // ✅ no more setIsLoggedIn needed
+        />
+      ) : (
+        <>
+          <Header
+            currentPage={currentPage}
+            onNavigate={setCurrentPage}
+            isLoggedIn={isLoggedIn}
+            onAuthClick={() => setCurrentPage('jobs')} // or handle logout here
           />
-        ) : (
-          <>
-            <Header
-              currentPage={currentPage}
-              onNavigate={setCurrentPage}
-              isLoggedIn={isLoggedIn}
-              onAuthClick={() => setIsLoggedIn(!isLoggedIn)}
-            />
-            {renderPage()}
-            {currentPage === 'jobs' && <ChatBot />}
-            <Footer onNavigate={setCurrentPage} />
-          </>
-        )}
-      </div>
+          {renderPage()}
+          {currentPage === 'jobs' && <ChatBot />}
+          <Footer onNavigate={setCurrentPage} />
+        </>
+      )}
+    </div>
+  );
+}
+
+// ✅ Outer component just wraps with AuthProvider
+export default function App() {
+  return (
+    <AuthProvider>
+      <AppContent />
     </AuthProvider>
   );
 }
