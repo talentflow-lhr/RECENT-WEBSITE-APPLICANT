@@ -35,8 +35,8 @@ interface SavedJobData {
 
 // ✅ Separate inner component so it can use useAuth inside AuthProvider
 function AppContent() {
-  const { account } = useAuth();
-  const isLoggedIn = !!account; // ✅ derived from context, persists on refresh
+  const { account, setAccount } = useAuth(); // add setAccount
+  const isLoggedIn = !!account;
 
   const [currentPage, setCurrentPage] = useState<'jobs' | 'resume' | 'about' | 'dashboard' | 'applications' | 'profile' | 'jobsforyou' | 'apply' | 'savedjobs'>('dashboard');
   const [selectedJob, setSelectedJob] = useState<JobData | undefined>(undefined);
@@ -124,16 +124,17 @@ function AppContent() {
   return (
     <div className="min-h-screen bg-gray-50">
       {!isLoggedIn ? (
-        <LoginPage
-          onLogin={() => setCurrentPage('dashboard')} // ✅ no more setIsLoggedIn needed
-        />
+        <LoginPage onLogin={() => setCurrentPage('dashboard')} />
       ) : (
         <>
           <Header
             currentPage={currentPage}
             onNavigate={setCurrentPage}
             isLoggedIn={isLoggedIn}
-            onAuthClick={() => setCurrentPage('jobs')} // or handle logout here
+            onAuthClick={() => {
+              setAccount(null); // ✅ real logout
+              setCurrentPage('dashboard');
+            }}
           />
           {renderPage()}
           {currentPage === 'jobs' && <ChatBot />}
