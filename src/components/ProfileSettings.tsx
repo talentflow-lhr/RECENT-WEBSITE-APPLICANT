@@ -2,6 +2,8 @@ import { User, Mail, Phone, MapPin, Lock, FileText, Check, X, Calendar, AlertCir
 import { useAuth } from "./AuthPass";
 import { useState, useEffect } from 'react';
 import { supabase } from "./supabaseClient";
+import { extractDocument } from "../lib/api";
+import { parsePassportMarkdown } from "../lib/parseMrz";
 
 interface Applicant {
   app_first_name?: string;
@@ -29,7 +31,7 @@ interface Applicant {
   app_present_contact_person?: string;
   app_emergency_relationship?: string;
   app_emergency_contact_number?: string;
-  
+
  // Provincial
   app_province_address_country?: string;
   app_province_address_province?: string;
@@ -65,39 +67,39 @@ export function ProfileSettings() {
     gender: 'male',
     email: 'john.doe@email.com',
     phone: '09345234576',
-    
+
     // Physical Information
     maritalStatus: 'single',
     height: '175',
     weight: '70',
-    
+
     // Preferred Job Fields
     preferredJobFields: ['Healthcare', 'Information Technology'] as string[],
-    
+
     // Present Address
     country: 'Philippines',
     province: 'Metro Manila',
     city: 'Manila',
-    
+
     // Emergency Contact
     emergencyContactName: 'Jane Doe',
     emergencyRelationship: 'sibling',
     emergencyContactNumber: '09123456789',
-    
+
     // Provincial Address
     provincialCountry: 'Philippines',
     provincialProvince: 'Cebu',
     provincialCity: 'Cebu City',
     provincialContactPerson: 'Maria Doe',
     provincialMobile: '09987654321',
-    
+
     // Passport Information
     passportNumber: 'P1234567',
     passportPlace: 'Manila, Philippines',
     passportIssueDate: '2020-01-15',
     passportExpiryDate: '2030-01-15',
     passportPicture:'';
-    
+
     // Password
     currentPassword: '',
     newPassword: '',
@@ -145,48 +147,48 @@ export function ProfileSettings() {
 
      useEffect(() => {
       if (!account) return;
-    
+
       const applicant = account.t_applicant;
-    
+
       setProfile(prev => ({
         ...prev,
-    
+
         // 🔥 FROM t_account
         username: account.acc_username || '',
         email: account.acc_email || applicant?.app_email || '',
-    
+
         // 🔥 FROM t_applicant
         firstName: applicant?.app_first_name || '',
         middleName: applicant?.app_middle_name || '',
         lastName: applicant?.app_last_name || '',
         phone: applicant?.app_present_tele_mobile || '',
-    
+
         country: applicant?.app_present_address_country || '',
         province: applicant?.app_present_address_province || '',
         city: applicant?.app_present_address_city || '',
-    
+
         birthDay: applicant?.app_dob_day || '',
         birthMonth: applicant?.app_dob_month || '',
         birthYear: applicant?.app_dob_year || '',
-    
+
         maritalStatus: applicant?.app_marital_status || '',
         height: applicant?.app_height || '',
         weight: applicant?.app_weight || '',
-    
+
         passportNumber: applicant?.app_passport_number || '',
         passportPlace: applicant?.app_passport_place || '',
         passportIssueDate: applicant?.app_passport_issue_date || '',
         passportExpiryDate: applicant?.app_passport_expiry_date || '',
-    
+
         nationality: applicant?.app_nationality || '',
         preferredJobFields: applicant?.app_preference || [],
 
         gender: applicant?.app_gender || '',
-        
+
         emergencyContactName:   applicant?.app_present_contact_person || '',
         emergencyRelationship:  applicant?.app_emergency_relationship || '',
         emergencyContactNumber: applicant?.app_emergency_contact_number || '',
-        
+
         pprovincialCountry:       applicant?.app_province_address_country || '',
         provincialProvince:      applicant?.app_province_address_province || '',
         provincialCity:          applicant?.app_province_address_city || '',
@@ -194,16 +196,19 @@ export function ProfileSettings() {
         provincialMobile:        applicant?.app_province_tele_mobile || '',
       }));
     }, [account]);
-  
+
   // Editing states for each section
   const [editingSection, setEditingSection] = useState<string | null>(null);
   const [tempProfile, setTempProfile] = useState(profile);
-  
+
   const [sameAsPresent, setSameAsPresent] = useState(false);
   const [usernameChecking, setUsernameChecking] = useState(false);
   const [usernameAvailable, setUsernameAvailable] = useState<boolean | null>(null);
   const [passportUploaded, setPassportUploaded] = useState(false);
   const [passportFileName, setPassportFileName] = useState('');
+  const [passportParsing, setPassportParsing] = useState(false);
+    const [passportParseError, setPassportParseError] = useState<string>('');
+    const [passportParseWarning, setPassportParseWarning] = useState<string>('');
 
   // Mock list of taken usernames
  // const takenUsernames = ['admin', 'user', 'test', 'john', 'jane', 'naomi', 'landbase'];
@@ -214,18 +219,18 @@ export function ProfileSettings() {
       return;
     }
     setUsernameChecking(true);
-  
+
     const { data } = await supabase
       .from("t_account")
       .select("account_id")
       .eq("acc_username", username)
       .neq("account_id", account?.account_id) // exclude current user
       .maybeSingle();
-  
+
     setUsernameAvailable(!data);
     setUsernameChecking(false);
   };
-  
+
   // also make handleUsernameChange async
   const handleUsernameChange = async (value: string) => {
     setTempProfile({ ...tempProfile, username: value });
@@ -239,7 +244,7 @@ export function ProfileSettings() {
     setEditingSection(section);
     setTempProfile(profile);
   };
-  
+
   const handleCancel = () => {
     setTempProfile(profile);
     setEditingSection(null);
@@ -249,7 +254,7 @@ export function ProfileSettings() {
 
   const handleSave = async (section: string) => {
     if (!account) return;
-  
+
     try {
       if (section === "basic") {
         // 🔹 Update t_account
@@ -260,9 +265,9 @@ export function ProfileSettings() {
             acc_email: tempProfile.email,
           })
           .eq("account_id", account.account_id);
-  
+
         if (accError) throw accError;
-  
+
         // 🔹 Update t_applicant
         const { error: appError } = await supabase
           .from("t_applicant")
@@ -281,10 +286,10 @@ export function ProfileSettings() {
             app_weight: tempProfile.weight ? parseFloat(tempProfile.weight) : null,
           })
           .eq("applicant_id", account.applicant_id);
-  
+
         if (appError) throw appError;
       }
-  
+
       if (section === "address") {
         const { error } = await supabase
           .from("t_applicant")
@@ -294,10 +299,10 @@ export function ProfileSettings() {
             app_present_address_city: tempProfile.city,
           })
           .eq("applicant_id", account.applicant_id);
-  
+
         if (error) throw error;
       }
-  
+
       if (section === "jobs") {
         const { error } = await supabase
           .from("t_applicant")
@@ -305,10 +310,10 @@ export function ProfileSettings() {
             app_preference: tempProfile.preferredJobFields,
           })
           .eq("applicant_id", account.applicant_id);
-  
+
         if (error) throw error;
       }
-  
+
       if (section === "passport") {
         const { error } = await supabase
           .from("t_applicant")
@@ -319,10 +324,10 @@ export function ProfileSettings() {
             app_passport_expiry_date: tempProfile.passportExpiryDate,
           })
           .eq("applicant_id", account.applicant_id);
-  
+
         if (error) throw error;
       }
-  
+
       if (section === "emergency") {
         const { error } = await supabase
           .from("t_applicant")
@@ -334,7 +339,7 @@ export function ProfileSettings() {
           .eq("applicant_id", account.applicant_id);
         if (error) throw error;
       }
-  
+
       if (section === "provincial") {
         const { error } = await supabase
           .from("t_applicant")
@@ -362,7 +367,7 @@ export function ProfileSettings() {
           alert("Password must be at least 8 characters");
           return;
         }
-      
+
         // Verify current password first
         const { data: check } = await supabase
           .from("t_account")
@@ -370,20 +375,20 @@ export function ProfileSettings() {
           .eq("account_id", account.account_id)
           .eq("acc_password", tempProfile.currentPassword)
           .maybeSingle();
-      
+
         if (!check) {
           alert("Current password is incorrect");
           return;
         }
-      
+
         const { error } = await supabase
           .from("t_account")
           .update({ acc_password: tempProfile.newPassword })
           .eq("account_id", account.account_id);
-      
+
         if (error) throw error;
       }
-  
+
       // 🔥 Success
       const { data: refreshed } = await supabase
         .from("t_account")
@@ -406,13 +411,13 @@ export function ProfileSettings() {
         `)
         .eq("account_id", account.account_id)
         .single();
-      
+
       if (refreshed) setAccount(refreshed); // updates context AND localStorage
-      
+
       setProfile(tempProfile);
       setEditingSection(null);
       alert("Saved successfully!");
-  
+
     } catch (err) {
       console.error(err);
       alert("Failed to save changes");
@@ -467,24 +472,93 @@ export function ProfileSettings() {
     'Real Estate',
   ];
 
-  const handlePassportUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
+    const handlePassportUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+      const file = e.target.files?.[0];
+      if (!file) return;
+
+      // ── Client-side validation ──────────────────────────────────────────────
       const validTypes = ['image/jpeg', 'image/png', 'image/jpg', 'application/pdf'];
       if (!validTypes.includes(file.type)) {
         alert('Please upload a valid passport image (JPG, PNG) or PDF');
         return;
       }
-      
       if (file.size > 5 * 1024 * 1024) {
         alert('File size must be less than 5MB');
         return;
       }
 
+      // ── Mark file as selected immediately so UI responds ───────────────────
       setPassportUploaded(true);
       setPassportFileName(file.name);
-    }
-  };
+      setPassportParseError('');
+      setPassportParseWarning('');
+      setPassportParsing(true);
+
+      try {
+        // ── Call docstrange backend ─────────────────────────────────────────
+        const { markdown } = await extractDocument(file);
+
+        // ── Parse the returned markdown for MRZ / labeled fields ───────────
+        const parsed = parsePassportMarkdown(markdown);
+
+        const hasData = Object.keys(parsed).some(
+          k => parsed[k as keyof typeof parsed] !== undefined && parsed[k as keyof typeof parsed] !== ''
+        );
+
+        if (!hasData) {
+          setPassportParseWarning(
+            'Could not automatically read passport data. Please fill in the fields manually.'
+          );
+          return;
+        }
+
+        // ── Merge extracted values into tempProfile ─────────────────────────
+        // Only overwrite fields that the parser actually found (no blanking of
+        // existing data when a field wasn't detected).
+        setTempProfile(prev => ({
+          ...prev,
+
+          // Passport section
+          ...(parsed.passportNumber   ? { passportNumber:    parsed.passportNumber }   : {}),
+          ...(parsed.passportPlace    ? { passportPlace:     parsed.passportPlace }    : {}),
+          ...(parsed.passportIssueDate  ? { passportIssueDate:  parsed.passportIssueDate }  : {}),
+          ...(parsed.passportExpiryDate ? { passportExpiryDate: parsed.passportExpiryDate } : {}),
+
+          // Personal fields — only pre-fill if the profile is still empty
+          // (avoids overwriting data the user has already confirmed)
+          ...(parsed.firstName && !prev.firstName ? { firstName: parsed.firstName } : {}),
+          ...(parsed.lastName  && !prev.lastName  ? { lastName:  parsed.lastName  } : {}),
+          ...(parsed.nationality && !prev.nationality ? { nationality: parsed.nationality } : {}),
+          ...(parsed.gender      && !prev.gender      ? { gender:      parsed.gender      } : {}),
+
+          // DOB — only pre-fill if all three parts are empty
+          ...((parsed.dobDay && parsed.dobMonth && parsed.dobYear &&
+               !prev.birthDay && !prev.birthMonth && !prev.birthYear)
+            ? { birthDay: parsed.dobDay, birthMonth: parsed.dobMonth, birthYear: parsed.dobYear }
+            : {}),
+        }));
+
+        const filledCount = [
+          parsed.passportNumber, parsed.passportPlace,
+          parsed.passportIssueDate, parsed.passportExpiryDate,
+          parsed.nationality, parsed.firstName, parsed.lastName,
+        ].filter(Boolean).length;
+
+        if (filledCount < 3) {
+          setPassportParseWarning(
+            'Some fields could not be read automatically. Please review and fill in any missing details.'
+          );
+        }
+
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : 'Extraction failed';
+        setPassportParseError(`Could not read passport: ${msg}. Please enter your details manually.`);
+      } finally {
+        setPassportParsing(false);
+        // Reset the input so the same file can be re-uploaded if needed
+        e.target.value = '';
+      }
+    };
 
   return (
     <div className="p-4 sm:p-6 md:p-8 bg-gray-50 min-h-screen">
@@ -794,7 +868,7 @@ export function ProfileSettings() {
               <div>
                 <p className="text-sm text-gray-500 mb-1">Date of Birth</p>
                 <p className="text-gray-900 font-medium">
-                  {profile.birthDay && profile.birthMonth && profile.birthYear 
+                  {profile.birthDay && profile.birthMonth && profile.birthYear
                     ? `${profile.birthMonth}/${profile.birthDay}/${profile.birthYear}`
                     : 'Not set'}
                 </p>
@@ -1342,37 +1416,65 @@ export function ProfileSettings() {
                 </div>
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-gray-700 font-medium mb-2">
-                    Upload Passport <span className="text-red-500">*</span>
-                  </label>
-                  <div className="space-y-3">
-                    <input
-                      type="file"
-                      id="passport-upload"
-                      accept="image/jpeg, image/png, image/jpg, application/pdf"
-                      onChange={handlePassportUpload}
-                      className="hidden"
-                    />
-                    <label
-                      htmlFor="passport-upload"
-                      className="flex items-center justify-center gap-2 px-6 py-3 bg-gradient-to-r from-[#ffca1a] to-[#17960b] text-white font-semibold rounded-lg cursor-pointer hover:shadow-lg transition-all duration-200 hover:scale-[1.02]"
-                    >
-                      <Upload className="w-5 h-5" />
-                      Choose File
+                  <div>
+                    <label className="block text-gray-700 font-medium mb-2">
+                      Upload Passport <span className="text-red-500">*</span>
                     </label>
-                    {passportFileName && (
-                      <div className="flex items-center gap-2 px-4 py-2 bg-green-50 border border-green-200 rounded-lg">
-                        <ImageIcon className="w-5 h-5 text-[#17960b]" />
-                        <span className="text-sm text-gray-700 font-medium truncate">{passportFileName}</span>
-                      </div>
-                    )}
-                    {!passportFileName && (
-                      <p className="text-xs text-gray-500">Accepted formats: JPG, PNG, PDF (Max 5MB)</p>
-                    )}
+                    <div className="space-y-3">
+                      <input
+                        type="file"
+                        id="passport-upload"
+                        accept="image/jpeg, image/png, image/jpg, application/pdf"
+                        onChange={handlePassportUpload}
+                        className="hidden"
+                        disabled={passportParsing}
+                      />
+                      <label
+                        htmlFor="passport-upload"
+                        className={`flex items-center justify-center gap-2 px-6 py-3 bg-gradient-to-r from-[#ffca1a] to-[#17960b] text-white font-semibold rounded-lg transition-all duration-200 ${
+                          passportParsing
+                            ? 'opacity-50 cursor-not-allowed'
+                            : 'cursor-pointer hover:shadow-lg hover:scale-[1.02]'
+                        }`}
+                      >
+                        <Upload className="w-5 h-5" />
+                        {passportParsing ? 'Reading passport...' : 'Choose File'}
+                      </label>
+
+                      {passportFileName && !passportParsing && (
+                        <div className="flex items-center gap-2 px-4 py-2 bg-green-50 border border-green-200 rounded-lg">
+                          <ImageIcon className="w-5 h-5 text-[#17960b]" />
+                          <span className="text-sm text-gray-700 font-medium truncate">{passportFileName}</span>
+                        </div>
+                      )}
+
+                      {!passportFileName && !passportParsing && (
+                        <p className="text-xs text-gray-500">Accepted formats: JPG, PNG, PDF (Max 5MB)</p>
+                      )}
+
+                      {passportParsing && (
+                        <div className="flex items-center gap-2 px-4 py-2 bg-blue-50 border border-blue-200 rounded-lg">
+                          <span className="inline-block w-4 h-4 border-2 border-blue-500 border-t-transparent rounded-full animate-spin flex-shrink-0" />
+                          <span className="text-sm text-blue-600">Extracting passport data…</span>
+                        </div>
+                      )}
+
+                      {passportParseWarning && !passportParsing && (
+                        <div className="flex items-center gap-2 px-4 py-2 bg-amber-50 border border-amber-200 rounded-lg">
+                          <AlertCircle className="w-4 h-4 text-amber-500 flex-shrink-0" />
+                          <span className="text-sm text-amber-700">{passportParseWarning}</span>
+                        </div>
+                      )}
+
+                      {passportParseError && !passportParsing && (
+                        <div className="flex items-center gap-2 px-4 py-2 bg-red-50 border border-red-200 rounded-lg">
+                          <X className="w-4 h-4 text-red-500 flex-shrink-0" />
+                          <span className="text-sm text-red-600">{passportParseError}</span>
+                        </div>
+                      )}
+                    </div>
                   </div>
                 </div>
-              </div>
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-4">
