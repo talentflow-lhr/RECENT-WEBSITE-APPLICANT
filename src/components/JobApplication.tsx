@@ -1,6 +1,6 @@
 import { useState } from "react";
 import svgPaths from "../imports/svg-65zdysylli";
-import imgImageLandbase from "figma:asset/636ded4fbbb48605dae08d3a89a37f53cf3273be.png";
+import imgImageLandbase from "../../imports/Landbase-removebg-preview.png";
 import { Download, Upload, CheckCircle2 } from "lucide-react";
 
 interface JobData {
