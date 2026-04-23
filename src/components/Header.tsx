@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { User, Briefcase, Settings, LogOut, Menu, X, Bookmark } from 'lucide-react';
-import imgLogo from 'figma:asset/636ded4fbbb48605dae08d3a89a37f53cf3273be.png';
+import imgLogo from '../../imports/Landbase-removebg-preview.png';
 import svgPaths from '../imports/svg-3nnvnkmfcx';
 import { useAuth } from "./AuthPass";
 
