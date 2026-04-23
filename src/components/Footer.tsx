@@ -1,5 +1,5 @@
 import { Mail, Phone, MapPin, Globe, Facebook, Linkedin, Twitter } from 'lucide-react';
-import logo from 'figma:asset/636ded4fbbb48605dae08d3a89a37f53cf3273be.png';
+import logo from '../../imports/Landbase-removebg-preview.png';
 
 interface FooterProps {
   onNavigate?: (page: 'jobs' | 'resume' | 'about' | 'dashboard' | 'applications' | 'profile' | 'jobsforyou' | 'apply' | 'savedjobs') => void;
