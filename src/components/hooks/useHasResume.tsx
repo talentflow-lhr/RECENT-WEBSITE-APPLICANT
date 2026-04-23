@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { supabase } from "../supabaseClient";
+import {useAuth} from "../AuthPass";
 
 
 export function useHasResume() {

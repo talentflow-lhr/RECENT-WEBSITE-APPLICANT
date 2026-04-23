@@ -1,6 +1,7 @@
 import { User, Mail, Phone, MapPin, Lock, FileText, Check, X, Calendar, AlertCircle, Briefcase, Edit2, Save, Upload, Image as ImageIcon } from 'lucide-react';
 import { useAuth } from "./AuthPass";
 import { useState, useEffect } from 'react';
+import { supabase } from "./supabaseClient";
 
 interface Applicant {
   app_first_name?: string;
@@ -23,6 +24,18 @@ interface Applicant {
   app_passport_expiry_date?: string;
   app_nationality?: string;
   app_preference?: string[];
+  app_gender?: string;
+   // Emergency
+  app_present_contact_person?: string;
+  app_emergency_relationship?: string;
+  app_emergency_contact_number?: string;
+  
+ // Provincial
+  app_province_address_country?: string;
+  app_province_address_province?: string;
+  app_province_address_city?: string;
+  app_province_contact_person?: string;
+  app_province_tele_mobile?: string;
 }
 
 interface Account {
@@ -48,6 +61,8 @@ export function ProfileSettings() {
     birthYear: '1995',
     username: 'johndoe',
     nationality: 'Filipino',
+    // line 53
+    gender: 'male',
     email: 'john.doe@email.com',
     phone: '09345234576',
     
@@ -89,7 +104,7 @@ export function ProfileSettings() {
     confirmPassword: '',
   });*/
 
-  const { account } = useAuth();
+  const { account, setAccount } = useAuth();
 
   const [profile, setProfile] = useState({
       firstName: '',
@@ -106,6 +121,8 @@ export function ProfileSettings() {
       height: '',
       weight: '',
       preferredJobFields: [] as string[],
+      // line 111
+      gender: '',
       country: '',
       province: '',
       city: '',
@@ -163,6 +180,18 @@ export function ProfileSettings() {
     
         nationality: applicant?.app_nationality || '',
         preferredJobFields: applicant?.app_preference || [],
+
+        gender: applicant?.app_gender || '',
+        
+        emergencyContactName:   applicant?.app_present_contact_person || '',
+        emergencyRelationship:  applicant?.app_emergency_relationship || '',
+        emergencyContactNumber: applicant?.app_emergency_contact_number || '',
+        
+        pprovincialCountry:       applicant?.app_province_address_country || '',
+        provincialProvince:      applicant?.app_province_address_province || '',
+        provincialCity:          applicant?.app_province_address_city || '',
+        provincialContactPerson: applicant?.app_province_contact_person || '',
+        provincialMobile:        applicant?.app_province_tele_mobile || '',
       }));
     }, [account]);
   
@@ -177,58 +206,217 @@ export function ProfileSettings() {
   const [passportFileName, setPassportFileName] = useState('');
 
   // Mock list of taken usernames
-  const takenUsernames = ['admin', 'user', 'test', 'john', 'jane', 'naomi', 'landbase'];
+ // const takenUsernames = ['admin', 'user', 'test', 'john', 'jane', 'naomi', 'landbase'];
 
-  const checkUsername = (username: string) => {
+  const checkUsername = async (username: string) => {
     if (username.length < 3) {
       setUsernameAvailable(null);
       return;
     }
-
     setUsernameChecking(true);
-    
-    setTimeout(() => {
-      const isTaken = takenUsernames.includes(username.toLowerCase());
-      setUsernameAvailable(!isTaken);
-      setUsernameChecking(false);
-    }, 500);
+  
+    const { data } = await supabase
+      .from("t_account")
+      .select("account_id")
+      .eq("acc_username", username)
+      .neq("account_id", account?.account_id) // exclude current user
+      .maybeSingle();
+  
+    setUsernameAvailable(!data);
+    setUsernameChecking(false);
   };
-
-  const handleUsernameChange = (value: string) => {
+  
+  // also make handleUsernameChange async
+  const handleUsernameChange = async (value: string) => {
     setTempProfile({ ...tempProfile, username: value });
     setUsernameAvailable(null);
     if (value.length >= 3) {
-      checkUsername(value);
+      checkUsername(value); // now calls supabase
     }
   };
 
-  const handleEdit = (section: string) => {
+ const handleEdit = (section: string) => {
     setEditingSection(section);
     setTempProfile(profile);
   };
-
-  const handleSave = async (section: string) => {
-    if (!user) return;
   
-    const { error } = await supabase
-      .from('profiles')
-      .update(tempProfile)
-      .eq('id', user.id);
-  
-    if (error) {
-      console.error(error);
-      alert("Failed to save");
-      return;
-    }
-
-  setProfile(tempProfile);
-  setEditingSection(null);
-};
-
   const handleCancel = () => {
     setTempProfile(profile);
     setEditingSection(null);
     setUsernameAvailable(null);
+  };
+
+
+  const handleSave = async (section: string) => {
+    if (!account) return;
+  
+    try {
+      if (section === "basic") {
+        // 🔹 Update t_account
+        const { error: accError } = await supabase
+          .from("t_account")
+          .update({
+            acc_username: tempProfile.username,
+            acc_email: tempProfile.email,
+          })
+          .eq("account_id", account.account_id);
+  
+        if (accError) throw accError;
+  
+        // 🔹 Update t_applicant
+        const { error: appError } = await supabase
+          .from("t_applicant")
+          .update({
+            app_first_name: tempProfile.firstName,
+            app_middle_name: tempProfile.middleName,
+            app_last_name: tempProfile.lastName,
+            app_dob_day:   tempProfile.birthDay   ? parseInt(tempProfile.birthDay)   : null,
+            app_dob_month: tempProfile.birthMonth ? parseInt(tempProfile.birthMonth) : null,
+            app_dob_year:  tempProfile.birthYear  ? parseInt(tempProfile.birthYear)  : null,
+            app_gender: tempProfile.gender,
+            app_nationality: tempProfile.nationality,
+            app_present_tele_mobile: tempProfile.phone,
+            app_marital_status: tempProfile.maritalStatus,
+            app_height: tempProfile.height ? parseFloat(tempProfile.height) : null,
+            app_weight: tempProfile.weight ? parseFloat(tempProfile.weight) : null,
+          })
+          .eq("applicant_id", account.applicant_id);
+  
+        if (appError) throw appError;
+      }
+  
+      if (section === "address") {
+        const { error } = await supabase
+          .from("t_applicant")
+          .update({
+            app_present_address_country: tempProfile.country,
+            app_present_address_province: tempProfile.province,
+            app_present_address_city: tempProfile.city,
+          })
+          .eq("applicant_id", account.applicant_id);
+  
+        if (error) throw error;
+      }
+  
+      if (section === "jobs") {
+        const { error } = await supabase
+          .from("t_applicant")
+          .update({
+            app_preference: tempProfile.preferredJobFields,
+          })
+          .eq("applicant_id", account.applicant_id);
+  
+        if (error) throw error;
+      }
+  
+      if (section === "passport") {
+        const { error } = await supabase
+          .from("t_applicant")
+          .update({
+            app_passport_number: tempProfile.passportNumber,
+            app_passport_place: tempProfile.passportPlace,
+            app_passport_issue_date: tempProfile.passportIssueDate,
+            app_passport_expiry_date: tempProfile.passportExpiryDate,
+          })
+          .eq("applicant_id", account.applicant_id);
+  
+        if (error) throw error;
+      }
+  
+      if (section === "emergency") {
+        const { error } = await supabase
+          .from("t_applicant")
+          .update({
+            app_present_contact_person:   tempProfile.emergencyContactName,
+            app_emergency_relationship:   tempProfile.emergencyRelationship,
+            app_emergency_contact_number: tempProfile.emergencyContactNumber,
+          })
+          .eq("applicant_id", account.applicant_id);
+        if (error) throw error;
+      }
+  
+      if (section === "provincial") {
+        const { error } = await supabase
+          .from("t_applicant")
+          .update({
+            app_province_address_country:  tempProfile.provincialCountry,
+            app_province_address_province: tempProfile.provincialProvince,
+            app_province_address_city:     tempProfile.provincialCity,
+            app_province_contact_person:   tempProfile.provincialContactPerson,
+            app_province_tele_mobile:      tempProfile.provincialMobile,
+          })
+          .eq("applicant_id", account.applicant_id);
+        if (error) throw error;
+      }
+
+      if (section === "password") {
+        if (!tempProfile.currentPassword) {
+          alert("Please enter your current password");
+          return;
+        }
+        if (tempProfile.newPassword !== tempProfile.confirmPassword) {
+          alert("New passwords do not match");
+          return;
+        }
+        if (tempProfile.newPassword.length < 8) {
+          alert("Password must be at least 8 characters");
+          return;
+        }
+      
+        // Verify current password first
+        const { data: check } = await supabase
+          .from("t_account")
+          .select("account_id")
+          .eq("account_id", account.account_id)
+          .eq("acc_password", tempProfile.currentPassword)
+          .maybeSingle();
+      
+        if (!check) {
+          alert("Current password is incorrect");
+          return;
+        }
+      
+        const { error } = await supabase
+          .from("t_account")
+          .update({ acc_password: tempProfile.newPassword })
+          .eq("account_id", account.account_id);
+      
+        if (error) throw error;
+      }
+  
+      // 🔥 Success
+      const { data: refreshed } = await supabase
+        .from("t_account")
+        .select(`
+          account_id, applicant_id, acc_username, acc_email, is_active,
+          t_applicant (
+            app_first_name, app_middle_name, app_last_name, app_email,
+            app_present_tele_mobile, app_present_address_country,
+            app_present_address_province, app_present_address_city,
+            app_present_contact_person,
+            app_dob_day, app_dob_month, app_dob_year, app_marital_status,
+            app_height, app_weight, app_passport_number, app_passport_place,
+            app_passport_issue_date, app_passport_expiry_date,
+            app_nationality, app_preference, app_gender,
+            app_emergency_relationship, app_emergency_contact_number,
+            app_province_address_country, app_province_address_province,
+            app_province_address_city, app_province_contact_person,
+            app_province_tele_mobile
+          )
+        `)
+        .eq("account_id", account.account_id)
+        .single();
+      
+      if (refreshed) setAccount(refreshed); // updates context AND localStorage
+      
+      setProfile(tempProfile);
+      setEditingSection(null);
+      alert("Saved successfully!");
+  
+    } catch (err) {
+      console.error(err);
+      alert("Failed to save changes");
+    }
   };
 
   const handleSameAsPresent = (checked: boolean) => {
@@ -500,6 +688,24 @@ export function ProfileSettings() {
                   </select>
                 </div>
               </div>
+              {/* Gender */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-gray-700 font-medium mb-2">
+                    Gender <span className="text-red-500">*</span>
+                  </label>
+                  <select
+                    value={tempProfile.gender}
+                    onChange={(e) => setTempProfile({ ...tempProfile, gender: e.target.value })}
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#17960b] focus:border-transparent"
+                  >
+                    <option value="male">Male</option>
+                    <option value="female">Female</option>
+                    <option value="other">Other</option>
+                    <option value="prefer-not-to-say">Prefer not to say</option>
+                  </select>
+                </div>
+              </div>
 
               {/* Email and Phone */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -600,6 +806,10 @@ export function ProfileSettings() {
               <div>
                 <p className="text-sm text-gray-500 mb-1">Nationality</p>
                 <p className="text-gray-900 font-medium">{profile.nationality}</p>
+              </div>
+              <div>
+                <p className="text-sm text-gray-500 mb-1">Gender</p>
+                <p className="text-gray-900 font-medium capitalize">{profile.gender?.replace('-', ' ') || 'Not set'}</p>
               </div>
               <div>
                 <p className="text-sm text-gray-500 mb-1">Email Address</p>

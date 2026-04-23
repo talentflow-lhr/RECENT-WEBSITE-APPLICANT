@@ -80,15 +80,33 @@ export function LoginPage({ onLogin }: LoginPageProps) {
         .from("t_account")
         .select(`
           account_id,
+          applicant_id,
           acc_username,
           acc_email,
           is_active,
-          applicant_id,
           t_applicant (
             applicant_id,
             app_first_name,
             app_middle_name,
-            app_last_name
+            app_last_name,
+            app_email,
+            app_present_tele_mobile,
+            app_present_address_country,
+            app_present_address_province,
+            app_present_address_city,
+            app_dob_day,
+            app_dob_month,
+            app_dob_year,
+            app_marital_status,
+            app_height,
+            app_weight,
+            app_passport_number,
+            app_passport_place,
+            app_passport_issue_date,
+            app_passport_expiry_date,
+            app_nationality,
+            app_preference,
+            app_gender
           )
         `)
         .eq("acc_username", username)
@@ -102,7 +120,7 @@ export function LoginPage({ onLogin }: LoginPageProps) {
       }
   
       setAccount(data);
-      localStorage.setItem("account", JSON.stringify(data));
+     // localStorage.setItem("account", JSON.stringify(data));
       onLogin();
       setLoading(false);
     } else {

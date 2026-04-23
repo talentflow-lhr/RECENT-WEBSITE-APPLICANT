@@ -1,10 +1,28 @@
 import { Card, CardContent } from './ui/card';
 import { Button } from './ui/button';
 import { Search, MapPin, DollarSign, X, Bookmark } from 'lucide-react';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import svgPaths from '../imports/svg-3nnvnkmfcx';
 import featuredJobPoster from 'figma:asset/69a79d0864f76398cf7c9e0b7e138a413d134914.png';
 import gulfAsiaPoster from 'figma:asset/853b5c04ffd8a06102642323016ef1525a3c9fc7.png';
+import { supabase } from './supabaseClient';
+
+interface Job {
+  id: number;          // position_id
+  jo_id: number;
+  title: string;       // job_title
+  company: string;     // company_name
+  location: string;    // jo_country
+  salary: string;      // job_salary_range
+  vacancies: number;   // job_number_needed
+  filled: number;      // job_filled_count
+  posted: string;      // jo_posted_date
+  deadline: string;    // jo_deadline
+  category: string;    // job_category
+  description: string; // job_description
+  requirements: string[];// job_requirements
+  contractLength: string;// job_contract_length
+}
 
 interface JobPortalProps {
   onApply?: (job: { title: string; company: string; location: string }) => void;
@@ -23,7 +41,7 @@ export function JobPortal({ onApply, onSaveJob, savedJobIds = [], onNavigateToPr
   const [showPosterModal, setShowPosterModal] = useState(false);
   const [showGulfAsiaPosterModal, setShowGulfAsiaPosterModal] = useState(false);
 
-  const jobsData = [
+  /*const jobsData = [
     // QCON Jobs - Featured Opportunities
     {
       id: 7,
@@ -312,20 +330,114 @@ export function JobPortal({ onApply, onSaveJob, savedJobIds = [], onNavigateToPr
       education: 'high-school',
       experience: true
     }
-  ];
+  ];*/
+
+  const [jobsData, setJobsData] = useState<Job[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    fetchJobs();
+  }, []);
+
+  const fetchJobs = async () => {
+    setLoading(true);
+    setError(null);
+
+    try {
+      const { data, error } = await supabase
+        .from('t_job_positions')
+        .select(`
+          position_id,
+          jo_id,
+          job_title,
+          job_salary_range,
+          job_number_needed,
+          job_filled_count,
+          job_category,
+          job_description,
+          job_requirements,
+          job_contract_length,
+          is_active,
+          t_job_orders!inner (
+            jo_id,
+            jo_country,
+            jo_posted_date,
+            jo_deadline,
+            is_active,
+            is_posted,
+            t_companies (
+              company_name,
+              company_country
+            )
+          )
+        `)
+        .eq('is_active', true)
+        .eq('t_job_orders.is_active', true)
+        .eq('t_job_orders.is_posted', true);
+
+      if (error) throw error;
+
+      // ✅ Map Supabase data to your Job shape
+      const mapped: Job[] = (data || [])
+        .filter(pos => pos.t_job_orders) // skip positions with no linked order
+        .map(pos => {
+          const order = pos.t_job_orders as any;
+          const company = order?.t_companies as any;
+
+          // Format posted date
+          const postedDate = order?.jo_posted_date
+            ? formatPostedDate(order.jo_posted_date)
+            : 'Recently posted';
+
+          return {
+            id: pos.position_id,
+            jo_id: pos.jo_id,
+            title: pos.job_title || 'Untitled Position',
+            company: company?.company_name || 'Unknown Company',
+            location: order?.jo_country || company?.company_country || 'Location TBD',
+            salary: pos.job_salary_range || 'Competitive',
+            vacancies: pos.job_number_needed || 0,
+            filled: pos.job_filled_count || 0,
+            posted: postedDate,
+            deadline: order?.jo_deadline || '',
+            category: pos.job_category || '',
+            description: pos.job_description || '',
+            requirements: pos.job_requirements || [],
+            contractLength: pos.job_contract_length || '',
+          };
+        });
+
+      setJobsData(mapped);
+    } catch (err: any) {
+      console.error('Error fetching jobs:', err);
+      setError('Failed to load jobs. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // ✅ Helper to format date as "X days ago"
+  const formatPostedDate = (dateStr: string): string => {
+    const posted = new Date(dateStr);
+    const now = new Date();
+    const diffMs = now.getTime() - posted.getTime();
+    const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+
+    if (diffDays === 0) return 'Today';
+    if (diffDays === 1) return '1 day ago';
+    if (diffDays < 7) return `${diffDays} days ago`;
+    if (diffDays < 30) return `${Math.floor(diffDays / 7)} weeks ago`;
+    return `${Math.floor(diffDays / 30)} months ago`;
+  };
 
   // Filter jobs based on search criteria
   const filterJobs = () => {
-    if (!searchQuery && !locationQuery && activeFilters.length === 0) {
-      return jobsData;
-    }
-
     return jobsData.filter(job => {
       let matchesSearch = true;
       let matchesLocation = true;
       let matchesFilters = true;
 
-      // Check job title/company match
       if (searchQuery) {
         const searchLower = searchQuery.toLowerCase();
         const titleLower = job.title.toLowerCase();
@@ -334,32 +446,28 @@ export function JobPortal({ onApply, onSaveJob, savedJobIds = [], onNavigateToPr
         if (searchType === 'exact') {
           matchesSearch = titleLower.includes(searchLower) || companyLower.includes(searchLower);
         } else {
-          // "Any of the words" - split search query and check if any word matches
           const searchWords = searchLower.split(' ').filter(word => word.length > 0);
-          matchesSearch = searchWords.some(word => 
+          matchesSearch = searchWords.some(word =>
             titleLower.includes(word) || companyLower.includes(word)
           );
         }
       }
 
-      // Check location match
       if (locationQuery) {
-        const locationLower = locationQuery.toLowerCase();
-        matchesLocation = job.location.toLowerCase().includes(locationLower);
+        matchesLocation = job.location.toLowerCase().includes(locationQuery.toLowerCase());
       }
 
-      // Check filters
       if (activeFilters.length > 0) {
         matchesFilters = activeFilters.every(filter => {
           switch (filter) {
             case 'landbased':
-              return job.type === 'landbased';
+              return true; // all your jobs are landbased — adjust if needed
             case 'no-placement-fee':
-              return !job.placementFee;
+              return true; // adjust based on your data if you add this field
             case 'high-school-graduate':
-              return job.education === 'high-school';
+              return true; // adjust if you add education requirement field
             case 'no-work-experience':
-              return !job.experience;
+              return true; // adjust if you add experience requirement field
             default:
               return true;
           }
@@ -369,6 +477,10 @@ export function JobPortal({ onApply, onSaveJob, savedJobIds = [], onNavigateToPr
       return matchesSearch && matchesLocation && matchesFilters;
     });
   };
+
+  const filteredJobs = isSearching || searchQuery || locationQuery || activeFilters.length > 0
+    ? filterJobs()
+    : jobsData;
 
   const handleSearch = () => {
     setIsSearching(true);
@@ -405,7 +517,7 @@ export function JobPortal({ onApply, onSaveJob, savedJobIds = [], onNavigateToPr
     }
   };
 
-  const filteredJobs = isSearching || searchQuery || locationQuery || activeFilters.length > 0 ? filterJobs() : jobsData;
+  //const filteredJobs = isSearching || searchQuery || locationQuery || activeFilters.length > 0 ? filterJobs() : jobsData;
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -851,6 +963,34 @@ export function JobPortal({ onApply, onSaveJob, savedJobIds = [], onNavigateToPr
             </div>
           </div>
 
+          {/* Loading state */}
+          {loading && (
+            <div className="flex items-center justify-center py-16">
+              <div className="text-center">
+                <svg className="w-10 h-10 animate-spin text-[#17960b] mx-auto mb-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
+                </svg>
+                <p className="text-gray-600 font-medium">Loading available positions...</p>
+              </div>
+            </div>
+          )}
+          
+          {/* Error state */}
+          {error && !loading && (
+            <div className="text-center py-12">
+              <p className="text-red-500 mb-4">{error}</p>
+              <button
+                onClick={fetchJobs}
+                className="bg-[#17960b] text-white px-6 py-2 rounded-lg hover:bg-[#0d5e06] transition-colors"
+              >
+                Try Again
+              </button>
+            </div>
+          )}
+
+        {!loading && !error && (
+        <>
           {/* Search Results Header */}
           {(searchQuery || locationQuery || isSearching || activeFilters.length > 0) && (
             <div id="job-results" className="mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
@@ -982,6 +1122,8 @@ export function JobPortal({ onApply, onSaveJob, savedJobIds = [], onNavigateToPr
               ))}
             </div>
           )}
+      </>
+        )}
         </div>
       </div>
 
