@@ -3,7 +3,8 @@ import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { Label } from "./ui/label";
 import { Mail, ArrowLeft, CheckCircle } from "lucide-react";
-import logo from "figma:asset/636ded4fbbb48605dae08d3a89a37f53cf3273be.png";
+import logo from "../../imports/Landbase-removebg-preview.png";
+
 
 interface ForgotPasswordProps {
   onBack: () => void;
