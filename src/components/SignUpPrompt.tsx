@@ -4,7 +4,7 @@ import { Input } from './ui/input';
 import { Label } from './ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
 import { Lock, UserPlus, Sparkles, CheckCircle } from 'lucide-react';
-import logo from 'figma:asset/636ded4fbbb48605dae08d3a89a37f53cf3273be.png';
+import logo from '../../imports/Landbase-removebg-preview.png';
 import { useState } from 'react';
 
 interface SignUpPromptProps {
