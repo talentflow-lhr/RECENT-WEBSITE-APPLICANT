@@ -1,5 +1,5 @@
 import svgPaths from "./svg-3nnvnkmfcx";
-import imgImageLandbase from "figma:asset/636ded4fbbb48605dae08d3a89a37f53cf3273be.png";
+import imgImageLandbase from "../../imports/Landbase-removebg-preview.png";
 import imgLandbaseRemovebgPreview1 from "figma:asset/59d793a5637be5743b4000eaed07893258073d54.png";
 
 function ImageLandbase() {
