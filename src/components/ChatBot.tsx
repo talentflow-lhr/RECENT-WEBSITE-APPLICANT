@@ -3,7 +3,7 @@ import { X, Send, MessageCircle } from 'lucide-react';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Card } from './ui/card';
-import imgLogo from '../../imports/Landbase-removebg-preview.png';
+import logo from '../../imports/Landbase-removebg-preview.png';
 
 interface Message {
   id: string;
