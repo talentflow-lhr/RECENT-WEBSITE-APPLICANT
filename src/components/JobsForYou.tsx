@@ -86,32 +86,6 @@ export function JobsForYou({ onApply, onSaveJob, savedJobIds, onNavigateToResume
       matchScore: 85,
       tags: ['Engineering', 'Mechanical', 'Oil & Gas'],
       reason: 'Your engineering qualifications meet their standards'
-    },
-    {
-      id: 5,
-      title: 'Executive Chef',
-      company: 'Royal Caribbean Cruises',
-      location: 'Cruise Ship',
-      country: '🚢',
-      salary: 'PHP 75,000 - 95,000',
-      type: 'Contract',
-      posted: '5 days ago',
-      matchScore: 82,
-      tags: ['Culinary', 'Leadership', 'Hospitality'],
-      reason: 'Your culinary expertise is highly sought after'
-    },
-    {
-      id: 6,
-      title: 'Financial Controller',
-      company: 'KPMG Middle East',
-      location: 'Abu Dhabi, UAE',
-      country: '🇦🇪',
-      salary: 'PHP 110,000 - 150,000',
-      type: 'Full-time',
-      posted: '1 week ago',
-      matchScore: 80,
-      tags: ['Finance', 'Accounting', 'CPA'],
-      reason: 'Your financial background matches perfectly'
     }
   ];
 
