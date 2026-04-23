@@ -387,8 +387,21 @@ export function ResumeBuilder({ onResumeSubmit }: ResumeBuilderProps = {}) {
     ? personalInfo.dateOfBirth.split('-').map(Number)  // ← convert to numbers here
     : [null, null, null];
 
+    // check if resume already exists
+    const { data: existingResume } = await supabase
+      .from('t_resume')
+      .select('resume_id')
+      .eq('applicant_id', account.applicant_id)
+      .order('res_last_updated', { ascending: false })
+      .order('resume_id', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    const rpcFunction = existingResume ? 'update_resume' : 'submit_resume';
+
     // submitting data to a transaction function in the database, to gurantee atomicity
-    const { data, error } = await supabase.rpc('submit_resume', {
+    const { data, error } = await supabase.rpc(rpcFunction, {
+      ...(existingResume && { p_resume_id: existingResume.resume_id }),
       p_applicant_id: account.applicant_id,
       p_dob_year: dob_year,
       p_dob_month: dob_month,
