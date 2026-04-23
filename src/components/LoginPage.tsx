@@ -4,7 +4,7 @@ import { Input } from './ui/input';
 import { Label } from './ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { Check, X, Eye, EyeOff, AlertCircle } from 'lucide-react';
-import logo from 'figma:asset/636ded4fbbb48605dae08d3a89a37f53cf3273be.png';
+import logo from '../../imports/Landbase-removebg-preview.png';
 import { ForgotPassword } from './ForgotPassword';
 import { supabase } from "./supabaseClient";
 import { useAuth } from "./AuthPass";
