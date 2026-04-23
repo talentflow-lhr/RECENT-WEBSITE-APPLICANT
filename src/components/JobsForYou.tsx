@@ -50,16 +50,16 @@ export function JobsForYou({ onApply, onSaveJob, savedJobIds, onNavigateToResume
     },
     {
       id: 2,
-      title: 'Registered Nurse - ICU',
-      company: 'Healthcare International',
-      location: 'Dubai, UAE',
-      country: '🇦🇪',
+      title: 'Field Operator',
+      company: 'QCON',
+      location: 'Doga, QATAR',
+      country: '',
       salary: 'PHP 85,000 - 110,000',
       type: 'Full-time',
       posted: '2 days ago',
       matchScore: 92,
-      tags: ['Nursing', 'Healthcare', 'ICU'],
-      reason: 'Your healthcare certifications align with requirements'
+      tags: ['Operator', 'Management'],
+      reason: 'You are great at field operating and leadership'
     },
     {
       id: 3,
