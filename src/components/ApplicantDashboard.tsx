@@ -21,7 +21,7 @@ import {
   Upload,
   FilePlus
 } from 'lucide-react';
-import logo from 'figma:asset/636ded4fbbb48605dae08d3a89a37f53cf3273be.png';
+import logo from '../../imports/Landbase-removebg-preview.png';
 import { useAuth } from "./AuthPass";
 
 interface SkillAssessment {
