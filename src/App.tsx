@@ -14,6 +14,7 @@ import { JobApplication } from './components/JobApplication';
 import { SavedJobs } from './components/SavedJobs';
 import { LoginPage } from './components/LoginPage';
 import { AuthProvider, useAuth } from "./components/AuthPass";
+import { supabase } from "./components/supabaseClient";
 
 interface JobData {
   title: string;
@@ -83,6 +84,24 @@ function AppContent() {
     });
     setCurrentPage('apply');
   };
+
+  useEffect(() => {
+    if (!account?.applicant_id) return;
+
+    setHasResume(false);
+
+    const checkResume = async () => {
+      const { data, error } = await supabase
+        .from("t_resume")
+        .select("applicant_id")
+        .eq("applicant_id", account.applicant_id);
+
+      if (error) console.error("Error fetching resume:", error);
+      if (data && data.length > 0) setHasResume(true);
+    };
+
+    checkResume();
+  }, [account?.applicant_id]);
 
   const renderPage = () => {
     switch (currentPage) {
