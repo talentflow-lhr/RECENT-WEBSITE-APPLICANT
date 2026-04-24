@@ -841,7 +841,7 @@ export function JobPortal({ onApply, onSaveJob, savedJobIds = [], onNavigateToPr
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                       </svg>
                     </button>
-                    // view all positions
+                    {/*view all positions*/}
                      <button
                         onClick={onNavigateToPositions}
                         className="bg-[#17960b] hover:bg-[#148509] text-white px-6 py-3 rounded-lg font-semibold transition-colors shadow-md hover:shadow-lg flex items-center justify-center gap-2"
@@ -975,7 +975,7 @@ export function JobPortal({ onApply, onSaveJob, savedJobIds = [], onNavigateToPr
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                       </svg>
                     </button>
-                    // view all positions
+                    {/*view all positions*/}
                     <button
                         onClick={onNavigateToPositions}
                         className="bg-[#17960b] hover:bg-[#148509] text-white px-6 py-3 rounded-lg font-semibold transition-colors shadow-md hover:shadow-lg flex items-center justify-center gap-2"
@@ -1123,7 +1123,6 @@ export function JobPortal({ onApply, onSaveJob, savedJobIds = [], onNavigateToPr
                     </div>
 
                     {/* Action Buttons */}
-                    // view full details
                      <div className="flex flex-col gap-2">
                       <button
                         onClick={() => setSelectedJob(job)}
@@ -1225,8 +1224,8 @@ export function JobPortal({ onApply, onSaveJob, savedJobIds = [], onNavigateToPr
           </div>
         </div>
       )}
-      // added job details
-          {/* Job Details Modal */}
+      
+      {/* Job Details Modal */}
       {selectedJob && (
         <div
           className="fixed inset-0 bg-black/20 flex items-center justify-center z-50 p-4"
