@@ -3,7 +3,7 @@ import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { Label } from "./ui/label";
 import { Mail, ArrowLeft, CheckCircle } from "lucide-react";
-import logo from "../../imports/Landbase-removebg-preview.png";
+import logo from "../imports/Landbase-removebg-preview.png";
 
 
 interface ForgotPasswordProps {
