@@ -8,11 +8,8 @@ interface FooterProps {
 export function Footer({ onNavigate }: FooterProps) {
   const branches = [
     { name: 'Cebu Branch', location: 'Rm. 221 Colon Development Corp. Bldg. Osmeña Blvd., Cebu City', phone: 'Tel. No. 0063-32-2555664' },
-    { name: 'Batangas Branch', location: 'Rm. 301, 3rd Flr. Caedo Bldg. Kumintang Ibaba, Batangas City', phone: 'Tel. 0063-43-7230120' },
     { name: 'Bataan Branch', location: '151 D De Ocampo St., Limay Bataan', phone: 'Tel. 0063-908/6942377' },
-    { name: 'Cagayan Branch', location: '2nd Flr MV Bldg. Thano del Pilar St. CDO', phone: 'Tel. 088-231-6776' },
-    { name: 'Bacolod Branch', location: 'Rm. 205-207 Dona Milagrosa Bldg. San Juan St. Bacolod City', phone: 'Tel. 0063-3287506436' },
-    { name: 'Iligan Branch', location: 'Rm 506, Alonto Bldg Gen. Aguinaldo St., Iligan City' }
+    { name: 'Cagayan Branch', location: '2nd Flr MV Bldg. Thano del Pilar St. CDO', phone: 'Tel. 088-231-6776' }
   ];
 
   const quickLinks = [
@@ -128,15 +125,6 @@ export function Footer({ onNavigate }: FooterProps) {
                 className="w-10 h-10 rounded-full bg-[#17960b] hover:bg-[#17960b]/80 flex items-center justify-center transition-colors"
                 aria-label="LinkedIn"
               >
-                <Linkedin className="w-5 h-5" />
-              </a>
-              <a 
-                href="#" 
-                className="w-10 h-10 rounded-full bg-[#17960b] hover:bg-[#17960b]/80 flex items-center justify-center transition-colors"
-                aria-label="Twitter"
-              >
-                <Twitter className="w-5 h-5" />
-              </a>
             </div>
           </div>
         </div>
