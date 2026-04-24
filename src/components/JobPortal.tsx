@@ -1123,42 +1123,41 @@ export function JobPortal({ onApply, onSaveJob, savedJobIds = [], onNavigateToPr
                     </div>
 
                     {/* Action Buttons */}
-                     <div className="flex flex-col gap-2">
+                    <div className="flex flex-col gap-2">
                       <button
                         onClick={() => setSelectedJob(job)}
                         className="w-full bg-[#ffca1a] hover:bg-[#e6b617] text-[#101828] px-4 py-2.5 rounded-lg text-[14px] font-medium transition-colors"
                       >
                         View Full Details
                       </button>
-                       
-                    <div className="flex gap-2">
-                      <button
-                        onClick={() => handleApplyNow(job)}
-                        className="flex-1 bg-[#17960b] hover:bg-[#158d0a] text-white px-4 py-2.5 rounded-lg text-[14px] font-medium transition-colors"
-                      >
-                        Apply Now
-                      </button>
-                      <button
-                        onClick={() => handleSaveJob(job.id)}
-                        className={`px-4 py-2.5 rounded-lg border transition-colors ${
-                          savedJobIds.includes(job.id)
-                            ? 'bg-[#ffca1a] border-[#ffca1a] text-[#101828]'
-                            : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50'
-                        }`}
-                        title={savedJobIds.includes(job.id) ? 'Saved' : 'Save Job'}
-                      >
-                        <Bookmark
-                          className={`w-5 h-5 ${
-                            savedJobIds.includes(job.id) ? 'fill-current' : ''
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => handleApplyNow(job)}
+                          className="flex-1 bg-[#17960b] hover:bg-[#158d0a] text-white px-4 py-2.5 rounded-lg text-[14px] font-medium transition-colors"
+                        >
+                          Apply Now
+                        </button>
+                        <button
+                          onClick={() => handleSaveJob(job.id)}
+                          className={`px-4 py-2.5 rounded-lg border transition-colors ${
+                            savedJobIds.includes(job.id)
+                              ? 'bg-[#ffca1a] border-[#ffca1a] text-[#101828]'
+                              : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50'
                           }`}
-                        />
-                      </button>
+                          title={savedJobIds.includes(job.id) ? 'Saved' : 'Save Job'}
+                        >
+                          <Bookmark
+                            className={`w-5 h-5 ${
+                              savedJobIds.includes(job.id) ? 'fill-current' : ''
+                            }`}
+                          />
+                        </button>
+                      </div>
                     </div>
                   </div>
                 </div>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
         )}
       </>
       )}
