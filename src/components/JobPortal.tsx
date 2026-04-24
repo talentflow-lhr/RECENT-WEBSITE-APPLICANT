@@ -1,6 +1,6 @@
 import { Card, CardContent } from './ui/card';
 import { Button } from './ui/button';
-import { Search, MapPin, DollarSign, X, Bookmark } from 'lucide-react';
+import { Search, MapPin, DollarSign, X, Bookmark, Clock } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import svgPaths from '../imports/svg-3nnvnkmfcx';
 import featuredJobPoster from 'figma:asset/69a79d0864f76398cf7c9e0b7e138a413d134914.png';
@@ -30,9 +30,10 @@ interface JobPortalProps {
   savedJobIds?: number[];
   onNavigateToProfile?: () => void;
   onNavigateToResume?: () => void;
+  onNavigateToPositions?: () => void;
 }
 
-export function JobPortal({ onApply, onSaveJob, savedJobIds = [], onNavigateToProfile, onNavigateToResume }: JobPortalProps) {
+export function JobPortal({ onApply, onSaveJob, savedJobIds = [], onNavigateToProfile, onNavigateToResume, onNavigateToPositions }: JobPortalProps) {
   const [searchQuery, setSearchQuery] = useState('');
   const [locationQuery, setLocationQuery] = useState('');
   const [searchType, setSearchType] = useState<'any' | 'exact'>('any');
@@ -40,6 +41,8 @@ export function JobPortal({ onApply, onSaveJob, savedJobIds = [], onNavigateToPr
   const [activeFilters, setActiveFilters] = useState<string[]>([]);
   const [showPosterModal, setShowPosterModal] = useState(false);
   const [showGulfAsiaPosterModal, setShowGulfAsiaPosterModal] = useState(false);
+  const [selectedJob, setSelectedJob] = useState<any>(null);
+
 
   /*const jobsData = [
     // QCON Jobs - Featured Opportunities
@@ -433,6 +436,9 @@ export function JobPortal({ onApply, onSaveJob, savedJobIds = [], onNavigateToPr
 
   // Filter jobs based on search criteria
   const filterJobs = () => {
+        if (!searchQuery && !locationQuery && activeFilters.length === 0) {
+      return jobsData;
+    }
     return jobsData.filter(job => {
       let matchesSearch = true;
       let matchesLocation = true;
@@ -454,6 +460,7 @@ export function JobPortal({ onApply, onSaveJob, savedJobIds = [], onNavigateToPr
       }
 
       if (locationQuery) {
+        const locationLower = locationQuery.toLowerCase();
         matchesLocation = job.location.toLowerCase().includes(locationQuery.toLowerCase());
       }
 
@@ -834,6 +841,17 @@ export function JobPortal({ onApply, onSaveJob, savedJobIds = [], onNavigateToPr
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                       </svg>
                     </button>
+                    // view all positions
+                     <button
+                        onClick={onNavigateToPositions}
+                        className="bg-[#17960b] hover:bg-[#148509] text-white px-6 py-3 rounded-lg font-semibold transition-colors shadow-md hover:shadow-lg flex items-center justify-center gap-2"
+                      >
+                        <span>View All Positions</span>
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                        </svg>
+                      </button>
+                  </div>
                   </div>
                 </div>
               </div>
@@ -957,6 +975,17 @@ export function JobPortal({ onApply, onSaveJob, savedJobIds = [], onNavigateToPr
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                       </svg>
                     </button>
+                    // view all positions
+                    <button
+                        onClick={onNavigateToPositions}
+                        className="bg-[#17960b] hover:bg-[#148509] text-white px-6 py-3 rounded-lg font-semibold transition-colors shadow-md hover:shadow-lg flex items-center justify-center gap-2"
+                      >
+                        <span>View All Positions</span>
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                        </svg>
+                      </button>
+                  </div>
                   </div>
                 </div>
               </div>
@@ -1094,6 +1123,15 @@ export function JobPortal({ onApply, onSaveJob, savedJobIds = [], onNavigateToPr
                     </div>
 
                     {/* Action Buttons */}
+                    // view full details
+                     <div className="flex flex-col gap-2">
+                      <button
+                        onClick={() => setSelectedJob(job)}
+                        className="w-full bg-[#ffca1a] hover:bg-[#e6b617] text-[#101828] px-4 py-2.5 rounded-lg text-[14px] font-medium transition-colors"
+                      >
+                        View Full Details
+                      </button>
+                       
                     <div className="flex gap-2">
                       <button
                         onClick={() => handleApplyNow(job)}
@@ -1182,6 +1220,104 @@ export function JobPortal({ onApply, onSaveJob, savedJobIds = [], onNavigateToPr
                 alt="Gulf Asia Contracting Job Poster"
                 className="w-full h-auto rounded-lg shadow-lg"
               />
+            </div>
+          </div>
+        </div>
+      )}
+      // added job details
+          {/* Job Details Modal */}
+      {selectedJob && (
+        <div
+          className="fixed inset-0 bg-black/20 flex items-center justify-center z-50 p-4"
+          onClick={() => setSelectedJob(null)}
+        >
+          <div
+            className="bg-white rounded-lg w-full max-w-3xl max-h-[95vh] overflow-auto"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex justify-between items-center z-10">
+              <h2 className="text-xl font-bold text-gray-900">{selectedJob.title}</h2>
+              <button
+                onClick={() => setSelectedJob(null)}
+                className="text-gray-500 hover:text-gray-700 hover:bg-gray-100 p-2 rounded-full transition-colors"
+              >
+                <X className="w-6 h-6" />
+              </button>
+            </div>
+            <div className="p-6">
+              {/* Company */}
+              <p className="text-lg text-gray-600 font-medium mb-4">
+                {selectedJob.company}
+              </p>
+
+              {/* Job Details Grid */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-6">
+                <div className="flex items-center gap-2 text-gray-700">
+                  <MapPin className="w-5 h-5 text-[#17960b]" />
+                  <span className="text-sm font-medium">{selectedJob.location}</span>
+                </div>
+                <div className="flex items-center gap-2 text-gray-700">
+                  <DollarSign className="w-5 h-5 text-[#17960b]" />
+                  <span className="text-sm font-medium">{selectedJob.salary}</span>
+                </div>
+                <div className="flex items-center gap-2 text-gray-700">
+                  <svg className="w-5 h-5 text-[#17960b]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                  </svg>
+                  <span className="text-sm font-medium">{selectedJob.vacancies} Vacancies</span>
+                </div>
+                <div className="flex items-center gap-2 text-gray-700">
+                  <Clock className="w-5 h-5 text-[#17960b]" />
+                  <span className="text-sm font-medium">Posted {selectedJob.posted}</span>
+                </div>
+              </div>
+
+              {/* Job Type Badge */}
+              {!selectedJob.placementFee && (
+                <div className="mb-6">
+                  <span className="inline-block bg-red-500 text-white px-3 py-1 rounded-full text-sm font-semibold">
+                    NO PLACEMENT FEE
+                  </span>
+                </div>
+              )}
+
+              {/* Job Description */}
+              {selectedJob.description && (
+                <div className="mb-6">
+                  <h3 className="text-lg font-bold text-gray-900 mb-3">
+                    Job Description
+                  </h3>
+                  <p className="text-gray-700 leading-relaxed">
+                    {selectedJob.description}
+                  </p>
+                </div>
+              )}
+
+              {/* Action Buttons */}
+              <div className="flex flex-col sm:flex-row gap-3">
+                <button
+                  onClick={() => {
+                    handleSaveJob(selectedJob.id);
+                  }}
+                  className={`flex-1 flex items-center justify-center gap-2 px-6 py-3 rounded-lg border font-semibold transition-colors ${
+                    savedJobIds.includes(selectedJob.id)
+                      ? 'bg-[#ffca1a] border-[#ffca1a] text-[#101828]'
+                      : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50'
+                  }`}
+                >
+                  <Bookmark className={`w-5 h-5 ${savedJobIds.includes(selectedJob.id) ? 'fill-current' : ''}`} />
+                  {savedJobIds.includes(selectedJob.id) ? 'Saved' : 'Save Job'}
+                </button>
+                <button
+                  onClick={() => {
+                    handleApplyNow(selectedJob);
+                    setSelectedJob(null);
+                  }}
+                  className="flex-1 bg-[#17960b] hover:bg-[#158d0a] text-white px-6 py-3 rounded-lg font-semibold transition-colors"
+                >
+                  Apply Now
+                </button>
+              </div>
             </div>
           </div>
         </div>
