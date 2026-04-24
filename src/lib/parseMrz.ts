@@ -55,11 +55,11 @@ function findMrzLines(text: string): [string, string] | null {
 
 function mrzYYMMDD(raw: string): string {
   // raw = YYMMDD → YYYY-MM-DD
-  // Heuristic: year < 30 → 2000s, else → 1900s
+  // Heuristic: year < 60 → 2000s, else → 1900s
   const yy = parseInt(raw.slice(0, 2), 10);
   const mm = raw.slice(2, 4);
   const dd = raw.slice(4, 6);
-  const yyyy = yy < 30 ? 2000 + yy : 1900 + yy;
+  const yyyy = yy < 60 ? 2000 + yy : 1900 + yy;
   return `${yyyy}-${mm}-${dd}`;
 }
 
@@ -148,6 +148,9 @@ function normalizeDate(raw: string): string {
       january:'01', february:'02', march:'03', april:'04',
       may:'05', june:'06', july:'07', august:'08',
       september:'09', october:'10', november:'11', december:'12',
+      jan:'01', feb:'02', mar:'03', apr:'04',
+      jun:'06', jul:'07', aug:'08',
+      sep:'09', oct:'10', nov:'11', dec:'12',
     };
     const mon = months[named[2].toLowerCase()];
     if (mon) return `${named[3]}-${mon}-${named[1].padStart(2, '0')}`;

@@ -2,7 +2,7 @@ import { User, Mail, Phone, MapPin, Lock, FileText, Check, X, Calendar, AlertCir
 import { useAuth } from "./AuthPass";
 import { useState, useEffect } from 'react';
 import { supabase } from "./supabaseClient";
-import { extractDocument } from "../lib/api";
+import { extractPassport } from "../lib/api";
 import { parsePassportMarkdown } from "../lib/parseMrz";
 
 interface Applicant {
@@ -496,7 +496,7 @@ export function ProfileSettings() {
 
       try {
         // ── Call docstrange backend ─────────────────────────────────────────
-        const { markdown } = await extractDocument(file);
+        const { markdown } = await extractPassport(file);
 
         // ── Parse the returned markdown for MRZ / labeled fields ───────────
         const parsed = parsePassportMarkdown(markdown);

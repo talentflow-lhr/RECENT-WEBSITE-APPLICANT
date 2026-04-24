@@ -1,7 +1,7 @@
 // src/lib/api.ts
 import { supabase } from "@/components/supabaseClient";
 
-export async function extractDocument(file: File): Promise<{ markdown: string }> {
+export async function extractPassport(file: File): Promise<{ markdown: string }> {
   const formData = new FormData();
   formData.append("file", file);
 
