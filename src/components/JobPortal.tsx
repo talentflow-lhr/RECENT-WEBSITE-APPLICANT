@@ -1159,10 +1159,9 @@ export function JobPortal({ onApply, onSaveJob, savedJobIds = [], onNavigateToPr
               ))}
             </div>
         )}
-      </>
-      )}
-      </div>
-      </div>
+          </>
+          )}
+        </div>
 
       {/* Poster Modal */}
       {showPosterModal && (
