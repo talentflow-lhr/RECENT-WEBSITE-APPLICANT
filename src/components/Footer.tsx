@@ -1,4 +1,4 @@
-import { Mail, Phone, MapPin, Globe, Facebook, Linkedin, Twitter } from 'lucide-react';
+import { Mail, Phone, MapPin, Globe, Facebook } from 'lucide-react';
 import logo from '../imports/Landbase-removebg-preview.png';
 
 interface FooterProps {
@@ -114,17 +114,11 @@ export function Footer({ onNavigate }: FooterProps) {
             <h4 className="text-base sm:text-lg font-semibold mb-4 text-[#ffca1a]">Connect With Us</h4>
             <div className="flex gap-3">
               <a 
-                href="#" 
+                href="https://web.facebook.com/landbasejobhiring" 
                 className="w-10 h-10 rounded-full bg-[#17960b] hover:bg-[#17960b]/80 flex items-center justify-center transition-colors"
                 aria-label="Facebook"
               >
                 <Facebook className="w-5 h-5" />
-              </a>
-              <a 
-                href="#" 
-                className="w-10 h-10 rounded-full bg-[#17960b] hover:bg-[#17960b]/80 flex items-center justify-center transition-colors"
-                aria-label="LinkedIn"
-              >
               </a>
             </div>
           </div>
