@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import svgPaths from '../imports/svg-65zdysylli';
-import imgImageLandbase from '../../imports/Landbase-removebg-preview.png';
+import imgImageLandbase from '../imports/Landbase-removebg-preview.png';
 import { Download, Plus, Trash2, Eye, EyeOff, Upload, X, FileText, Check, ChevronDown, Star, Briefcase, MapPin, ArrowRight, Calendar } from 'lucide-react';
 import { supabase } from "./supabaseClient";
 import { useAuth } from "./AuthPass";
