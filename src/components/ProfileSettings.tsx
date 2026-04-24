@@ -2,7 +2,7 @@ import { User, Mail, Phone, MapPin, Lock, FileText, Check, X, Calendar, AlertCir
 import { useAuth } from "./AuthPass";
 import { useState, useEffect } from 'react';
 import { supabase } from "./supabaseClient";
-import { extractPassport } from "../lib/api";
+import { extractPassport } from "../lib/apiPassport";
 import { parsePassportMarkdown } from "../lib/parseMrz";
 
 interface Applicant {

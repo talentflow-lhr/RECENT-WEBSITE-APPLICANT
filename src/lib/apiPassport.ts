@@ -1,4 +1,4 @@
-// src/lib/api.ts
+// src/lib/apiPassport.ts
 import { supabase } from "@/components/supabaseClient";
 
 export async function extractPassport(file: File): Promise<{ markdown: string }> {
