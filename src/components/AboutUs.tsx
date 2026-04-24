@@ -1,7 +1,7 @@
 import { Card, CardContent } from './ui/card';
 import { Button } from './ui/button';
 import { Target, Users, Award, TrendingUp, CheckCircle, Globe, Phone, Mail, MapPin } from 'lucide-react';
-import logo from '../../imports/Landbase-removebg-preview.png';  
+import logo from '../imports/Landbase-removebg-preview.png';  
 
 export function AboutUs() {
   return (
@@ -120,7 +120,7 @@ export function AboutUs() {
                     </div>
                     <h3 className="text-gray-900 mb-2 text-base sm:text-lg">Address</h3>
                     <p className="text-gray-600 text-sm">
-                      San Carlos City, Negros Occidental, Philippines
+                      Unit 303-304 Taft Office Center 1986 Taft Avenue Pasay City, Philippines near Buendia LRT Station, Pasay City, Philippines
                     </p>
                   </div>
                 </CardContent>
