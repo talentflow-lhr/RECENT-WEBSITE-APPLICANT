@@ -1,4 +1,4 @@
-import { Mail, Phone, MapPin, Globe, Facebook } from 'lucide-react';
+import { Mail, Phone, MapPin, Globe, Facebook, Linkedin, Twitter } from 'lucide-react';
 import logo from '../imports/Landbase-removebg-preview.png';
 
 interface FooterProps {
