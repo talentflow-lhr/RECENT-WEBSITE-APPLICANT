@@ -21,13 +21,15 @@ import {
   Upload,
   FilePlus
 } from 'lucide-react';
-import logo from '../../imports/Landbase-removebg-preview.png';
+import logo from '../imports/Landbase-removebg-preview.png';
 import { useAuth } from "./AuthPass";
+import {supabase} from "./supabaseClient";
+import { useState, useEffect } from 'react';
 
 interface SkillAssessment {
   name: string;
   score: number;
-  status: 'excellent' | 'good' | 'needs-improvement';
+  status: "A+" | "A" | "B+" | "B" | "C+" | "C" | "D";
   recommendation: string;
 }
 
@@ -61,55 +63,56 @@ export function ApplicantDashboard({
   const overallScore = 78;
   const applicationStatus = "Under Review";
 
-  const skillsAssessment: SkillAssessment[] = [
-    {
-      name: "Experience",
-      score: 85,
-      status: 'excellent',
-      recommendation: "Strong work history with relevant positions and achievements"
-    },
-    {
-      name: "Overall Skills",
-      score: 88,
-      status: 'excellent',
-      recommendation: "Well-rounded skill set that matches industry requirements"
-    },
-    {
-      name: "Quality of Description",
-      score: 75,
-      status: 'good',
-      recommendation: "Good descriptions but could be more detailed and quantified"
-    },
-    {
-      name: "Completeness of Resume",
-      score: 82,
-      status: 'excellent',
-      recommendation: "Resume contains most essential sections with adequate detail"
-    }
-  ];
+  const [resumeData, setResumeData] = useState<any>(null);
+  const [loadingSkills, setLoadingSkills] = useState(true);
 
-  const areasForImprovement = [
-    {
-      area: "Work Experience Details",
-      impact: "High",
-      suggestion: "Example: Add specific metrics and achievements (e.g., 'Increased sales by 30%' instead of 'Responsible for sales')"
-    },
-    {
-      area: "Professional Certifications",
-      impact: "Medium",
-      suggestion: "Consider obtaining relevant certifications such as TESDA NC II or industry-specific credentials"
-    },
-    {
-      area: "Keywords Optimization",
-      impact: "Medium",
-      suggestion: "Include industry-specific keywords that match job descriptions"
-    },
-    {
-      area: "References Section",
-      impact: "Low",
-      suggestion: "Add professional references with contact information"
+  const fetchLatest = async () => {
+    const { data } = await supabase
+      .from('t_resume')
+      .select(`
+        res_exp_score,
+        res_skills_score,
+        res_desc_score,
+        res_completeness_score,
+        res_complete_score,
+        res_last_updated
+      `)
+      .eq('applicant_id', account.applicant_id)
+      .order('res_last_updated', { ascending: false })
+      .order('resume_id', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    return data;
+  };
+
+  useEffect(() => {
+    async function loadResumeScores() {
+      if (!account?.applicant_id) return;
+
+      setLoadingSkills(true);
+
+      let data = await fetchLatest();
+
+      if (!data?.res_complete_score) {
+        await supabase
+          .from('t_resume')
+          .update({ res_complete_score: '0' })
+          .eq('applicant_id', account.applicant_id)
+          .order('res_last_updated', { ascending: false })
+          .limit(1);
+
+        while (!data?.res_complete_score) {
+          await new Promise(resolve => setTimeout(resolve, 10000));
+          data = await fetchLatest();
+        }
+      }
+
+      setResumeData(data);
+      setLoadingSkills(false);
     }
-  ];
+
+    loadResumeScores();
+  }, [account?.applicant_id]);
 
   const recommendedCompanies: CompanyRecommendation[] = [
     {
@@ -158,11 +161,11 @@ export function ApplicantDashboard({
 
   const getScoreGrade = (score: number) => {
     if (score >= 90) return 'A+';
-    if (score >= 85) return 'A';
-    if (score >= 80) return 'B+';
-    if (score >= 75) return 'B';
-    if (score >= 70) return 'C+';
-    if (score >= 65) return 'C';
+    if (score >= 80) return 'A';
+    if (score >= 70) return 'B+';
+    if (score >= 60) return 'B';
+    if (score >= 50) return 'C+';
+    if (score >= 40) return 'C';
     return 'D';
   };
 
@@ -191,6 +194,56 @@ export function ApplicantDashboard({
         return 'bg-gray-500 text-white';
     }
   };
+
+  const skillsAssessment: SkillAssessment[] = resumeData ? [
+    {
+      name: "Experience",
+      score: parseFloat(resumeData.res_exp_score ?? '0'),
+      status: getScoreGrade(parseFloat(resumeData.res_exp_score ?? '0')),
+      recommendation: "Strong work history with relevant positions and achievements"
+    },
+    {
+      name: "Overall Skills",
+      score: parseFloat(resumeData.res_skills_score ?? '0'),
+      status: getScoreGrade(parseFloat(resumeData.res_skills_score ?? '0')),
+      recommendation: "Well-rounded skill set that matches industry requirements"
+    },
+    {
+      name: "Quality of Description",
+      score: parseFloat(resumeData.res_desc_score ?? '0'),
+      status: getScoreGrade(parseFloat(resumeData.res_desc_score ?? '0')),
+      recommendation: "Good descriptions but could be more detailed and quantified"
+    },
+    {
+      name: "Completeness of Resume",
+      score: parseFloat(resumeData.res_completeness_score ?? '0'),
+      status: getScoreGrade(parseFloat(resumeData.res_completeness_score ?? '0')),
+      recommendation: "Resume contains most essential sections with adequate detail"
+    }
+  ] : [];
+
+  const areasForImprovement = [
+    {
+      area: "Work Experience Details",
+      impact: "High",
+      suggestion: "Example: Add specific metrics and achievements (e.g., 'Increased sales by 30%' instead of 'Responsible for sales')"
+    },
+    {
+      area: "Professional Certifications",
+      impact: "Medium",
+      suggestion: "Consider obtaining relevant certifications such as TESDA NC II or industry-specific credentials"
+    },
+    {
+      area: "Keywords Optimization",
+      impact: "Medium",
+      suggestion: "Include industry-specific keywords that match job descriptions"
+    },
+    {
+      area: "References Section",
+      impact: "Low",
+      suggestion: "Add professional references with contact information"
+    }
+  ];
 
   return (
     <div className="min-h-screen bg-gray-50 relative">
@@ -362,16 +415,14 @@ export function ApplicantDashboard({
                       <div className="flex items-start justify-between mb-3">
                         <div>
                           <h3 className="text-gray-900 mb-1">{skill.name}</h3>
-                          <Badge className={getStatusColor(skill.status)}>
-                            {skill.status === 'excellent' && 'Excellent'}
-                            {skill.status === 'good' && 'Good'}
-                            {skill.status === 'needs-improvement' && 'Needs Improvement'}
+                          <Badge className={getScoreColor(skill.score)}>
+                            {skill.status}
                           </Badge>
                         </div>
                         <div className="flex items-center gap-1">
-                          {skill.status === 'excellent' ? (
+                          {['A+', 'A'].includes(skill.status) ? (
                             <TrendingUp className="w-5 h-5 text-[#17960b]" />
-                          ) : skill.status === 'needs-improvement' ? (
+                          ) : ['D', 'C', 'C+'].includes(skill.status) ? (
                             <TrendingDown className="w-5 h-5 text-red-500" />
                           ) : (
                             <TrendingUp className="w-5 h-5 text-[#ffca1a]" />
