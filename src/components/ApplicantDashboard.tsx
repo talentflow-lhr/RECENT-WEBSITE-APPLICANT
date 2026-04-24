@@ -21,7 +21,7 @@ import {
   Upload,
   FilePlus
 } from 'lucide-react';
-import logo from '../../imports/Landbase-removebg-preview.png';
+import logo from '../imports/Landbase-removebg-preview.png';
 import { useAuth } from "./AuthPass";
 import {supabase} from "./supabaseClient";
 import { useState, useEffect } from 'react';
