@@ -125,6 +125,7 @@ export function Footer({ onNavigate }: FooterProps) {
                 className="w-10 h-10 rounded-full bg-[#17960b] hover:bg-[#17960b]/80 flex items-center justify-center transition-colors"
                 aria-label="LinkedIn"
               >
+              </a>
             </div>
           </div>
         </div>
