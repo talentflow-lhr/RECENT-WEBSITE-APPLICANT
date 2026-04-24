@@ -1,6 +1,6 @@
 import { useState } from "react";
 import svgPaths from "../imports/svg-65zdysylli";
-import imgImageLandbase from "../../imports/Landbase-removebg-preview.png";
+import imgImageLandbase from "../imports/Landbase-removebg-preview.png";
 import { Download, Upload, CheckCircle2 } from "lucide-react";
 
 interface JobData {
