@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
-import { User, Briefcase, Settings, LogOut, Menu, X, Bookmark } from 'lucide-react';
-import imgLogo from '../imports/Landbase-removebg-preview.png';
+import { User, Briefcase, Settings, LogOut, Menu, X, Bookmark, ChevronDown } from 'lucide-react';
+import imgLogo from '../../imports/Landbase-removebg-preview.png';
 import svgPaths from '../imports/svg-3nnvnkmfcx';
 import { useAuth } from "./AuthPass";
 
