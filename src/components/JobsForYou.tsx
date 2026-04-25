@@ -90,7 +90,7 @@ export function JobsForYou({ onApply, onSaveJob, savedJobIds = [], onNavigateToR
 
       /// Step 2: Call the edge function via supabase client
      const { data: result, error: fnError } = await supabase.functions.invoke(
-      'cosine_similarity_score',
+      'quick-service',
       {
         body: { applicant_id: account!.applicant_id },
         headers: {
