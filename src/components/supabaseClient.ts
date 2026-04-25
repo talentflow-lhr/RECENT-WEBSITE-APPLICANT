@@ -8,3 +8,4 @@ const SUPABASE_ANON_KEY = 'sb_publishable_F8gFU_y97mT9aGZ-DYs_1Q_IW-Gr9vh'
 // const SUPABASE_ANON_KEY="sb_publishable_TlPDehNKgYWA5pZDnB8Evw_hgO3QbpP"
 
 export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
+export { SUPABASE_URL, SUPABASE_ANON_KEY }
