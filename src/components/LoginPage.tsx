@@ -126,7 +126,7 @@ export function LoginPage({ onLogin }: LoginPageProps) {
         localStorage.setItem("remembered_username", formData.username);
         localStorage.setItem("remembered_password", formData.password);
       } else {
-        localStorage.removeItem{"remembered_username");
+        localStorage.removeItem("remembered_username");
         localStorage.removeItem("remembered_password");
       }
   
