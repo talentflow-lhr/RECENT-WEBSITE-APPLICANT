@@ -1,7 +1,7 @@
 import { useState } from "react";
 import svgPaths from "../imports/svg-65zdysylli";
 import imgImageLandbase from "../imports/Landbase-removebg-preview.png";
-import { Download, Upload, CheckCircle2 } from "lucide-react";
+import { Download, Upload, CheckCircle2, ArrowLeft } from "lucide-react";
 
 interface JobData {
   title: string;
@@ -11,10 +11,12 @@ interface JobData {
 
 interface JobApplicationProps {
   jobData?: JobData;
+  onBack?: () => void;
 }
 
 export function JobApplication({
   jobData,
+  onBack,
 }: JobApplicationProps) {
   const [useExistingResume, setUseExistingResume] =
     useState(false);
@@ -30,11 +32,11 @@ export function JobApplication({
   const handleSubmit = () => {
     if (useExistingResume) {
       alert(
-        "Application submitted using your saved resume to Naomi Cuerdo (09345234576)!",
+        "Application submitted using your saved resume!",
       );
     } else {
       alert(
-        "Application submitted with new resume to Naomi Cuerdo (09345234576)!",
+        "Application submitted with new resume!",
       );
     }
   };
@@ -50,6 +52,14 @@ export function JobApplication({
   return (
     <div className="min-h-screen bg-[#f9fafb] pt-4 sm:pt-6 md:pt-8 px-4 sm:px-6 md:px-8 pb-8">
       <div className="max-w-[1126px] mx-auto">
+        <button
+          onClick={onBack}
+          className="flex items-center gap-2 text-[#17960b] hover:text-[#148509] font-semibold mb-6 transition-colors group"
+          >
+          <ArrowLeft className="w-5 h-5 transition-transform group-hover:-translate-x-1" />
+          Back to Jobs
+        </button>
+        
         {/* Header */}
         <div className="bg-white rounded-[10px] shadow-[0px_1px_3px_0px_rgba(0,0,0,0.1),0px_1px_2px_0px_rgba(0,0,0,0.1)] mb-6 md:mb-8 p-4 sm:p-6 md:p-8">
           <h1 className="text-[20px] sm:text-[24px] md:text-[28px] leading-[30px] sm:leading-[36px] md:leading-[42px] text-[#101828] mb-2">
@@ -255,20 +265,6 @@ export function JobApplication({
                     your application
                   </p>
                 )}
-              </div>
-
-              {/* Application Status */}
-              <div className="border-t border-[#e5e7eb] pt-6">
-                <div className="bg-[#ffca1a]/10 rounded-lg p-4">
-                  <p className="text-[14px] text-[#101828] font-medium mb-2">
-                    Application Details
-                  </p>
-                  <ul className="text-[13px] text-[#4a5565] space-y-1">
-                    <li>• Contact: Naomi Cuerdo</li>
-                    <li>• Phone: 09345234576</li>
-                    <li>• Response time: 2-3 business days</li>
-                  </ul>
-                </div>
               </div>
             </div>
           </div>
