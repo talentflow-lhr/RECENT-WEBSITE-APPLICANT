@@ -17,7 +17,7 @@ import { useState, useEffect } from "react";
 import { useAuth } from "./AuthPass";
 import { supabase } from "./supabaseClient";
 
-// ✅ Replace old JobData interface with one matching the edge function response
+// ✅ Replace old JobData interface with one matching the  edge function response
 interface JobData {
   position_id: number;
   job_title: string;
