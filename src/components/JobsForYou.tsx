@@ -89,9 +89,6 @@ export function JobsForYou({ onApply, onSaveJob, savedJobIds = [], onNavigateToR
         'cosine-similarity-score',
         {
           body: { applicant_id: account!.applicant_id },
-          headers: {
-            'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
-          },
         }
       );
 
