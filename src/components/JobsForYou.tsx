@@ -57,9 +57,21 @@ export function JobsForYou({ onApply, onSaveJob, savedJobIds = [], onNavigateToR
   const [hasResume, setHasResume] = useState<boolean | null>(null); // null = still checking
   const [savedIds, setSavedIds] = useState<number[]>([]);
 
+  const fetchSavedJobs = async () => {
+    const { data } = await supabase
+      .from('t_saved_jobs')
+      .select('position_id')
+      .eq('applicant_id', account!.applicant_id);
+    
+    if (data) {
+      setSavedIds(data.map(d => d.position_id));
+    }
+  };
+  
   useEffect(() => {
     if (!account) return;
     checkResumeAndFetch();
+    fetchSavedJobs();
   }, [account]);
 
   const checkResumeAndFetch = async () => {
@@ -198,24 +210,8 @@ export function JobsForYou({ onApply, onSaveJob, savedJobIds = [], onNavigateToR
 
   const categoryOrder = ["Top Matches", "Strong Fits", "Good Opportunities", "Worth Exploring"];
 
-  const fetchSavedJobs = async () => {
-    const { data } = await supabase
-      .from('t_saved_jobs')
-      .select('position_id')
-      .eq('applicant_id', account!.applicant_id);
-    
-    if (data) {
-      setSavedIds(data.map(d => d.position_id));
-    }
-  };
-  
-  useEffect(() => {
-    if (!account) return;
-    checkResumeAndFetch();
-    fetchSavedJobs();
-  }, [account]);
-
   const handleToggleSave = async (positionId: number) => {
+    console.log('positionId received:', positionId)
     const isSaved = savedIds.includes(positionId);
   
     if (isSaved) {
