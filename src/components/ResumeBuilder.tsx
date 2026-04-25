@@ -85,35 +85,6 @@ interface WorkExperience {
   description: string;
 }
 
-interface Education {
-  level: string;
-  degree: string;
-  school: string;
-  city: string;
-  stateProvince: string;
-  country: string;
-  startDate: string;
-  endDate: string;
-  grade: string;
-  description: string;
-  achievements: string;
-}
-
-interface Organization {
-  organization: string;
-  role: string;
-  startDate: string;
-  endDate: string;
-  current: boolean;
-  description: string;
-}
-
-interface Skill {
-  name: string;
-  level: string;
-  category: 'technical' | 'soft';
-}
-
 interface Certification {
   name: string;
   type: 'certificate' | 'training';
@@ -124,13 +95,38 @@ interface Certification {
   proofUrl?: string | null;
 }
 
+interface Education {
+  level: string;
+  degree: string;
+  school: string;
+  city: string;
+  stateProvince: string;
+  country: string;
+  startDate: string;
+  endDate: string;
+  currentlyStudying: boolean;
+  grade: string;
+  description: string;
+  achievements: string;
+}
+
+interface Skill {
+  name: string;
+  level: string;
+  category: 'technical' | 'soft';
+}
+
 interface ResumeBuilderProps {
   onResumeSubmit?: () => void;
 }
 
 const formatDateToMonthYear = (dateString: string): string => {
+  if (!dateString) return '';
   const [year, month] = dateString.split('-');
-  return `${['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][parseInt(month,10)-1]} ${year}`;
+  if (!year || !month) return '';
+  const monthIndex = parseInt(month, 10) - 1;
+  const monthName = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][monthIndex];
+  return monthName ? `${monthName} ${year}` : '';
 };
 
 const loadImage = (src: string): Promise<HTMLImageElement> => {
@@ -261,8 +257,11 @@ export function ResumeBuilder({ onResumeSubmit }: ResumeBuilderProps = {}) {
   const [currentStep, setCurrentStep] = useState(1);
   const [showPreview, setShowPreview] = useState(false);
   const [showUploadModal, setShowUploadModal] = useState(false);
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [showDownloadDropdown, setShowDownloadDropdown] = useState(false);
   const [resumeUploaded, setResumeUploaded] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
+  const [uploadedFileName, setUploadedFileName] = useState('');
   const [personalInfo, setPersonalInfo] = useState<PersonalInfo>({
     firstName: '',
     middleInitial: '',
@@ -299,20 +298,10 @@ export function ResumeBuilder({ onResumeSubmit }: ResumeBuilderProps = {}) {
       country: '',
       startDate: '',
       endDate: '',
+      currentlyStudying: false,
       grade: '',
       description: '',
       achievements: ''
-    }
-  ]);
-
-  const [organizations, setOrganizations] = useState<Organization[]>([
-    {
-      organization: 'Youth Leadership Council',
-      role: 'Vice President',
-      startDate: 'Jan 2019',
-      endDate: 'Dec 2020',
-      current: false,
-      description: 'Led community outreach programs and managed a team of 15 volunteers'
     }
   ]);
 
@@ -324,6 +313,22 @@ export function ResumeBuilder({ onResumeSubmit }: ResumeBuilderProps = {}) {
     { name: '', type: 'certificate', organization: '', dateIssued: '' }
   ]);
 
+  const previewContainerRef = useRef<HTMLDivElement>(null);
+  const [previewScale, setPreviewScale] = useState(0.55);
+
+  useEffect(() => {
+    const updateScale = () => {
+      if (previewContainerRef.current) {
+        const containerWidth = previewContainerRef.current.offsetWidth - 32;
+        setPreviewScale(containerWidth / 794);
+      }
+    };
+
+    updateScale();
+    window.addEventListener('resize', updateScale);
+    return () => window.removeEventListener('resize', updateScale);
+  }, []);
+  
   const handleNext = () => {
     if (currentStep < 5) {
       setCurrentStep(currentStep + 1);
@@ -430,6 +435,55 @@ export function ResumeBuilder({ onResumeSubmit }: ResumeBuilderProps = {}) {
     fileInputRef.current?.click();
   };
 
+  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+  const file = event.target.files?.[0];
+  if (file) {
+    const imgFileTypes = ['image/jpeg', 'image/png', 'image/webp'];
+    const validTypes = ['application/pdf', ...imgFileTypes];
+
+    if (!validTypes.includes(file.type)) {
+      alert('Please upload a PDF or image (.pdf, .jpg, .png, .webp)');
+      return;
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+      alert('File size must be less than 5MB');
+      return;
+    }
+
+    setIsUploading(true);          // ← was never called
+    setUploadedFileName(file.name); // ← was never called
+
+    try {
+      let resumeImg: HTMLImageElement;
+
+      if (imgFileTypes.includes(file.type)) {
+        resumeImg = await loadImage(URL.createObjectURL(file));
+      } else if (file.type === 'application/pdf') {
+        resumeImg = await parsePdfToImages(file);
+      } else {
+        alert('This file type is not supported for auto-parsing.');
+        setShowUploadModal(false);
+        setIsUploading(false);
+        return;
+      }
+
+      const resumeJSON = await parseResumeLLM(resumeImg);
+      handleUploadResumeFieldsPopulation(resumeJSON);
+      setResumeUploaded(true);
+      setShowUploadModal(false);
+      setShowSuccessModal(true);  
+
+    } catch (err) {
+      console.error('Resume parsing failed:', err);
+      setShowUploadModal(false);
+      alert('Failed to parse resume. Please fill in the fields manually.');
+    } finally {
+      setIsUploading(false);       
+    }
+  }
+};
+
   const addWorkExperience = () => {
     setWorkExperiences([...workExperiences, {
       position: '',
@@ -464,6 +518,7 @@ export function ResumeBuilder({ onResumeSubmit }: ResumeBuilderProps = {}) {
       country: '',
       startDate: '',
       endDate: '',
+      currentlyStudying: false,
       grade: '',
       description: '',
       achievements: ''
@@ -478,27 +533,6 @@ export function ResumeBuilder({ onResumeSubmit }: ResumeBuilderProps = {}) {
     const updated = [...education];
     updated[index] = { ...updated[index], [field]: value };
     setEducation(updated);
-  };
-
-  const addOrganization = () => {
-    setOrganizations([...organizations, {
-      organization: '',
-      role: '',
-      startDate: '',
-      endDate: '',
-      current: false,
-      description: ''
-    }]);
-  };
-
-  const removeOrganization = (index: number) => {
-    setOrganizations(organizations.filter((_, i) => i !== index));
-  };
-
-  const updateOrganization = (index: number, field: keyof Organization, value: string | boolean) => {
-    const updated = [...organizations];
-    updated[index] = { ...updated[index], [field]: value };
-    setOrganizations(updated);
   };
 
   const addSkill = () => {
@@ -536,320 +570,300 @@ export function ResumeBuilder({ onResumeSubmit }: ResumeBuilderProps = {}) {
     updated[index] = { ...updated[index], [field]: value };
     setCertifications(updated);
   };
-
-  const handleUploadResumeFieldsPopulation = (resumeJSON: Record<string, unknown>) => {
-    // --- Personal Info ---
-    const p = resumeJSON.personal_info as Record<string, string> | undefined;
-    if (p) {
-      setPersonalInfo({
-        firstName:     p.first_name      ?? '',
-        middleInitial: p.middle_initial  ?? '',
-        lastName:      p.last_name       ?? '',
-        dateOfBirth:   p.date_of_birth   ?? '',   // was missing
-        city:          p.city            ?? '',
-        province:      p.province        ?? '',
-        country:       p.country         ?? '',
-        email:         p.email           ?? '',
-        phone:         p.phone           ?? '',
-      });
-    }
-
-    // --- Work Experience ---
-    const experiences = resumeJSON.experiences as Record<string, unknown>[] | undefined;
-    if (experiences && experiences.length > 0) {
-      setWorkExperiences(experiences.map((exp) => ({
-        position:      (exp.position     as string)  ?? '',
-        company:       (exp.company      as string)  ?? '',
-        city:          (exp.city         as string)  ?? '',
-        stateProvince: (exp.province     as string)  ?? '',
-        country:       (exp.country      as string)  ?? '',   // was missing
-        startDate:     (exp.startDate    as string)  ?? '',
-        endDate:       (exp.endDate      as string)  ?? '',
-        current:       (exp.current      as boolean) ?? false,
-        description:   (exp.description  as string)  ?? '',
-      })));
-    }
-
-    // --- Education ---
-    const educationEntries = resumeJSON.education as Record<string, unknown>[] | undefined;
-    if (educationEntries && educationEntries.length > 0) {
-      setEducation(educationEntries.map((edu) => ({
-        level:         (edu.educational_level as string) ?? '',   // was missing
-        degree:        (edu.degree            as string) ?? '',
-        school:        (edu.school            as string) ?? '',
-        city:          (edu.city              as string) ?? '',
-        stateProvince: (edu.province          as string) ?? '',
-        country:       (edu.country           as string) ?? '',   // was missing
-        startDate:     (edu.startDate         as string) ?? '',
-        endDate:       (edu.endDate           as string) ?? '',
-        grade:         (edu.grade             as string) ?? '',   // was missing
-        description:   (edu.info              as string) ?? '',   // was missing / wrong key
-        achievements:  (edu.grade_honors      as string) ?? '',   // more accurate mapping
-      })));
-    }
-
-    // --- Skills ---
-    const skillEntries = resumeJSON.skills as Record<string, string>[] | undefined;
-    if (skillEntries && skillEntries.length > 0) {
-      setSkills(skillEntries.map((skill) => {
-        const cat = skill.skill_category;
-        const category: 'technical' | 'soft' =
-          cat === 'technical' ? 'technical' : 'soft';   // normalize extras to 'soft'
-        return {
-          name:     skill.skill_name        ?? '',
-          level:    skill.proficiency_level ?? '',
-          category,
-        };
-      }));
-    }
-
-    // --- Certifications ---
-    const certEntries = resumeJSON.certificates as Record<string, string>[] | undefined;
-    if (certEntries && certEntries.length > 0) {
-      setCertifications(certEntries.map((cert) => {
-        const rawType = (cert.cred_type ?? '').toLowerCase();
-        const type: 'certificate' | 'training' =
-          rawType === 'training' ? 'training' : 'certificate';   // was missing
-        return {
-          name:          cert.certificate_title ?? '',
-          type,
-          organization:  cert.issuer            ?? '',
-          dateIssued:    cert.date_obtained     ?? '',
-          proofFile:     null,
-          proofFileName: '',
-        };
-      }));
-    }
+  
+  const sortWorkExperiencesByDate = () => {
+    const sorted = [...workExperiences].sort((a, b) => {
+      if (a.current) return -1;
+      if (b.current) return 1;
+      const dateA = a.endDate || a.startDate;
+      const dateB = b.endDate || b.startDate;
+      return dateB.localeCompare(dateA);
+    });
+    setWorkExperiences(sorted);
   };
 
-  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (file) {
-      // Check file type
+ const sortEducationByDate = () => {
+    const sorted = [...education].sort((a, b) => {
+      if (a.currentlyStudying) return -1;
+      if (b.currentlyStudying) return 1;
+      const dateA = a.endDate || a.startDate;
+      const dateB = b.endDate || b.startDate;
+      return dateB.localeCompare(dateA);
+    });
+    setEducation(sorted);
+  };  
 
-      const imgFileTypes = ['image/jpeg', 'image/png', 'image/webp']
-      const validTypes = [
-        'application/pdf',
-        'application/msword',
-        'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-        ...imgFileTypes
-      ];
-      if (!validTypes.includes(file.type)) {
-        alert('Please upload a PDF or Word document (.pdf, .doc, .docx)');
-        return;
-      }
+ const handleUploadResumeFieldsPopulation = (resumeJSON: Record<string, unknown>) => {
+  // --- Personal Info ---
+  const p = resumeJSON.personal_info as Record<string, string> | undefined;
+  if (p) {
+    setPersonalInfo({
+      firstName:     p.first_name      ?? '',
+      middleInitial: p.middle_initial  ?? '',
+      lastName:      p.last_name       ?? '',
+      dateOfBirth:   p.date_of_birth   ?? '',
+      city:          p.city            ?? '',
+      province:      p.province        ?? '',
+      country:       p.country         ?? '',
+      email:         p.email           ?? '',
+      phone:         p.phone           ?? '',
+    });
+  }
 
-      // Check file size (max 5MB)
-      if (file.size > 5 * 1024 * 1024) {
-        alert('File size must be less than 5MB');
-        return;
-      }
+  // --- Work Experience ---
+  const experiences = resumeJSON.experiences as Record<string, unknown>[] | undefined;
+  if (experiences && experiences.length > 0) {
+    setWorkExperiences(experiences.map((exp) => ({
+      position:      (exp.position    as string)  ?? '',
+      company:       (exp.company     as string)  ?? '',
+      city:          (exp.city        as string)  ?? '',
+      stateProvince: (exp.province    as string)  ?? '',
+      country:       (exp.country     as string)  ?? '',
+      startDate:     (exp.startDate   as string)  ?? '',
+      endDate:       (exp.endDate     as string)  ?? '',
+      current:       (exp.current     as boolean) ?? false,
+      description:   (exp.description as string)  ?? '',
+    })));
+  }
 
-      try {
-        let resumeImg: HTMLImageElement;
+  // --- Certifications ---
+  const certEntries = resumeJSON.certificates as Record<string, string>[] | undefined;
+  if (certEntries && certEntries.length > 0) {
+    setCertifications(certEntries.map((cert) => {
+      const rawType = (cert.cred_type ?? '').toLowerCase();
+      const type: 'certificate' | 'training' =
+        rawType === 'training' ? 'training' : 'certificate';
+      return {
+        name:          cert.certificate_title ?? '',
+        type,
+        organization:  cert.issuer            ?? '',
+        dateIssued:    cert.date_obtained     ?? '',
+        proofFile:     null,
+        proofFileName: '',
+        proofUrl:      null,
+      };
+    }));
+  }
 
-        if (imgFileTypes.includes(file.type)) {
-          resumeImg = await loadImage(URL.createObjectURL(file));
-        } else if (file.type === 'application/pdf') {
-          resumeImg = await parsePdfToImages(file);
-        } else {
-          alert('Word documents are not yet supported for auto-parsing.');
-          setShowUploadModal(false);
-          return;
-        }
+  // --- Education ---
+  const educationEntries = resumeJSON.education as Record<string, unknown>[] | undefined;
+  if (educationEntries && educationEntries.length > 0) {
+    setEducation(educationEntries.map((edu) => ({
+      level:             (edu.educational_level as string)  ?? '',
+      degree:            (edu.degree            as string)  ?? '',
+      school:            (edu.school            as string)  ?? '',
+      city:              (edu.city              as string)  ?? '',
+      stateProvince:     (edu.province          as string)  ?? '',
+      country:           (edu.country           as string)  ?? '',
+      startDate:         (edu.startDate         as string)  ?? '',
+      endDate:           (edu.endDate           as string)  ?? '',
+      currentlyStudying: (edu.currentlyStudying as boolean) ?? false,
+      grade:             (edu.grade             as string)  ?? '',
+      description:       (edu.info              as string)  ?? '',
+      achievements:      (edu.grade_honors      as string)  ?? '',
+    })));
+  }
 
-        const resumeJSON = await parseResumeLLM(resumeImg);
-        handleUploadResumeFieldsPopulation(resumeJSON);
-        setResumeUploaded(true);
-        setShowUploadModal(false);
-        alert(`Resume "${file.name}" parsed and fields populated successfully!`);
+  // --- Skills ---
+  const skillEntries = resumeJSON.skills as Record<string, string>[] | undefined;
+  if (skillEntries && skillEntries.length > 0) {
+    const proficiencyOrder: Record<string, number> = {
+      'Expert': 4, 'Advanced': 3, 'Intermediate': 2, 'Beginner': 1,
+    };
 
-      } catch (err) {
-        console.error('Resume parsing failed:', err);
-        setShowUploadModal(false);
-        alert('Failed to parse resume. Please fill in the fields manually.');
-      }
-    }
-  };
+    const mapped = skillEntries.map((skill) => ({
+      name:     skill.skill_name        ?? '',
+      level:    skill.proficiency_level ?? '',
+      category: skill.skill_category === 'technical' ? 'technical' : 'soft' as 'technical' | 'soft',
+    }));
+
+    const sorted = [...mapped].sort((a, b) =>
+      (proficiencyOrder[b.level] || 0) - (proficiencyOrder[a.level] || 0)
+    );
+
+    setSkills(sorted);
+  }
+}; // ← end of handleUploadResumeFieldsPopulation
 
   const steps = [
     { number: 1, title: 'Personal\nInformation', icon: 'personal' },
-    { number: 2, title: 'Experience', icon: 'professional' },
-    { number: 3, title: 'Education', icon: 'education' },
-    { number: 4, title: 'Skills', icon: 'skills' },
-    { number: 5, title: 'Certifications', icon: 'certifications' },
+    { number: 2, title: 'Work\nExperience', icon: 'professional' },
+    { number: 3, title: 'Certifications', icon: 'certifications' },
+    { number: 4, title: 'Education', icon: 'education' },
+    { number: 5, title: 'Skills', icon: 'skills' },
   ];
 
   const ResumePreview = () => {
-    // All resume content in a single flow
-    return (
-      <div className="space-y-6">
-        {/* Continuous content that flows across multiple pages */}
-        <div className="bg-white shadow-2xl mx-auto relative" style={{ width: '210mm', maxWidth: '100%' }}>
-          <div className="p-8 sm:p-12 md:p-16">
-            {/* Name */}
-            <div className="mb-6">
-              <h1 className="text-2xl font-semibold text-[#101828] uppercase tracking-wide mb-2">
-                {personalInfo.firstName || 'FIRST'} {personalInfo.middleInitial || 'M'} {personalInfo.lastName || 'LAST'}
-              </h1>
-              <div className="text-sm text-[#4a5565]">
-                <p>{personalInfo.city || 'City'} {personalInfo.province || 'Province'}, {personalInfo.country || 'Country'} | {personalInfo.email || 'email@email.com'} | {personalInfo.phone || '+phone'}</p>
-              </div>
-            </div>
-
-            {/* Work Experiences */}
-            <div className="mb-6">
-              <h2 className="text-lg font-semibold text-[#101828] uppercase mb-3 pb-1.5 border-b-2 border-[#101828]">
-                Work Experience
-              </h2>
-              {workExperiences.length > 0 && workExperiences[0].position ? (
-                <div className="space-y-4">
-                  {workExperiences.map((exp, index) => (
-                    exp.position && (
-                      <div key={index}>
-                        <div className="flex items-start justify-between mb-1">
-                          <div className="flex-1">
-                            <p className="text-base font-semibold text-[#101828]">{exp.position}</p>
-                            <p className="text-sm text-[#4a5565]">
-                              {exp.company}, {exp.city}, {exp.stateProvince}
-                            </p>
-                          </div>
-                          <p className="text-sm text-[#4a5565] whitespace-nowrap ml-4">
-                            {formatDateToMonthYear(exp.startDate)} - {exp.current ? 'Present' : formatDateToMonthYear(exp.endDate)}
-                          </p>
-                        </div>
-                        {exp.description && (
-                          <p className="text-sm text-[#4a5565] mt-1 leading-relaxed whitespace-pre-line">{exp.description}</p>
-                        )}
-                      </div>
-                    )
-                  ))}
-                </div>
-              ) : (
-                <p className="text-sm text-gray-400 italic">Highlight specific achievements and quantify results</p>
-              )}
-            </div>
-
-            {/* Page break indicator after work experience if content is long */}
-            {(workExperiences.length > 2 || (education.length > 0 && education[0].degree)) && (
-              <div className="border-t-2 border-dashed border-gray-300 my-8 relative">
-                <span className="absolute -top-3 right-0 bg-white px-2 text-xs text-gray-400">Page Break</span>
-              </div>
-            )}
-
-            {/* Education */}
-            <div className="mb-6">
-              <h2 className="text-lg font-semibold text-[#101828] uppercase mb-3 pb-1.5 border-b-2 border-[#101828]">
-                Education
-              </h2>
-              {education.length > 0 && education[0].degree ? (
-                <div className="space-y-4">
-                  {education.map((edu, index) => (
-                    edu.degree && (
-                      <div key={index}>
-                        <div className="flex items-start justify-between mb-1">
-                          <div className="flex-1">
-                            <p className="text-base font-semibold text-[#101828]">{edu.degree}</p>
-                            <p className="text-sm text-[#4a5565]">
-                              {edu.school}, {edu.city}, {edu.stateProvince}
-                            </p>
-                          </div>
-                          <p className="text-sm text-[#4a5565] whitespace-nowrap ml-4">
-                            {formatDateToMonthYear(edu.startDate)} - {formatDateToMonthYear(edu.endDate)}
-                          </p>
-                        </div>
-                        {edu.achievements && (
-                          <p className="text-sm text-[#4a5565] mt-1 leading-relaxed">{edu.achievements}</p>
-                        )}
-                      </div>
-                    )
-                  ))}
-                </div>
-              ) : (
-                <p className="text-sm text-gray-400 italic">Well-documented educational background</p>
-              )}
-            </div>
-
-            {/* Skills */}
-            <div className="mb-6">
-              <h2 className="text-lg font-semibold text-[#101828] uppercase mb-3 pb-1.5 border-b-2 border-[#101828]">
-                Skills
-              </h2>
-              
-              {skills.length > 0 && skills[0].name ? (
-                <>
-                  {/* Technical Skills */}
-                  {skills.filter(s => s.category === 'technical' && s.name).length > 0 && (
-                    <div className="mb-4">
-                      <p className="text-sm font-semibold text-[#101828] mb-2">Technical Skills:</p>
-                      <div className="space-y-1">
-                        {skills.filter(s => s.category === 'technical').map((skill, index) => (
-                          skill.name && (
-                            <p key={index} className="text-sm text-[#4a5565]">
-                              • {skill.name} - {skill.level}
-                            </p>
-                          )
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                  
-                  {/* Soft Skills */}
-                  {skills.filter(s => s.category === 'soft' && s.name).length > 0 && (
-                    <div>
-                      <p className="text-sm font-semibold text-[#101828] mb-2">Soft Skills:</p>
-                      <div className="space-y-1">
-                        {skills.filter(s => s.category === 'soft').map((skill, index) => (
-                          skill.name && (
-                            <p key={index} className="text-sm text-[#4a5565]">
-                              • {skill.name} - {skill.level}
-                            </p>
-                          )
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                </>
-              ) : (
-                <div className="space-y-2">
-                  <p className="text-sm text-gray-400 italic">Technical Skills: Software, tools, programming languages</p>
-                  <p className="text-sm text-gray-400 italic">Soft Skills: Communication, leadership, languages</p>
-                </div>
-              )}
-            </div>
-
-            {/* Certifications */}
-            <div className="mb-6">
-              <h2 className="text-lg font-semibold text-[#101828] uppercase mb-3 pb-1.5 border-b-2 border-[#101828]">
-                Certifications
-              </h2>
-              {certifications.length > 0 && certifications[0].name ? (
-                <div className="space-y-3">
-                  {certifications.map((cert, index) => (
-                    cert.name && (
-                      <div key={index}>
-                        <p className="text-base font-semibold text-[#101828]">{cert.name}</p>
-                        <p className="text-sm text-[#4a5565]">
-                          {cert.organization}
-                        </p>
-                        {cert.dateIssued && (
-                          <p className="text-sm text-[#4a5565]">
-                            Date Issued: { formatDateToMonthYear(cert.dateIssued)}
-                          </p>
-                        )}
-                      </div>
-                    )
-                  ))}
-                </div>
-              ) : (
-                <p className="text-sm text-gray-400 italic">Add industry-specific certifications to stand out</p>
-              )}
-            </div>
+  return (
+    <div
+      className="bg-white shadow-2xl mx-auto relative origin-top"
+      style={{
+        width: '794px',
+        minHeight: '1123px',
+        transform: `scale(${previewScale})`,
+        transformOrigin: 'top center',
+        marginBottom: `calc((1123px * ${previewScale}) - 1123px)`,
+      }}
+    >
+      <div className="p-16">
+        {/* Name */}
+        <div className="mb-6">
+          <h1 className="text-2xl font-semibold text-[#101828] uppercase tracking-wide mb-2">
+            {personalInfo.firstName || 'FIRST'} {personalInfo.middleInitial || 'M'} {personalInfo.lastName || 'LAST'}
+          </h1>
+          <div className="text-sm text-[#4a5565]">
+            <p>
+              {personalInfo.city || 'City'} {personalInfo.province || 'Province'}, {personalInfo.country || 'Country'} | {personalInfo.email || 'email@email.com'} | {personalInfo.phone || '+phone'}
+            </p>
           </div>
         </div>
+
+        {/* Work Experiences */}
+        <div className="mb-6">
+          <h2 className="text-lg font-semibold text-[#101828] uppercase mb-3 pb-1.5 border-b-2 border-[#101828]">
+            Work Experience
+          </h2>
+          {workExperiences.length > 0 && workExperiences[0].position ? (
+            <div className="space-y-4">
+              {workExperiences.map((exp, index) => (
+                exp.position && (
+                  <div key={index}>
+                    <div className="flex items-start justify-between mb-1">
+                      <div className="flex-1">
+                        <p className="text-base font-semibold text-[#101828]">{exp.position}</p>
+                        <p className="text-sm text-[#4a5565]">
+                          {exp.company}, {exp.city}, {exp.stateProvince}
+                        </p>
+                      </div>
+                      <p className="text-sm text-[#4a5565] whitespace-nowrap ml-4">
+                        {formatDateToMonthYear(exp.startDate)} - {exp.current ? 'Present' : formatDateToMonthYear(exp.endDate)}
+                      </p>
+                    </div>
+                    {exp.description && (
+                      <p className="text-sm text-[#4a5565] mt-1 leading-relaxed whitespace-pre-line">{exp.description}</p>
+                    )}
+                  </div>
+                )
+              ))}
+            </div>
+          ) : (
+            <p className="text-sm text-gray-400 italic">Highlight specific achievements and quantify results</p>
+          )}
+        </div>
+
+        {/* Page break indicator */}
+        {(workExperiences.length > 2 || (education.length > 0 && education[0].degree)) && (
+          <div className="border-t-2 border-dashed border-gray-300 my-8 relative">
+            <span className="absolute -top-3 right-0 bg-white px-2 text-xs text-gray-400">Page Break</span>
+          </div>
+        )}
+
+        {/* Certifications */}
+        <div className="mb-6">
+          <h2 className="text-lg font-semibold text-[#101828] uppercase mb-3 pb-1.5 border-b-2 border-[#101828]">
+            Certifications
+          </h2>
+          {certifications.length > 0 && certifications[0].name ? (
+            <div className="space-y-3">
+              {certifications.map((cert, index) => (
+                cert.name && (
+                  <div key={index}>
+                    <p className="text-base font-semibold text-[#101828]">{cert.name}</p>
+                    <p className="text-sm text-[#4a5565]">{cert.organization}</p>
+                    {cert.dateIssued && (
+                      <p className="text-sm text-[#4a5565]">
+                        Date Issued: {formatDateToMonthYear(cert.dateIssued)}
+                      </p>
+                    )}
+                  </div>
+                )
+              ))}
+            </div>
+          ) : (
+            <p className="text-sm text-gray-400 italic">Add industry-specific certifications to stand out</p>
+          )}
+        </div>
+
+        {/* Education */}
+        <div className="mb-6">
+          <h2 className="text-lg font-semibold text-[#101828] uppercase mb-3 pb-1.5 border-b-2 border-[#101828]">
+            Education
+          </h2>
+          {education.length > 0 && education[0].degree ? (
+            <div className="space-y-4">
+              {education.map((edu, index) => (
+                edu.degree && (
+                  <div key={index}>
+                    <div className="flex items-start justify-between mb-1">
+                      <div className="flex-1">
+                        <p className="text-base font-semibold text-[#101828]">{edu.degree}</p>
+                        <p className="text-sm text-[#4a5565]">
+                          {edu.school}, {edu.city}, {edu.stateProvince}
+                        </p>
+                      </div>
+                      <p className="text-sm text-[#4a5565] whitespace-nowrap ml-4">
+                        {formatDateToMonthYear(edu.startDate)} - {formatDateToMonthYear(edu.endDate)}
+                      </p>
+                    </div>
+                    {edu.achievements && (
+                      <p className="text-sm text-[#4a5565] mt-1 leading-relaxed">{edu.achievements}</p>
+                    )}
+                  </div>
+                )
+              ))}
+            </div>
+          ) : (
+            <p className="text-sm text-gray-400 italic">Well-documented educational background</p>
+          )}
+        </div>
+
+        {/* Skills */}
+        <div className="mb-6">
+          <h2 className="text-lg font-semibold text-[#101828] uppercase mb-3 pb-1.5 border-b-2 border-[#101828]">
+            Skills
+          </h2>
+          {skills.length > 0 && skills[0].name ? (
+            <>
+              {skills.filter(s => s.category === 'technical' && s.name).length > 0 && (
+                <div className="mb-4">
+                  <p className="text-sm font-semibold text-[#101828] mb-2">Technical Skills:</p>
+                  <div className="grid grid-cols-2 gap-x-4 gap-y-1">
+                    {skills.filter(s => s.category === 'technical').map((skill, index) => (
+                      skill.name && (
+                        <p key={index} className="text-sm text-[#4a5565]">
+                          • {skill.name} - {skill.level}
+                        </p>
+                      )
+                    ))}
+                  </div>
+                </div>
+              )}
+              {skills.filter(s => s.category === 'soft' && s.name).length > 0 && (
+                <div>
+                  <p className="text-sm font-semibold text-[#101828] mb-2">Soft Skills:</p>
+                  <div className="grid grid-cols-2 gap-x-4 gap-y-1">
+                    {skills.filter(s => s.category === 'soft').map((skill, index) => (
+                      skill.name && (
+                        <p key={index} className="text-sm text-[#4a5565]">
+                          • {skill.name} - {skill.level}
+                        </p>
+                      )
+                    ))}
+                  </div>
+                </div>
+              )}
+            </>
+          ) : (
+            <div className="space-y-2">
+              <p className="text-sm text-gray-400 italic">Technical Skills: Software, tools, programming languages</p>
+              <p className="text-sm text-gray-400 italic">Soft Skills: Communication, leadership, languages</p>
+            </div>
+          )}
+        </div>
       </div>
-    );
-  };
+    </div>
+  );
+};
 
   return (
     <div className="min-h-screen bg-[#f9fafb] py-4 sm:py-6 md:py-8 px-4 sm:px-6 md:px-8">
@@ -950,7 +964,7 @@ export function ResumeBuilder({ onResumeSubmit }: ResumeBuilderProps = {}) {
                     <input
                       ref={fileInputRef}
                       type="file"
-                      accept=".pdf,.doc,.docx"
+                      accept=".pdf,.jpg,.jpeg,.png,.webp"
                       onChange={handleFileUpload}
                       className="hidden"
                     />
@@ -1073,7 +1087,16 @@ export function ResumeBuilder({ onResumeSubmit }: ResumeBuilderProps = {}) {
                 {currentStep === 2 && (
                   <>
                     <div className="mb-6">
-                      <p className="text-lg sm:text-xl font-semibold text-[#101828] mb-2">Work Experience</p>
+                      <div className="flex items-center justify-between mb-2">
+                      <p className="text-lg sm:text-xl font-semibold text-[#101828]">Work Experience</p>
+                        <button
+                          onClick={sortWorkExperiencesByDate}
+                          className="text-sm text-[#17960b] hover:text-[#148509] font-medium flex items-center gap-1"
+                        >
+                          <ArrowRight className="w-4 h-4 rotate-90" />
+                          Sort by Date
+                        </button>
+                      </div>
                       <p className="text-sm sm:text-base text-[#4a5565]">Add your professional experience.</p>
                     </div>
 
@@ -1210,13 +1233,127 @@ export function ResumeBuilder({ onResumeSubmit }: ResumeBuilderProps = {}) {
                   </>
                 )}
 
-                {/* Step 3: Education */}
+                {/* Step 3: Certifications */}
                 {currentStep === 3 && (
                   <>
                     <div className="mb-6">
-                      <p className="text-lg sm:text-xl font-semibold text-[#101828] mb-2">Education Level</p>
-                      <p className="text-sm sm:text-base text-[#4a5565]">Add your educational background.</p>
+                      <p className="text-lg sm:text-xl font-semibold text-[#101828] mb-2">Certifications</p>
+                      <p className="text-sm sm:text-base text-[#4a5565]">Add your professional certifications.</p>
                     </div>
+
+                    <div className="space-y-6 max-h-[60vh] overflow-y-auto pr-2">
+                      {certifications.map((cert, index) => (
+                        <div key={index} className="border border-[#e5e7eb] rounded-lg p-4">
+                          <div className="flex items-center justify-between mb-4">
+                            <p className="text-base font-semibold text-[#101828]">Certification {index + 1}</p>
+                            {certifications.length > 1 && (
+                              <button
+                                onClick={() => removeCertification(index)}
+                                className="text-red-600 hover:text-red-700 p-2"
+                                aria-label="Remove certification"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </button>
+                            )}
+                          </div>
+                          <div className="space-y-4">
+                            <div>
+                              <label className="block text-sm font-medium text-[#364153] mb-2">Certification Name</label>
+                              <input
+                                type="text"
+                                value={cert.name}
+                                onChange={(e) => updateCertification(index, 'name', e.target.value)}
+                                className="w-full bg-[#f3f3f5] rounded-lg px-3 py-2.5 text-sm text-gray-900 border-0 outline-none focus:ring-2 focus:ring-[#17960b]"
+                                placeholder="Add industry-specific certifications to stand out (e.g., Certification of Master Plumbing)"
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-sm font-medium text-[#364153] mb-2">Type</label>
+                              <select
+                                value={cert.type}
+                                onChange={(e) => updateCertification(index, 'type', e.target.value as 'certificate' | 'training')}
+                                className="w-full bg-[#f3f3f5] rounded-lg px-3 py-2.5 text-sm text-gray-900 border-0 outline-none focus:ring-2 focus:ring-[#17960b]"
+                              >
+                                <option value="certificate">Certificate</option>
+                                <option value="training">Training</option>
+                              </select>
+                            </div>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                              <div>
+                                <label className="block text-sm font-medium text-[#364153] mb-2">Issuing Organization</label>
+                                <input
+                                  type="text"
+                                  value={cert.organization}
+                                  onChange={(e) => updateCertification(index, 'organization', e.target.value)}
+                                  className="w-full bg-[#f3f3f5] rounded-lg px-3 py-2.5 text-sm text-gray-900 border-0 outline-none focus:ring-2 focus:ring-[#17960b]"
+                                  placeholder="e.g., Philippine Tubero Association"
+                                />
+                              </div>
+                              <div>
+                                <label className="block text-sm font-medium text-[#364153] mb-2">Date Issued</label>
+                                <div className="relative">
+                                  <input
+                                    type="date"
+                                    value={cert.dateIssued}
+                                    onChange={(e) => updateCertification(index, 'dateIssued', e.target.value)}
+                                    className="w-full bg-[#f3f3f5] rounded-lg pl-10 pr-3 py-2.5 text-sm text-gray-900 border-0 outline-none focus:ring-2 focus:ring-[#17960b]"
+                                  />
+                                  <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-500 pointer-events-none" />
+                                </div>
+                              </div>
+                            </div>
+                            <div>
+                              <label className="block text-sm font-medium text-[#364153] mb-2">Proof of Certification (Optional)</label>
+                              <div className="flex items-center gap-3">
+                                <input
+                                  type="file"
+                                  accept=".pdf,.jpg,.jpeg,.png,.doc,.docx"
+                                  onChange={(e) => {
+                                    const file = e.target.files?.[0];
+                                    if (file) {
+                                      updateCertification(index, 'proofFile', file);
+                                      updateCertification(index, 'proofFileName', file.name);
+                                    }
+                                  }}
+                                  className="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-[#17960b] file:text-white hover:file:bg-[#148509] file:cursor-pointer"
+                                />
+                              </div>
+                              {cert.proofFileName && (
+                                <p className="text-xs text-[#4a5565] mt-2">
+                                  Selected: {cert.proofFileName}
+                                </p>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                      <button
+                        onClick={addCertification}
+                        className="w-full border-2 border-dashed border-[#17960b] rounded-lg py-3 text-[#17960b] font-semibold flex items-center justify-center gap-2 hover:bg-[#17960b]/5 transition-colors"
+                      >
+                        <Plus className="w-5 h-5" />
+                        Add Another Certification
+                      </button>
+                    </div>
+                  </>
+                )}
+
+                {/* Step 4: Education */}
+                {currentStep === 4 && (
+                  <>
+                    <div className="mb-6">
+                      <div className="flex items-center justify-between mb-2">
+                        <p className="text-lg sm:text-xl font-semibold text-[#101828]">Education Level</p>
+                        <button
+                          onClick={sortEducationByDate}
+                          className="text-sm text-[#17960b] hover:text-[#148509] font-medium flex items-center gap-1"
+                        >
+                          <ArrowRight className="w-4 h-4 rotate-90" />
+                          Sort by Date
+                        </button>
+                      </div>
+                      <p className="text-sm sm:text-base text-[#4a5565]">Add your educational background.</p>
+                      </div>
 
                     <div className="space-y-6 max-h-[60vh] overflow-y-auto pr-2">
                       {education.map((edu, index) => (
@@ -1372,8 +1509,8 @@ export function ResumeBuilder({ onResumeSubmit }: ResumeBuilderProps = {}) {
                   </>
                 )}
 
-                {/* Step 4: Skills */}
-                {currentStep === 4 && (
+                {/* Step 5: Skills */}
+                {currentStep === 5 && (
                   <>
                     <div className="mb-6">
                       <p className="text-lg sm:text-xl font-semibold text-[#101828] mb-2">Skills</p>
@@ -1441,111 +1578,6 @@ export function ResumeBuilder({ onResumeSubmit }: ResumeBuilderProps = {}) {
                       >
                         <Plus className="w-5 h-5" />
                         Add Another Skill
-                      </button>
-                    </div>
-                  </>
-                )}
-
-                {/* Step 5: Certifications */}
-                {currentStep === 5 && (
-                  <>
-                    <div className="mb-6">
-                      <p className="text-lg sm:text-xl font-semibold text-[#101828] mb-2">Certifications</p>
-                      <p className="text-sm sm:text-base text-[#4a5565]">Add your professional certifications.</p>
-                    </div>
-
-                    <div className="space-y-6 max-h-[60vh] overflow-y-auto pr-2">
-                      {certifications.map((cert, index) => (
-                        <div key={index} className="border border-[#e5e7eb] rounded-lg p-4">
-                          <div className="flex items-center justify-between mb-4">
-                            <p className="text-base font-semibold text-[#101828]">Certification {index + 1}</p>
-                            {certifications.length > 1 && (
-                              <button
-                                onClick={() => removeCertification(index)}
-                                className="text-red-600 hover:text-red-700 p-2"
-                                aria-label="Remove certification"
-                              >
-                                <Trash2 className="w-4 h-4" />
-                              </button>
-                            )}
-                          </div>
-                          <div className="space-y-4">
-                            <div>
-                              <label className="block text-sm font-medium text-[#364153] mb-2">Certification Name</label>
-                              <input
-                                type="text"
-                                value={cert.name}
-                                onChange={(e) => updateCertification(index, 'name', e.target.value)}
-                                className="w-full bg-[#f3f3f5] rounded-lg px-3 py-2.5 text-sm text-gray-900 border-0 outline-none focus:ring-2 focus:ring-[#17960b]"
-                                placeholder="Add industry-specific certifications to stand out (e.g., Certification of Master Plumbing)"
-                              />
-                            </div>
-                            <div>
-                              <label className="block text-sm font-medium text-[#364153] mb-2">Type</label>
-                              <select
-                                value={cert.type}
-                                onChange={(e) => updateCertification(index, 'type', e.target.value as 'certificate' | 'training')}
-                                className="w-full bg-[#f3f3f5] rounded-lg px-3 py-2.5 text-sm text-gray-900 border-0 outline-none focus:ring-2 focus:ring-[#17960b]"
-                              >
-                                <option value="certificate">Certificate</option>
-                                <option value="training">Training</option>
-                              </select>
-                            </div>
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                              <div>
-                                <label className="block text-sm font-medium text-[#364153] mb-2">Issuing Organization</label>
-                                <input
-                                  type="text"
-                                  value={cert.organization}
-                                  onChange={(e) => updateCertification(index, 'organization', e.target.value)}
-                                  className="w-full bg-[#f3f3f5] rounded-lg px-3 py-2.5 text-sm text-gray-900 border-0 outline-none focus:ring-2 focus:ring-[#17960b]"
-                                  placeholder="e.g., Philippine Tubero Association"
-                                />
-                              </div>
-                              <div>
-                                <label className="block text-sm font-medium text-[#364153] mb-2">Date Issued</label>
-                                <div className="relative">
-                                  <input
-                                    type="date"
-                                    value={cert.dateIssued}
-                                    onChange={(e) => updateCertification(index, 'dateIssued', e.target.value)}
-                                    className="w-full bg-[#f3f3f5] rounded-lg pl-10 pr-3 py-2.5 text-sm text-gray-900 border-0 outline-none focus:ring-2 focus:ring-[#17960b]"
-                                  />
-                                  <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-500 pointer-events-none" />
-                                </div>
-                              </div>
-                            </div>
-                            <div>
-                              <label className="block text-sm font-medium text-[#364153] mb-2">Proof of Certification (Optional)</label>
-                              <div className="flex items-center gap-3">
-                                <input
-                                  type="file"
-                                  accept=".pdf,.jpg,.jpeg,.png,.doc,.docx"
-                                  onChange={(e) => {
-                                    const file = e.target.files?.[0];
-                                    if (file) {
-                                      updateCertification(index, 'proofFile', file);
-                                      updateCertification(index, 'proofFileName', file.name);
-                                    }
-                                  }}
-                                  className="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-[#17960b] file:text-white hover:file:bg-[#148509] file:cursor-pointer"
-                                />
-                              </div>
-                              {cert.proofFileName && (
-                                <p className="text-xs text-[#4a5565] mt-2">
-                                  Selected: {cert.proofFileName}
-                                </p>
-                              )}
-                            </div>
-                          </div>
-                        </div>
-                      ))}
-                      <button
-                        onClick={addCertification}
-                        className="w-full border-2 border-dashed border-[#17960b] rounded-lg py-3 text-[#17960b] font-semibold flex items-center justify-center gap-2 hover:bg-[#17960b]/5 transition-colors"
-                      >
-                        <Plus className="w-5 h-5" />
-                        Add Another Certification
                       </button>
                     </div>
                   </>
@@ -1647,8 +1679,10 @@ export function ResumeBuilder({ onResumeSubmit }: ResumeBuilderProps = {}) {
               </div>
               
               {/* Page Preview Container */}
-              <div className="bg-gray-100 p-4 sm:p-6 rounded-b-lg shadow-sm">
-                <div className="max-h-[calc(100vh-12rem)] overflow-y-auto">
+              <div ref={previewContainerRef}
+                className="bg-gray-100 p-4 sm:p-6 rounded-b-lg shadow-sm overflow-hidden"
+                >
+                <div className="max-h-[calc(100vh-12rem)] overflow-y-auto overflow-x-hidden">
                   <ResumePreview />
                 </div>
               </div>
@@ -1711,6 +1745,19 @@ export function ResumeBuilder({ onResumeSubmit }: ResumeBuilderProps = {}) {
               </div>
 
               {/* Upload Area */}
+               {isUploading ? (
+                  <div className="block w-full border-2 border-dashed border-[#17960b] rounded-xl p-8 text-center bg-[#17960b]/5">
+                    <div className="w-12 h-12 mx-auto mb-3">
+                      <div className="w-full h-full border-4 border-[#17960b] border-t-transparent rounded-full animate-spin"></div>
+                    </div>
+                    <p className="text-base font-medium text-[#101828] mb-1">
+                      Uploading your resume...
+                    </p>
+                    <p className="text-sm text-[#4a5565]">
+                      Please wait while we process your file
+                    </p>
+                  </div>
+                ) : (
               <div className="mb-6">
                 <label 
                   htmlFor="cv-upload"
@@ -1719,7 +1766,7 @@ export function ResumeBuilder({ onResumeSubmit }: ResumeBuilderProps = {}) {
                   <input 
                     id="cv-upload" 
                     type="file" 
-                    accept=".pdf,.doc,.docx" 
+                    accept=".pdf,.jpg,.jpeg,.png,.webp" 
                     className="hidden"
                     onChange={handleFileUpload}
                   />
@@ -1728,10 +1775,11 @@ export function ResumeBuilder({ onResumeSubmit }: ResumeBuilderProps = {}) {
                     Click to upload or drag and drop
                   </p>
                   <p className="text-sm text-[#4a5565]">
-                    PDF, DOC, or DOCX (max. 10MB)
+                    PDF, JPG, JPEG, or WEBP (max. 5MB)
                   </p>
                 </label>
               </div>
+          )}
 
               {/* Supported Formats */}
               <div className="bg-[#f9fafb] rounded-lg p-4 mb-6">
@@ -1743,11 +1791,11 @@ export function ResumeBuilder({ onResumeSubmit }: ResumeBuilderProps = {}) {
                   </span>
                   <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-white rounded-full text-xs font-medium text-[#4a5565] border border-gray-200">
                     <Check className="w-3 h-3 text-[#17960b]" />
-                    DOC
+                    JPG/JPEG/PNG
                   </span>
                   <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-white rounded-full text-xs font-medium text-[#4a5565] border border-gray-200">
                     <Check className="w-3 h-3 text-[#17960b]" />
-                    DOCX
+                    WEBP
                   </span>
                 </div>
               </div>
@@ -1768,6 +1816,43 @@ export function ResumeBuilder({ onResumeSubmit }: ResumeBuilderProps = {}) {
                   Browse Files
                 </button>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+       {/* Success Modal */}
+      {showSuccessModal && (
+        <div className="fixed inset-0 z-50 overflow-y-auto">
+          {/* Backdrop */}
+          <div className="fixed inset-0 bg-black/50 transition-opacity" onClick={() => setShowSuccessModal(false)}></div>
+
+          {/* Modal Content */}
+          <div className="flex min-h-full items-center justify-center p-4">
+            <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-md p-8 text-center">
+              {/* Success Icon */}
+              <div className="w-20 h-20 bg-[#17960b]/10 rounded-full flex items-center justify-center mx-auto mb-6">
+                <Check className="w-10 h-10 text-[#17960b]" />
+              </div>
+      
+              {/* Success Message */}
+              <h3 className="text-2xl font-bold text-[#101828] mb-3">
+                Upload Complete!
+              </h3>
+              <p className="text-base text-[#4a5565] mb-2">
+                Your resume <span className="font-semibold text-[#101828]">"{uploadedFileName}"</span> has been uploaded successfully.
+              </p>
+              <p className="text-sm text-[#4a5565] mb-8">
+                You can now edit or submit your resume.
+              </p>
+
+              {/* Close Button */}
+              <button
+                onClick={() => setShowSuccessModal(false)}
+                className="w-full px-6 py-3 bg-[#17960b] text-white rounded-lg font-semibold hover:bg-[#148509] transition-colors"
+              >
+                Continue
+              </button>
             </div>
           </div>
         </div>
