@@ -84,6 +84,10 @@ export function JobsForYou({ onApply, onSaveJob, savedJobIds = [], onNavigateToR
 
       setHasResume(true);
 
+      // ✅ Add this to verify the correct ID is being sent
+    console.log('account object:', account);
+    console.log('sending applicant_id:', account!.applicant_id);
+
       /// Step 2: Call the edge function via supabase client
       const { data: result, error: fnError } = await supabase.functions.invoke(
         'cosine-similarity-score',
