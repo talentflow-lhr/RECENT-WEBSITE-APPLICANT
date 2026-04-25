@@ -40,7 +40,7 @@ function AppContent() {
   const { account, setAccount } = useAuth(); // add setAccount
   const isLoggedIn = !!account;
 
-  const [currentPage, setCurrentPage] = useState<'jobs' | 'resume' | 'about' | 'dashboard' | 'applications' | 'profile' | 'jobsforyou' | 'apply' | 'savedjobs'>('dashboard');
+  const [currentPage, setCurrentPage] = useState<'jobs' | 'resume' | 'about' | 'dashboard' | 'applications' | 'profile' | 'jobsforyou' | 'apply' | 'savedjobs' | 'jobpositions'>('jobs');
   const [selectedJob, setSelectedJob] = useState<JobData | undefined>(undefined);
   const [savedJobs, setSavedJobs] = useState<SavedJobData[]>([]);
   const [hasResume, setHasResume] = useState(false);
