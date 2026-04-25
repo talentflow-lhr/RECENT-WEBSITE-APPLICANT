@@ -21,11 +21,13 @@ export function LoginPage({ onLogin }: LoginPageProps) {
   const [usernameChecking, setUsernameChecking] = useState(false);
   const [usernameAvailable, setUsernameAvailable] = useState<boolean | null>(null);
   const [passwordErrors, setPasswordErrors] = useState<string[]>([]);
-  const [rememberMe, setRememberMe] = useState(false);
+  const [rememberMe, setRememberMe] = useState(
+    !!localStorage.getItem("remembered_username")
+  );
   const [formData, setFormData] = useState({
     username: localStorage.getItem("remembered_username") || '',
     email: '',
-    password: '',
+    password: localStorage.getItem("remembered_password") || '',
     confirmPassword: '',
     firstName: '',
     middleName: '',
@@ -122,6 +124,10 @@ export function LoginPage({ onLogin }: LoginPageProps) {
 
       if (rememberMe) {
         localStorage.setItem("remembered_username", formData.username);
+        localStorage.setItem("remembered_password", formData.password);
+      } else {
+        localStorage.removeItem{"remembered_username");
+        localStorage.removeItem("remembered_password");
       }
   
       setAccount(data);
