@@ -22,7 +22,7 @@ export function ForgotPassword({
     e.preventDefault();
     setIsLoading(true);
   
-    const { data, error } = await supabase.functions.invoke('send-reset-email', {
+    const { data, error } = await supabase.functions.invoke('super-processor', {
       body: { email },
     });
   
