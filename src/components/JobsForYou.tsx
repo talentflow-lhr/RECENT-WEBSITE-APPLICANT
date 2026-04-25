@@ -55,6 +55,7 @@ export function JobsForYou({ onApply, onSaveJob, savedJobIds = [], onNavigateToR
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [hasResume, setHasResume] = useState<boolean | null>(null); // null = still checking
+  const [savedIds, setSavedIds] = useState<number[]>([]);
 
   useEffect(() => {
     if (!account) return;
@@ -196,6 +197,48 @@ export function JobsForYou({ onApply, onSaveJob, savedJobIds = [], onNavigateToR
   }, {} as Record<string, JobData[]>);
 
   const categoryOrder = ["Top Matches", "Strong Fits", "Good Opportunities", "Worth Exploring"];
+
+  const fetchSavedJobs = async () => {
+    const { data } = await supabase
+      .from('t_saved_jobs')
+      .select('position_id')
+      .eq('applicant_id', account!.applicant_id);
+    
+    if (data) {
+      setSavedIds(data.map(d => d.position_id));
+    }
+  };
+  
+  useEffect(() => {
+    if (!account) return;
+    checkResumeAndFetch();
+    fetchSavedJobs();
+  }, [account]);
+
+  const handleToggleSave = async (positionId: number) => {
+    const isSaved = savedIds.includes(positionId);
+  
+    if (isSaved) {
+      // Unsave
+      await supabase
+        .from('t_saved_jobs')
+        .delete()
+        .eq('applicant_id', account!.applicant_id)
+        .eq('position_id', positionId);
+  
+      setSavedIds(prev => prev.filter(id => id !== positionId));
+    } else {
+      // Save
+      await supabase
+        .from('t_saved_jobs')
+        .insert({
+          applicant_id: account!.applicant_id,
+          position_id: positionId,
+        });
+  
+      setSavedIds(prev => [...prev, positionId]);
+    }
+  };
 
   // ─── No resume state ───────────────────────────────────────────────────────
   if (!loading && hasResume === false) {
@@ -381,10 +424,10 @@ export function JobsForYou({ onApply, onSaveJob, savedJobIds = [], onNavigateToR
                               <Button
                                 variant="outline"
                                 className="border-gray-300"
-                                onClick={() => onSaveJob?.(job)}
+                                onClick={() => handleToggleSave(job.position_id)}
                               >
-                                <Bookmark className={`w-4 h-4 mr-1 ${savedJobIds.includes(job.position_id) ? 'fill-current' : ''}`} />
-                                {savedJobIds.includes(job.position_id) ? 'Saved' : 'Save'}
+                                <Bookmark className={`w-4 h-4 mr-1 ${savedIds.includes(job.position_id) ? 'fill-current' : ''}`} />
+                                {savedIds.includes(job.position_id) ? 'Saved' : 'Save'}
                               </Button>
                             </div>
                           </div>
@@ -541,10 +584,10 @@ export function JobsForYou({ onApply, onSaveJob, savedJobIds = [], onNavigateToR
                 <Button
                   variant="outline"
                   className="flex-1 border-gray-300"
-                  onClick={() => onSaveJob?.(selectedJob)}
+                  onClick={() => handleToggleSave(selectedJob.position_id)}
                 >
-                  <Bookmark className={`w-4 h-4 mr-2 ${savedJobIds.includes(selectedJob.position_id) ? 'fill-current' : ''}`} />
-                  {savedJobIds.includes(selectedJob.position_id) ? 'Saved' : 'Save Job'}
+                  <Bookmark className={`w-4 h-4 mr-2 ${savedIds.includes(selectedJob.position_id) ? 'fill-current' : ''}`} />
+                  {savedIds.includes(selectedJob.position_id) ? 'Saved' : 'Save Job'}
                 </Button>
                 <Button
                   className="flex-1 bg-[#17960b] hover:bg-[#17960b]/90 text-white font-semibold"
