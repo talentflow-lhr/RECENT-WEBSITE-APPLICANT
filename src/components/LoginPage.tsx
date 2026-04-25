@@ -21,8 +21,9 @@ export function LoginPage({ onLogin }: LoginPageProps) {
   const [usernameChecking, setUsernameChecking] = useState(false);
   const [usernameAvailable, setUsernameAvailable] = useState<boolean | null>(null);
   const [passwordErrors, setPasswordErrors] = useState<string[]>([]);
+  const [rememberMe, setRememberMe] = useState(false);
   const [formData, setFormData] = useState({
-    username: '',
+    username: localStorage.getItem("remembered_username") || '',
     email: '',
     password: '',
     confirmPassword: '',
@@ -30,7 +31,7 @@ export function LoginPage({ onLogin }: LoginPageProps) {
     middleName: '',
     lastName: '',
     signupUsername: '',
-    heardFrom: ''
+    heardFrom: '',
   });
 
   // Mock list of taken usernames (in real app, this would be checked via API)
@@ -118,11 +119,17 @@ export function LoginPage({ onLogin }: LoginPageProps) {
         alert("Invalid username or password");
         return setLoading(false);
       }
+
+      if (rememberMe) {
+        localStorage.setItem("remembered_username", formData.username);
+      }
   
       setAccount(data);
      // localStorage.setItem("account", JSON.stringify(data));
       onLogin();
       setLoading(false);
+
+      
     } else {
 
       const cleanedData = {
@@ -317,7 +324,11 @@ export function LoginPage({ onLogin }: LoginPageProps) {
             {/* Tab Toggle */}
             <div className="flex gap-2 mb-6 sm:mb-8 bg-gray-100 rounded-lg p-1">
               <button
-                onClick={() => setIsLogin(true)}
+                onClick={() => { 
+                  setIsLogin(true);
+                  setFormData(prev => ({ ...prev, password: '', confirmPassword: ''}))
+                  setPasswordErrors([]);
+                }}
                 className={`flex-1 py-2.5 sm:py-3 px-3 sm:px-4 rounded-md font-semibold text-sm sm:text-base transition-all ${
                   isLogin
                     ? 'bg-[#17960b] text-white shadow-md'
@@ -327,7 +338,10 @@ export function LoginPage({ onLogin }: LoginPageProps) {
                 LOGIN
               </button>
               <button
-                onClick={() => setIsLogin(false)}
+                onClick={() => { 
+                  setIsLogin(false);
+                  setFormData( prev => ({ ...prev, password: '', confirmPassword: ''}));
+                }}
                 className={`flex-1 py-2.5 sm:py-3 px-3 sm:px-4 rounded-md font-semibold text-sm sm:text-base transition-all ${
                   !isLogin
                     ? 'bg-[#17960b] text-white shadow-md'
@@ -509,6 +523,7 @@ export function LoginPage({ onLogin }: LoginPageProps) {
                 </Label>
                 <div className="relative">
                   <Input
+                    key = {isLogin ? 'login-password' : 'signup-password'}
                     id="password"
                     name="password"
                     type={showPassword ? 'text' : 'password'}
@@ -593,7 +608,12 @@ export function LoginPage({ onLogin }: LoginPageProps) {
               {isLogin && (
                 <div className="flex items-center justify-between text-sm">
                   <label className="flex items-center gap-2 cursor-pointer">
-                    <input type="checkbox" className="w-4 h-4 accent-[#17960b]" />
+                    <input 
+                      type="checkbox" 
+                      className="w-4 h-4 accent-[#17960b]"
+                      checked={rememberMe}
+                      onChange={(e) => setRememberMe(e.target.checked)}
+                    />
                     <span className="text-gray-600">Remember me</span>
                   </label>
                   <button
