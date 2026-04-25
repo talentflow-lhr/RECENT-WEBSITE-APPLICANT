@@ -5,6 +5,7 @@ import { useState, useEffect } from 'react';
 import svgPaths from '../imports/svg-3nnvnkmfcx';
 import featuredJobPoster from 'figma:asset/69a79d0864f76398cf7c9e0b7e138a413d134914.png';
 import gulfAsiaPoster from 'figma:asset/853b5c04ffd8a06102642323016ef1525a3c9fc7.png';
+import { useAuth } from './AuthPass';
 import { supabase } from './supabaseClient';
 
 interface Job {
@@ -34,6 +35,7 @@ interface JobPortalProps {
 }
 
 export function JobPortal({ onApply, onSaveJob, savedJobIds = [], onNavigateToProfile, onNavigateToResume, onNavigateToPositions }: JobPortalProps) {
+  const { account } = useAuth();
   const [searchQuery, setSearchQuery] = useState('');
   const [locationQuery, setLocationQuery] = useState('');
   const [searchType, setSearchType] = useState<'any' | 'exact'>('any');
@@ -42,8 +44,45 @@ export function JobPortal({ onApply, onSaveJob, savedJobIds = [], onNavigateToPr
   const [showPosterModal, setShowPosterModal] = useState(false);
   const [showGulfAsiaPosterModal, setShowGulfAsiaPosterModal] = useState(false);
   const [selectedJob, setSelectedJob] = useState<any>(null);
+  const [savedIds, setSavedIds] = useState<number[]>([]);
 
-
+  const fetchSavedJobs = async () => {
+    if (!account) return;
+    const { data } = await supabase
+      .from('t_saved_jobs')
+      .select('position_id')
+      .eq('applicant_id', account.applicant_id);
+    
+    if (data) {
+      setSavedIds(data.map((d: any) => d.position_id));
+    }
+  };
+  
+  const handleToggleSave = async (jobId: number) => {
+    if (!account) return;
+    const isSaved = savedIds.includes(jobId);
+  
+    if (isSaved) {
+      await supabase
+        .from('t_saved_jobs')
+        .delete()
+        .eq('applicant_id', account.applicant_id)
+        .eq('position_id', jobId);
+      setSavedIds(prev => prev.filter(id => id !== jobId));
+    } else {
+      await supabase
+        .from('t_saved_jobs')
+        .insert({
+          applicant_id: account.applicant_id,
+          position_id: jobId,
+        });
+      setSavedIds(prev => [...prev, jobId]);
+    }
+  };
+  
+  useEffect(() => {
+    fetchSavedJobs();
+  }, [account]);
   /*const jobsData = [
     // QCON Jobs - Featured Opportunities
     {
@@ -1136,17 +1175,17 @@ export function JobPortal({ onApply, onSaveJob, savedJobIds = [], onNavigateToPr
                           Apply Now
                         </button>
                         <button
-                          onClick={() => handleSaveJob(job.id)}
+                          onClick={() => handleToggleSave(job.id)}
                           className={`px-4 py-2.5 rounded-lg border transition-colors ${
-                            savedJobIds.includes(job.id)
+                            savedIds.includes(job.id)
                               ? 'bg-[#ffca1a] border-[#ffca1a] text-[#101828]'
                               : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50'
                           }`}
-                          title={savedJobIds.includes(job.id) ? 'Saved' : 'Save Job'}
+                          title={savedIds.includes(job.id) ? 'Saved' : 'Save Job'}
                         >
                           <Bookmark
                             className={`w-5 h-5 ${
-                              savedJobIds.includes(job.id) ? 'fill-current' : ''
+                              savedIds.includes(job.id) ? 'fill-current' : ''
                             }`}
                           />
                         </button>
@@ -1293,17 +1332,15 @@ export function JobPortal({ onApply, onSaveJob, savedJobIds = [], onNavigateToPr
               {/* Action Buttons */}
               <div className="flex flex-col sm:flex-row gap-3">
                 <button
-                  onClick={() => {
-                    handleSaveJob(selectedJob.id);
-                  }}
+                  onClick={() => handleToggleSave(selectedJob.id)}
                   className={`flex-1 flex items-center justify-center gap-2 px-6 py-3 rounded-lg border font-semibold transition-colors ${
-                    savedJobIds.includes(selectedJob.id)
+                    savedIds.includes(selectedJob.id)
                       ? 'bg-[#ffca1a] border-[#ffca1a] text-[#101828]'
                       : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50'
                   }`}
                 >
-                  <Bookmark className={`w-5 h-5 ${savedJobIds.includes(selectedJob.id) ? 'fill-current' : ''}`} />
-                  {savedJobIds.includes(selectedJob.id) ? 'Saved' : 'Save Job'}
+                  <Bookmark className={`w-5 h-5 ${savedIds.includes(selectedJob.id) ? 'fill-current' : ''}`} />
+                  {savedIds.includes(selectedJob.id) ? 'Saved' : 'Save Job'}
                 </button>
                 <button
                   onClick={() => {
