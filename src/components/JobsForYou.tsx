@@ -8,219 +8,249 @@ import {
   Briefcase, 
   Star,
   Building2,
-  TrendingUp,
   Bookmark,
-  X
+  X,
+  Upload,
+  AlertCircle
 } from 'lucide-react';
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useAuth } from "./AuthPass";
+import { supabase } from "./supabaseClient";
 
+// ✅ Replace old JobData interface with one matching the edge function response
 interface JobData {
-  id: number;
-  title: string;
-  company: string;
+  position_id: number;
+  job_title: string;
+  job_description: string;
+  job_category: string;
+  job_salary_range: string;
+  job_number_needed: number;
+  job_filled_count: number;
+  job_contract_length: string;
   location: string;
-  country: string;
-  salary: string;
-  type: string;
-  posted: string;
-  matchScore: number;
-  tags: string[];
-  reason: string;
-  description: string;
+  deadline: string | null;
+  posted_date: string | null;
+  placement_fee: number;
+  jo_phone_number: string;
+  jo_email: string;
+  company_name: string;
+  company_contact: string;
+  company_email: string;
+  company_representative: string;
+  score: number;
+  raw_score: number;
 }
 
 interface JobsForYouProps {
   onApply?: (job: { title: string; company: string; location: string }) => void;
-  onSaveJob?: (job: JobData) => void;
+  onSaveJob?: (job: any) => void;
   savedJobIds?: number[];
   onNavigateToResume?: () => void;
 }
 
-export function JobsForYou({ onApply, onSaveJob, savedJobIds, onNavigateToResume, onNavigateToPositions }: JobsForYouProps) {
+export function JobsForYou({ onApply, onSaveJob, savedJobIds = [], onNavigateToResume }: JobsForYouProps) {
+  const { account } = useAuth();
   const [selectedJob, setSelectedJob] = useState<JobData | null>(null);
-  const recommendedJobs: JobData[] = [
-    {
-      id: 1,
-      title: "Senior Software Engineer",
-      company: "Tech Innovations Inc.",
-      location: "Singapore",
-      country: "Singapore",
-      salary: "PHP 120,000 - 160,000",
-      type: "Full-time",
-      posted: "1 day ago",
-      matchScore: 95,
-      tags: ["React", "Node.js", "TypeScript"],
-      reason: "Your technical skills match this position perfectly",
-      description: "..."
-    },
-    {
-      id: 2,
-      title: "Registered Nurse - ICU",
-      company: "Healthcare International",
-      location: "Dubai, UAE",
-      salary: "PHP 85,000 - 110,000",
-      type: "Full-time",
-      posted: "2 days ago",
-      matchScore: 92,
-      tags: ["Nursing", "Healthcare", "ICU"],
-      reason:
-        "Your healthcare certifications align with requirements",
-      description: "Join our world-class healthcare facility in Dubai as an ICU Registered Nurse. You will provide critical care to patients, work with advanced medical equipment, and collaborate with international medical teams. We offer tax-free salary, accommodation, annual flights home, and comprehensive health insurance for you and your family.",
-    },
-    {
-      id: 3,
-      title: "Hotel Operations Manager",
-      company: "Marriott International",
-      location: "Doha, Qatar",
-      salary: "PHP 95,000 - 130,000",
-      type: "Full-time",
-      posted: "3 days ago",
-      matchScore: 88,
-      tags: ["Hospitality", "Management", "Operations"],
-      reason: "Your management experience is a great fit",
-      description: "Marriott International is seeking an experienced Hotel Operations Manager to oversee daily operations of our luxury property in Doha. You will manage staff, ensure exceptional guest experiences, and maintain operational excellence. Benefits include competitive salary, performance bonuses, accommodation, and career advancement within the Marriott network.",
-    },
-    {
-      id: 4,
-      title: "Mechanical Engineer",
-      company: "Saudi Aramco",
-      location: "Riyadh, Saudi Arabia",
-      salary: "PHP 100,000 - 140,000",
-      type: "Full-time",
-      posted: "4 days ago",
-      matchScore: 85,
-      tags: ["Engineering", "Mechanical", "Oil & Gas"],
-      reason:
-        "Your engineering qualifications meet their standards",
-      description: "Saudi Aramco, the world's leading oil and gas company, is hiring Mechanical Engineers for our Riyadh operations. You will work on major infrastructure projects, perform system design and analysis, and ensure operational efficiency. Excellent package includes tax-free salary, housing allowance, family benefits, and professional development opportunities.",
-    },
-    {
-      id: 5,
-      title: "Executive Chef",
-      company: "Royal Caribbean Cruises",
-      location: "Cruise Ship",
-      salary: "PHP 75,000 - 95,000",
-      type: "Contract",
-      posted: "5 days ago",
-      matchScore: 82,
-      tags: ["Culinary", "Leadership", "Hospitality"],
-      reason: "Your culinary expertise is highly sought after",
-      description: "Royal Caribbean is looking for an experienced Executive Chef to lead our culinary operations aboard luxury cruise ships. You will manage kitchen operations, create innovative menus, and lead a diverse culinary team. This contract position includes all accommodations, meals, and the opportunity to travel the world while practicing your craft.",
-    },
-    {
-      id: 6,
-      title: "Financial Controller",
-      company: "KPMG Middle East",
-      location: "Abu Dhabi, UAE",
-      salary: "PHP 110,000 - 150,000",
-      type: "Full-time",
-      posted: "1 week ago",
-      matchScore: 80,
-      tags: ["Finance", "Accounting", "CPA"],
-      reason: "Your financial background matches perfectly",
-      description: "KPMG Middle East seeks a qualified Financial Controller to manage financial operations for our Abu Dhabi office. Responsibilities include financial reporting, budget management, and compliance oversight. We offer competitive tax-free compensation, professional certification support, housing allowance, and exceptional career growth within a global organization.",
-    },
-    {
-      id: 7,
-      title: "Construction Supervisor",
-      company: "Emirates Construction",
-      location: "Dubai, UAE",
-      salary: "PHP 65,000 - 85,000",
-      type: "Full-time",
-      posted: "1 week ago",
-      matchScore: 75,
-      tags: ["Construction", "Supervision", "Safety"],
-      reason: "Your construction experience is relevant",
-      description: "Emirates Construction is hiring Construction Supervisors for major development projects in Dubai. You will oversee site operations, ensure safety compliance, and coordinate with subcontractors. Package includes competitive salary, accommodation, transportation, medical insurance, and annual leave with flight tickets home.",
-    },
-    {
-      id: 8,
-      title: "Customer Service Representative",
-      company: "BPO Solutions Inc.",
-      location: "Kuala Lumpur, Malaysia",
-      salary: "PHP 35,000 - 45,000",
-      type: "Full-time",
-      posted: "2 weeks ago",
-      matchScore: 60,
-      tags: ["Customer Service", "Communication", "BPO"],
-      reason: "Basic communication skills match",
-      description: "Join our BPO team in Kuala Lumpur as a Customer Service Representative. You will handle customer inquiries, resolve issues, and provide excellent service to international clients. We provide comprehensive training, performance incentives, and opportunities for career progression within the organization.",
-    },
-  ];
+  const [recommendedJobs, setRecommendedJobs] = useState<JobData[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [hasResume, setHasResume] = useState<boolean | null>(null); // null = still checking
 
-   const getMatchCategory = (score: number) => {
-    if (score >= 75) return "Top Matches";
-    if (score >= 65) return "Strong Fits";
-    if (score >= 55) return "Good Opportunities";
+  useEffect(() => {
+    if (!account) return;
+    checkResumeAndFetch();
+  }, [account]);
+
+  const checkResumeAndFetch = async () => {
+    setLoading(true);
+    setError(null);
+
+    try {
+      // Step 1: Check if applicant has a resume
+      const { data: resumeData, error: resumeError } = await supabase
+        .from('t_resume')
+        .select('resume_id')
+        .eq('applicant_id', account!.applicant_id)
+        .maybeSingle();
+
+      if (resumeError) throw resumeError;
+
+      if (!resumeData) {
+        // No resume found — show upload prompt
+        setHasResume(false);
+        setLoading(false);
+        return;
+      }
+
+      setHasResume(true);
+
+      // Step 2: Call the edge function
+      const { data: sessionData } = await supabase.auth.getSession();
+      
+      const response = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/cosine-similarity-score`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+          },
+          body: JSON.stringify({ applicant_id: account!.applicant_id }),
+        }
+      );
+
+      if (!response.ok) {
+        const errData = await response.json();
+        throw new Error(errData.error || 'Failed to fetch recommendations');
+      }
+
+      const result = await response.json();
+      setRecommendedJobs(result.scores || []);
+
+    } catch (err: any) {
+      console.error('Error fetching recommendations:', err);
+      setError('Failed to load recommendations. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // ✅ Match score category based on edge function score (0-1 range after transmutation)
+  const getMatchCategory = (score: number) => {
+    if (score >= 0.85) return "Top Matches";
+    if (score >= 0.75) return "Strong Fits";
+    if (score >= 0.65) return "Good Opportunities";
     return "Worth Exploring";
   };
 
   const getCategoryColor = (category: string) => {
     switch (category) {
-      case "Top Matches":
-        return "text-[#0a5e06]";
-      case "Strong Fits":
-        return "text-[#17960b]";
-      case "Good Opportunities":
-        return "text-[#ffca1a]";
-      default:
-        return "text-gray-600";
+      case "Top Matches": return "text-[#0a5e06]";
+      case "Strong Fits": return "text-[#17960b]";
+      case "Good Opportunities": return "text-[#ffca1a]";
+      default: return "text-gray-600";
     }
   };
 
   const getStarCount = (category: string) => {
     switch (category) {
-      case "Top Matches":
-        return 5;
-      case "Strong Fits":
-        return 4;
-      case "Good Opportunities":
-        return 3;
-      default:
-        return 2;
+      case "Top Matches": return 5;
+      case "Strong Fits": return 4;
+      case "Good Opportunities": return 3;
+      default: return 2;
     }
   };
 
   const getStarColor = (category: string) => {
     switch (category) {
-      case "Top Matches":
-        return "fill-[#0a5e06] text-[#0a5e06]";
-      case "Strong Fits":
-        return "fill-[#17960b] text-[#17960b]";
-      case "Good Opportunities":
-        return "fill-[#ffca1a] text-[#ffca1a]";
-      default:
-        return "fill-gray-400 text-gray-400";
+      case "Top Matches": return "fill-[#0a5e06] text-[#0a5e06]";
+      case "Strong Fits": return "fill-[#17960b] text-[#17960b]";
+      case "Good Opportunities": return "fill-[#ffca1a] text-[#ffca1a]";
+      default: return "fill-gray-400 text-gray-400";
     }
   };
 
-  const groupedJobs = recommendedJobs.reduce(
-    (acc, job) => {
-      const category = getMatchCategory(job.matchScore);
-      if (!acc[category]) {
-        acc[category] = [];
-      }
-      acc[category].push(job);
-      return acc;
-    },
-    {} as Record<string, JobData[]>,
-  );
+  const formatPostedDate = (dateStr: string | null): string => {
+    if (!dateStr) return 'Recently posted';
+    const posted = new Date(dateStr);
+    const now = new Date();
+    const diffDays = Math.floor((now.getTime() - posted.getTime()) / (1000 * 60 * 60 * 24));
+    if (diffDays === 0) return 'Today';
+    if (diffDays === 1) return '1 day ago';
+    if (diffDays < 7) return `${diffDays} days ago`;
+    if (diffDays < 30) return `${Math.floor(diffDays / 7)} weeks ago`;
+    return `${Math.floor(diffDays / 30)} months ago`;
+  };
 
-  const categoryOrder  = [
-    "Top Matches",
-    "Strong Fits",
-    "Good Opportunities",
-    "Worth Exploring",
-  ];
+  const groupedJobs = recommendedJobs.reduce((acc, job) => {
+    const category = getMatchCategory(job.score);
+    if (!acc[category]) acc[category] = [];
+    acc[category].push(job);
+    return acc;
+  }, {} as Record<string, JobData[]>);
+
+  const categoryOrder = ["Top Matches", "Strong Fits", "Good Opportunities", "Worth Exploring"];
+
+  // ─── No resume state ───────────────────────────────────────────────────────
+  if (!loading && hasResume === false) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-8">
+        <Card className="border-gray-200 max-w-lg w-full">
+          <CardContent className="p-12 text-center">
+            <div className="w-16 h-16 bg-yellow-100 rounded-full flex items-center justify-center mx-auto mb-4">
+              <Upload className="w-8 h-8 text-[#ffca1a]" />
+            </div>
+            <h3 className="text-xl font-bold text-gray-900 mb-2">Upload Your Resume First</h3>
+            <p className="text-gray-600 mb-6">
+              To get personalized job recommendations, we need to analyze your resume. Upload it now and we'll match you with the best opportunities.
+            </p>
+            <Button
+              className="bg-[#17960b] hover:bg-[#0d5e06] text-white font-semibold px-8"
+              onClick={onNavigateToResume}
+            >
+              Go to Resume Builder
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  // ─── Loading state ─────────────────────────────────────────────────────────
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <svg className="w-12 h-12 animate-spin text-[#17960b] mx-auto mb-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
+          </svg>
+          <p className="text-gray-600 font-medium text-lg">Finding your best matches...</p>
+          <p className="text-gray-400 text-sm mt-1">Analyzing your resume against available positions</p>
+        </div>
+      </div>
+    );
+  }
+
+  // ─── Error state ───────────────────────────────────────────────────────────
+  if (error) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-8">
+        <Card className="border-gray-200 max-w-lg w-full">
+          <CardContent className="p-12 text-center">
+            <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+              <AlertCircle className="w-8 h-8 text-red-500" />
+            </div>
+            <h3 className="text-xl font-bold text-gray-900 mb-2">Something Went Wrong</h3>
+            <p className="text-gray-600 mb-6">{error}</p>
+            <Button
+              className="bg-[#17960b] hover:bg-[#0d5e06] text-white font-semibold"
+              onClick={checkResumeAndFetch}
+            >
+              Try Again
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Header */}
         <div className="mb-8">
-          <h1 className="text-2xl md:text-3xl lg:text-4xl font-bold text-gray-900 mb-3">Jobs Recommended for You</h1>
+          <h1 className="text-2xl md:text-3xl lg:text-4xl font-bold text-gray-900 mb-3">
+            Jobs Recommended for You
+          </h1>
           <p className="text-base md:text-lg text-gray-600">
-            Based on your profile, skills, and preferences, we've curated these job opportunities specially for you.
+            Based on your resume and preferences, we've curated these job opportunities specially for you.
           </p>
+          {recommendedJobs.length > 0 && (
+            <p className="text-sm text-[#17960b] font-medium mt-1">
+              {recommendedJobs.length} position{recommendedJobs.length !== 1 ? 's' : ''} matched
+            </p>
+          )}
         </div>
 
         {/* Recommended Jobs by Category */}
@@ -231,166 +261,150 @@ export function JobsForYou({ onApply, onSaveJob, savedJobIds, onNavigateToResume
 
             return (
               <div key={category}>
-                {/* Category Header */}
-                <h2
-                  className={`text-xl md:text-2xl font-bold mb-4 ${getCategoryColor(category)}`}
-                >
+                <h2 className={`text-xl md:text-2xl font-bold mb-4 ${getCategoryColor(category)}`}>
                   {category}
                 </h2>
 
-                {/* Jobs Grid */}
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                  {jobs.map((job) => (
-                    <Card
-                      key={job.id}
-                      className="border-gray-200 hover:shadow-lg transition-all bg-white"
-                    >
-                      <CardContent className="p-6">
-                        {/* Job Header */}
-                        <div className="mb-4 flex items-start justify-between gap-4">
-                          <div className="flex-1">
-                            <h3 className="text-gray-900 mb-2 font-bold text-xl">
-                              {job.title}
-                            </h3>
-                            <p className="text-gray-600 mb-2 font-medium">
-                              {job.company}
-                            </p>
+                  {jobs.map((job) => {
+                    const category = getMatchCategory(job.score);
+                    return (
+                      <Card key={job.position_id} className="border-gray-200 hover:shadow-lg transition-all bg-white">
+                        <CardContent className="p-6">
+                          {/* Job Header */}
+                          <div className="mb-4 flex items-start justify-between gap-4">
+                            <div className="flex-1">
+                              <h3 className="text-gray-900 mb-1 font-bold text-xl">{job.job_title}</h3>
+                              <p className="text-gray-600 font-medium">{job.company_name}</p>
+                            </div>
+                            <div className="flex flex-col items-end gap-1">
+                              <div className="flex gap-0.5">
+                                {Array.from({ length: getStarCount(category) }).map((_, i) => (
+                                  <Star key={i} className={`w-4 h-4 ${getStarColor(category)}`} />
+                                ))}
+                              </div>
+                              <span className="text-xs font-semibold text-gray-500">
+                                {Math.round(job.score * 100)}% match
+                              </span>
+                            </div>
                           </div>
-                          {/* Star Rating */}
-                          <div className="flex gap-0.5">
-                            {Array.from({
-                              length: getStarCount(category),
-                            }).map((_, i) => (
-                              <Star
-                                key={i}
-                                className={`w-5 h-5 ${getStarColor(category)}`}
-                              />
-                            ))}
-                          </div>
-                        </div>
 
-                        {/* Job Details */}
-                        <div className="space-y-2 mb-4">
-                          <div className="flex items-center gap-2 text-gray-600">
-                            <MapPin className="w-4 h-4" />
-                            <span>{job.location}</span>
+                          {/* Job Details */}
+                          <div className="space-y-2 mb-4">
+                            <div className="flex items-center gap-2 text-gray-600">
+                              <MapPin className="w-4 h-4 shrink-0" />
+                              <span className="text-sm">{job.location}</span>
+                            </div>
+                            <div className="flex items-center gap-2 text-gray-600">
+                              <DollarSign className="w-4 h-4 shrink-0" />
+                              <span className="text-sm">{job.job_salary_range || 'Competitive'}</span>
+                            </div>
+                            {job.job_contract_length && (
+                              <div className="flex items-center gap-2 text-gray-600">
+                                <Briefcase className="w-4 h-4 shrink-0" />
+                                <span className="text-sm">{job.job_contract_length}</span>
+                              </div>
+                            )}
+                            <div className="flex items-center gap-2 text-gray-500">
+                              <Clock className="w-4 h-4 shrink-0" />
+                              <span className="text-sm">Posted {formatPostedDate(job.posted_date)}</span>
+                            </div>
                           </div>
-                          <div className="flex items-center gap-2 text-gray-600">
-                            <DollarSign className="w-4 h-4" />
-                            <span>{job.salary}</span>
-                          </div>
-                          <div className="flex items-center gap-2 text-gray-600">
-                            <Briefcase className="w-4 h-4" />
-                            <span>{job.type}</span>
-                          </div>
-                          <div className="flex items-center gap-2 text-gray-500">
-                            <Clock className="w-4 h-4" />
-                            <span>Posted {job.posted}</span>
-                          </div>
-                        </div>
 
-                        {/* Tags */}
-                        <div className="flex flex-wrap gap-2 mb-4">
-                          {job.tags.map((tag, index) => (
-                            <Badge
-                              key={index}
-                              variant="outline"
-                              className="border-gray-300 text-gray-700"
-                            >
-                              {tag}
-                            </Badge>
-                          ))}
-                        </div>
+                          {/* Category Badge */}
+                          <div className="flex flex-wrap gap-2 mb-4">
+                            {job.job_category && (
+                              <Badge variant="outline" className="border-gray-300 text-gray-700">
+                                {job.job_category}
+                              </Badge>
+                            )}
+                            {job.placement_fee === 0 && (
+                              <Badge className="bg-red-500 text-white border-0">
+                                No Placement Fee
+                              </Badge>
+                            )}
+                          </div>
 
-                        {/* Actions */}
-                        <div className="flex flex-col gap-3">
-                          <Button
-                            className="w-full bg-[#ffca1a] hover:bg-[#e6b617] text-gray-900 font-semibold"
-                            onClick={() => setSelectedJob(job)}
-                          >
-                            View Full Details
-                          </Button>
-                          <div className="flex gap-3">
+                          {/* Vacancies */}
+                          <p className="text-xs text-gray-500 mb-4">
+                            {job.job_number_needed - job.job_filled_count} of {job.job_number_needed} vacancies remaining
+                          </p>
+
+                          {/* Actions */}
+                          <div className="flex flex-col gap-3">
                             <Button
-                              className="flex-1 bg-[#17960b] hover:bg-[#17960b]/90 text-white font-semibold"
-                              onClick={() =>
-                                onApply?.({
-                                  title: job.title,
-                                  company: job.company,
+                              className="w-full bg-[#ffca1a] hover:bg-[#e6b617] text-gray-900 font-semibold"
+                              onClick={() => setSelectedJob(job)}
+                            >
+                              View Full Details
+                            </Button>
+                            <div className="flex gap-3">
+                              <Button
+                                className="flex-1 bg-[#17960b] hover:bg-[#17960b]/90 text-white font-semibold"
+                                onClick={() => onApply?.({
+                                  title: job.job_title,
+                                  company: job.company_name,
                                   location: job.location,
-                                })
-                              }
-                            >
-                              Apply Now
-                            </Button>
-                            <Button
-                              variant="outline"
-                              className="border-gray-300"
-                              onClick={() => onSaveJob?.(job)}
-                            >
-                              <Bookmark className="w-4 h-4 mr-1" />
-                              {savedJobIds?.includes(job.id)
-                                ? "Saved"
-                                : "Save"}
-                            </Button>
+                                })}
+                              >
+                                Apply Now
+                              </Button>
+                              <Button
+                                variant="outline"
+                                className="border-gray-300"
+                                onClick={() => onSaveJob?.(job)}
+                              >
+                                <Bookmark className={`w-4 h-4 mr-1 ${savedJobIds.includes(job.position_id) ? 'fill-current' : ''}`} />
+                                {savedJobIds.includes(job.position_id) ? 'Saved' : 'Save'}
+                              </Button>
+                            </div>
                           </div>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  ))}
+                        </CardContent>
+                      </Card>
+                    );
+                  })}
                 </div>
               </div>
             );
           })}
         </div>
 
-        {/* Empty State if no recommendations */}
-        {recommendedJobs.length === 0 && (
+        {/* Empty state — resume exists but no matches */}
+        {recommendedJobs.length === 0 && hasResume && (
           <Card className="border-gray-200">
             <CardContent className="p-12 text-center">
               <Building2 className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-              <h3 className="text-gray-900 mb-2">No Recommendations Yet</h3>
+              <h3 className="text-xl font-bold text-gray-900 mb-2">No Matches Found Yet</h3>
               <p className="text-gray-600 mb-6">
-                Complete your profile and upload your resume to get personalized job recommendations.
+                We couldn't find strong matches right now. Try updating your resume or preferences to improve your results.
               </p>
-              <Button className="bg-[#17960b] hover:bg-[#17960b]/90 text-white" onClick={onNavigateToResume}>
-                Complete Profile
+              <Button className="bg-[#17960b] hover:bg-[#0d5e06] text-white" onClick={onNavigateToResume}>
+                Update Resume
               </Button>
             </CardContent>
           </Card>
         )}
 
-        {/* CTA Section */}
+        {/* CTA */}
         <Card className="mt-8 bg-white border-gray-200">
           <CardContent className="p-8 text-center">
-            <h3 className="text-gray-900 mb-4">Want More Personalized Recommendations?</h3>
+            <h3 className="text-lg font-bold text-gray-900 mb-3">Want Better Recommendations?</h3>
             <p className="text-gray-600 mb-6">
-              Update your profile, add more skills, and upload your latest resume to get even better job matches.
+              Update your resume and preferences to get even more accurate job matches.
             </p>
-            <div className="flex justify-center">
-              <Button 
-                className="bg-[#ffca1a] hover:bg-[#e6b617] text-gray-900"
-                onClick={onNavigateToResume}
-              >
-                Update Resume
-              </Button>
-            </div>
+            <Button className="bg-[#ffca1a] hover:bg-[#e6b617] text-gray-900" onClick={onNavigateToResume}>
+              Update Resume
+            </Button>
           </CardContent>
         </Card>
       </div>
-       {/* Full Details Modal */}
+
+      {/* Full Details Modal */}
       {selectedJob && (
         <div className="fixed inset-0 z-50 overflow-y-auto">
-          {/* Backdrop */}
-          <div
-            className="fixed inset-0 bg-black/50 transition-opacity"
-            onClick={() => setSelectedJob(null)}
-          ></div>
-
-          {/* Modal Content */}
+          <div className="fixed inset-0 bg-black/50" onClick={() => setSelectedJob(null)} />
           <div className="flex min-h-full items-center justify-center p-4">
             <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-3xl p-8">
-              {/* Close Button */}
               <button
                 onClick={() => setSelectedJob(null)}
                 className="absolute top-4 right-4 text-gray-500 hover:text-gray-700 hover:bg-gray-100 p-2 rounded-full transition-colors"
@@ -398,108 +412,117 @@ export function JobsForYou({ onApply, onSaveJob, savedJobIds, onNavigateToResume
                 <X className="w-6 h-6" />
               </button>
 
-              {/* Modal Header */}
               <div className="mb-6">
-                <h2 className="text-2xl md:text-3xl font-bold text-gray-900 mb-2">
-                  {selectedJob.title}
+                <h2 className="text-2xl md:text-3xl font-bold text-gray-900 mb-1">
+                  {selectedJob.job_title}
                 </h2>
-                <p className="text-lg text-gray-600 font-medium mb-4">
-                  {selectedJob.company}
-                </p>
+                <p className="text-lg text-gray-600 font-medium mb-1">{selectedJob.company_name}</p>
+                <p className="text-sm text-gray-400 mb-4">{selectedJob.location}</p>
 
                 {/* Match Score */}
                 <div className="flex items-center gap-2 mb-4">
-                  <div className="flex gap-0.5">
-                    {Array.from({ length: 5 }).map((_, i) => {
-                      const category = getMatchCategory(selectedJob.matchScore);
-                      const starCount = getStarCount(category);
-                      return (
-                        <Star
-                          key={i}
-                          className={`w-5 h-5 ${
-                            i < starCount ? getStarColor(category) : 'text-gray-300'
-                          }`}
-                        />
-                      );
-                    })}
-                  </div>
-                  <span className="text-sm font-semibold text-gray-700">
-                    {selectedJob.matchScore}% Match
-                  </span>
+                  {(() => {
+                    const cat = getMatchCategory(selectedJob.score);
+                    const count = getStarCount(cat);
+                    return (
+                      <>
+                        <div className="flex gap-0.5">
+                          {Array.from({ length: 5 }).map((_, i) => (
+                            <Star key={i} className={`w-5 h-5 ${i < count ? getStarColor(cat) : 'text-gray-300'}`} />
+                          ))}
+                        </div>
+                        <span className="text-sm font-semibold text-gray-700">
+                          {Math.round(selectedJob.score * 100)}% Match
+                        </span>
+                      </>
+                    );
+                  })()}
                 </div>
 
-                {/* Job Details Grid */}
+                {/* Details Grid */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4">
                   <div className="flex items-center gap-2 text-gray-700">
                     <MapPin className="w-5 h-5 text-[#17960b]" />
-                    <span className="text-sm font-medium">{selectedJob.location}</span>
+                    <span className="text-sm">{selectedJob.location}</span>
                   </div>
                   <div className="flex items-center gap-2 text-gray-700">
                     <DollarSign className="w-5 h-5 text-[#17960b]" />
-                    <span className="text-sm font-medium">{selectedJob.salary}</span>
+                    <span className="text-sm">{selectedJob.job_salary_range || 'Competitive'}</span>
                   </div>
-                  <div className="flex items-center gap-2 text-gray-700">
-                    <Briefcase className="w-5 h-5 text-[#17960b]" />
-                    <span className="text-sm font-medium">{selectedJob.type}</span>
-                  </div>
+                  {selectedJob.job_contract_length && (
+                    <div className="flex items-center gap-2 text-gray-700">
+                      <Briefcase className="w-5 h-5 text-[#17960b]" />
+                      <span className="text-sm">{selectedJob.job_contract_length}</span>
+                    </div>
+                  )}
                   <div className="flex items-center gap-2 text-gray-700">
                     <Clock className="w-5 h-5 text-[#17960b]" />
-                    <span className="text-sm font-medium">Posted {selectedJob.posted}</span>
+                    <span className="text-sm">Posted {formatPostedDate(selectedJob.posted_date)}</span>
                   </div>
                 </div>
 
-                {/* Tags */}
-                <div className="flex flex-wrap gap-2 mb-4">
-                  {selectedJob.tags.map((tag, index) => (
-                    <Badge
-                      key={index}
-                      variant="outline"
-                      className="border-gray-300 text-gray-700"
-                    >
-                      {tag}
+                {/* Badges */}
+                <div className="flex flex-wrap gap-2 mb-2">
+                  {selectedJob.job_category && (
+                    <Badge variant="outline" className="border-gray-300 text-gray-700">
+                      {selectedJob.job_category}
                     </Badge>
-                  ))}
+                  )}
+                  {selectedJob.placement_fee === 0 && (
+                    <Badge className="bg-red-500 text-white border-0">No Placement Fee</Badge>
+                  )}
                 </div>
               </div>
 
-              {/* Why You're a Match */}
-              <div className="mb-6 bg-[#17960b]/5 rounded-lg p-4">
-                <h3 className="text-lg font-bold text-gray-900 mb-2">
-                  Why You're a Great Match
-                </h3>
-                <p className="text-gray-700">
-                  {selectedJob.reason}
+              {/* Vacancies */}
+              <div className="mb-4 bg-gray-50 rounded-lg p-3">
+                <p className="text-sm text-gray-600">
+                  <span className="font-semibold">Vacancies:</span> {selectedJob.job_number_needed - selectedJob.job_filled_count} remaining of {selectedJob.job_number_needed}
                 </p>
+                {selectedJob.deadline && (
+                  <p className="text-sm text-red-500 mt-1">
+                    <span className="font-semibold">Deadline:</span> {new Date(selectedJob.deadline).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}
+                  </p>
+                )}
               </div>
 
               {/* Job Description */}
-              <div className="mb-6">
-                <h3 className="text-lg font-bold text-gray-900 mb-3">
-                  Job Description
-                </h3>
-                <p className="text-gray-700 leading-relaxed">
-                  {selectedJob.description}
-                </p>
-              </div>
+              {selectedJob.job_description && (
+                <div className="mb-6">
+                  <h3 className="text-lg font-bold text-gray-900 mb-3">Job Description</h3>
+                  <p className="text-gray-700 leading-relaxed">{selectedJob.job_description}</p>
+                </div>
+              )}
 
-              {/* Action Buttons */}
+              {/* Contact */}
+              {(selectedJob.jo_phone_number || selectedJob.jo_email || selectedJob.company_contact || selectedJob.company_email) && (
+                <div className="mb-6 bg-[#17960b]/5 rounded-lg p-4">
+                  <h3 className="text-lg font-bold text-gray-900 mb-2">Contact Information</h3>
+                  <div className="space-y-1 text-sm text-gray-700">
+                    {selectedJob.company_representative && <p><span className="font-medium">Contact Person:</span> {selectedJob.company_representative}</p>}
+                    {selectedJob.jo_phone_number && <p><span className="font-medium">Phone:</span> {selectedJob.jo_phone_number}</p>}
+                    {selectedJob.jo_email && <p><span className="font-medium">Email:</span> {selectedJob.jo_email}</p>}
+                    {selectedJob.company_email && <p><span className="font-medium">Company Email:</span> {selectedJob.company_email}</p>}
+                  </div>
+                </div>
+              )}
+
+              {/* Actions */}
               <div className="flex flex-col sm:flex-row gap-3">
                 <Button
                   variant="outline"
                   className="flex-1 border-gray-300"
-                  onClick={() => {
-                    onSaveJob?.(selectedJob);
-                  }}
+                  onClick={() => onSaveJob?.(selectedJob)}
                 >
-                  <Bookmark className="w-4 h-4 mr-2" />
-                  {savedJobIds?.includes(selectedJob.id) ? "Saved" : "Save Job"}
+                  <Bookmark className={`w-4 h-4 mr-2 ${savedJobIds.includes(selectedJob.position_id) ? 'fill-current' : ''}`} />
+                  {savedJobIds.includes(selectedJob.position_id) ? 'Saved' : 'Save Job'}
                 </Button>
                 <Button
                   className="flex-1 bg-[#17960b] hover:bg-[#17960b]/90 text-white font-semibold"
                   onClick={() => {
                     onApply?.({
-                      title: selectedJob.title,
-                      company: selectedJob.company,
+                      title: selectedJob.job_title,
+                      company: selectedJob.company_name,
                       location: selectedJob.location,
                     });
                     setSelectedJob(null);
