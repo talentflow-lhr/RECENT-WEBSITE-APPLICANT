@@ -140,7 +140,12 @@ function AppContent() {
       case 'profile':
         return <ProfileSettings />;
       case 'apply':
-        return <JobApplication jobData={selectedJob} />;
+       return (
+         <JobApplication
+           jobData={selectedJob}
+           onBack={() => setCurrentPage('jobpositions')}
+           />
+       );
       case 'savedjobs':
         return <SavedJobs savedJobs={savedJobs} onRemoveJob={handleRemoveSavedJob} onApply={handleApplySavedJob} />;
        case 'jobpositions':
