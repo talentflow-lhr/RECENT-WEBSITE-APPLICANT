@@ -4,6 +4,7 @@ import { Input } from "./ui/input";
 import { Label } from "./ui/label";
 import { Mail, ArrowLeft, CheckCircle } from "lucide-react";
 import logo from "../imports/Landbase-removebg-preview.png";
+import { supabase } from "./supabaseClient";
 
 
 interface ForgotPasswordProps {
@@ -17,17 +18,23 @@ export function ForgotPassword({
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
-
-    // Simulate API call
-    setTimeout(() => {
-      setIsLoading(false);
-      setIsSubmitted(true);
-    }, 1500);
+  
+    const { data, error } = await supabase.functions.invoke('send-reset-email', {
+      body: { email },
+    });
+  
+    setIsLoading(false);
+  
+    if (error || data?.error) {
+      alert(data?.error || 'Email not found. Please check and try again.');
+      return;
+    }
+  
+    setIsSubmitted(true);
   };
-
   if (isSubmitted) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-[#f5f7f0] to-[#e8f5e3] flex items-center justify-center p-4 sm:p-6 md:p-8">
