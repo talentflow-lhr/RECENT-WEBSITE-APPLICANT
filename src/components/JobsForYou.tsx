@@ -84,28 +84,47 @@ export function JobsForYou({ onApply, onSaveJob, savedJobIds = [], onNavigateToR
 
       setHasResume(true);
 
-      // Step 2: Call the edge function
-      const { data: sessionData } = await supabase.auth.getSession();
-      
-      const response = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/cosine-similarity-score`,
+      /// Step 2: Call the edge function via supabase client
+      const { data: result, error: fnError } = await supabase.functions.invoke(
+        'cosine-similarity-score',
         {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
-          },
-          body: JSON.stringify({ applicant_id: account!.applicant_id }),
+          body: { applicant_id: account!.applicant_id },
         }
       );
 
-      if (!response.ok) {
-        const errData = await response.json();
-        throw new Error(errData.error || 'Failed to fetch recommendations');
+      // ✅ Add the console.logs RIGHT HERE, on the next two lines
+      console.log('Edge function result:', result);
+      console.log('Edge function error:', fnError);
+      
+      if (fnError) throw fnError;
+      
+      // ✅ Add this — check if the function returned an error in the response body
+      if (result?.error) {
+        // Handle specific known errors gracefully
+        if (
+          result.error.includes('No resume embedding') ||
+          result.error.includes('resume embedder')
+        ) {
+          // Resume exists in t_resume but hasn't been embedded yet
+          setHasResume(false);
+          setLoading(false);
+          return;
+        }
+      
+        if (
+          result.error.includes('No active jobs') ||
+          result.error.includes('job embedder')
+        ) {
+          // Jobs exist but haven't been embedded yet
+          setRecommendedJobs([]);
+          setLoading(false);
+          return;
+        }
+      
+        throw new Error(result.error);
       }
-
-      const result = await response.json();
-      setRecommendedJobs(result.scores || []);
+      
+      setRecommendedJobs(result?.scores || []);
 
     } catch (err: any) {
       console.error('Error fetching recommendations:', err);
@@ -180,9 +199,12 @@ export function JobsForYou({ onApply, onSaveJob, savedJobIds = [], onNavigateToR
             <div className="w-16 h-16 bg-yellow-100 rounded-full flex items-center justify-center mx-auto mb-4">
               <Upload className="w-8 h-8 text-[#ffca1a]" />
             </div>
-            <h3 className="text-xl font-bold text-gray-900 mb-2">Upload Your Resume First</h3>
+            <h3 className="text-xl font-bold text-gray-900 mb-2">
+              Resume Not Ready Yet
+            </h3>
             <p className="text-gray-600 mb-6">
-              To get personalized job recommendations, we need to analyze your resume. Upload it now and we'll match you with the best opportunities.
+              To get personalized job recommendations, your resume needs to be built and processed first. 
+              Go to the Resume Builder to get started.
             </p>
             <Button
               className="bg-[#17960b] hover:bg-[#0d5e06] text-white font-semibold px-8"
