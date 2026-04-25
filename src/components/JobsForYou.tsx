@@ -90,7 +90,7 @@ export function JobsForYou({ onApply, onSaveJob, savedJobIds = [], onNavigateToR
         {
           body: { applicant_id: account!.applicant_id },
           headers: {
-            'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+            'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
           },
         }
       );
