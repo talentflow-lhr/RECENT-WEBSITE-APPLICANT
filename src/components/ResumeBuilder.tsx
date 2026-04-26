@@ -560,6 +560,7 @@ export function ResumeBuilder({ onResumeSubmit }: ResumeBuilderProps = {}) {
         ...exp,
         startDate: isValidDate(exp.startDate) ? exp.startDate : null,
         endDate: exp.current ? null : (isValidDate(exp.endDate) ? exp.endDate : null),
+        description: exp.description ? [exp.description] : [],  // wrap in array
       }));
       
       const sanitizedEducation = education.map((edu) => ({
@@ -831,27 +832,32 @@ export function ResumeBuilder({ onResumeSubmit }: ResumeBuilderProps = {}) {
     }
 
     const experiences = resumeJSON.experiences as Record<string, unknown>[] | undefined;
-    if (experiences && experiences.length > 0) {
-      setWorkExperiences(experiences.map((exp) => {
-        const endDateRaw = ((exp.endDate as string) ?? '').trim();
-        const isCurrent = Boolean(exp.current) ||
-          endDateRaw.toLowerCase() === 'present' ||
-          endDateRaw.toLowerCase() === 'current' ||
-          endDateRaw === '';
-    
-        return {
-          position:      (exp.position    as string) ?? '',
-          company:       (exp.company     as string) ?? '',
-          city:          (exp.city        as string) ?? '',
-          stateProvince: (exp.province    as string) ?? '',
-          country:       (exp.country     as string) ?? '',
-          startDate:     (exp.startDate   as string) ?? '',
-          endDate:       isCurrent ? '' : endDateRaw,
-          current:       isCurrent,
-          description:   (exp.description as string) ?? '',
-        };
-      }));
-    }
+      if (experiences && experiences.length > 0) {
+        setWorkExperiences(experiences.map((exp) => {
+          const endDateRaw = ((exp.endDate as string) ?? '').trim();
+          const isCurrent = Boolean(exp.current) ||
+            endDateRaw.toLowerCase() === 'present' ||
+            endDateRaw.toLowerCase() === 'current' ||
+            endDateRaw === '';
+      
+          const descRaw = exp.description;
+          const description = Array.isArray(descRaw)
+            ? (descRaw as string[]).join('\n')
+            : (descRaw as string) ?? '';
+      
+          return {
+            position:      (exp.position as string) ?? '',
+            company:       (exp.company  as string) ?? '',
+            city:          (exp.city     as string) ?? '',
+            stateProvince: (exp.province as string) ?? '',
+            country:       (exp.country  as string) ?? '',
+            startDate:     (exp.startDate as string) ?? '',
+            endDate:       isCurrent ? '' : endDateRaw,
+            current:       isCurrent,
+            description,
+          };
+        }));
+      }
 
     const certEntries = resumeJSON.certificates as Record<string, string>[] | undefined;
     if (certEntries && certEntries.length > 0) {
