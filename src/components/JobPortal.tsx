@@ -733,10 +733,10 @@ export function JobPortal({ onApply, onSaveJob, savedJobIds = [], onNavigateToPr
         <div className="max-w-[1236px] mx-auto px-4 sm:px-6 md:px-8">
           
           {/* Featured Job Opportunity Banner */}
-          <div className="mb-8 sm:mb-10 md:mb-12">
+           <div className="mb-6">
             <div className="bg-gradient-to-r from-[#17960b] to-[#0d5e06] rounded-2xl p-1">
               <div className="bg-white rounded-xl overflow-hidden">
-                <div className="p-4 sm:p-6 md:p-8">
+                <div className="p-4 sm:p-5">
                   <div className="flex items-center gap-2 mb-4">
                     <div className="bg-[#ffca1a] text-[#101828] px-3 py-1 rounded-full text-xs sm:text-sm font-semibold">
                       FEATURED OPPORTUNITY
@@ -752,7 +752,7 @@ export function JobPortal({ onApply, onSaveJob, savedJobIds = [], onNavigateToPr
                   
                   <div className="bg-gradient-to-r from-blue-50 to-green-50 rounded-lg p-4 mb-6">
                     <h3 className="text-lg font-bold text-[#17960b] mb-3">Available Positions:</h3>
-                    <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-2">
+                    <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-x-4 gap-y-1">
                       <div className="flex items-start gap-2">
                         <span className="text-[#17960b] text-lg mt-0.5">•</span>
                         <span className="text-sm font-medium text-gray-800">Heavy Equipment Operator</span>
@@ -862,7 +862,7 @@ export function JobPortal({ onApply, onSaveJob, savedJobIds = [], onNavigateToPr
                     </p>
                   </div>
 
-                  <div className="flex flex-col sm:flex-row gap-4 items-center justify-between">
+                   <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center justify-between">
                     <div>
                       <p className="text-sm text-gray-600 mb-2">Contact Details:</p>
                       <div className="space-y-1 text-sm">
@@ -883,7 +883,7 @@ export function JobPortal({ onApply, onSaveJob, savedJobIds = [], onNavigateToPr
                     {/*view all positions*/}
                      <button
                         onClick={onNavigateToPositions}
-                        className="bg-[#17960b] hover:bg-[#148509] text-white px-6 py-3 rounded-lg font-semibold transition-colors shadow-md hover:shadow-lg flex items-center justify-center gap-2"
+                        className="bg-[#17960b] hover:bg-[#148509] text-white px-4 py-2 text-sm rounded-lg font-semibold transition-colors shadow-md hover:shadow-lg flex items-center justify-center gap-2"
                       >
                         <span>View All Positions</span>
                         <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -897,10 +897,10 @@ export function JobPortal({ onApply, onSaveJob, savedJobIds = [], onNavigateToPr
           </div>
 
           {/* Gulf Asia Featured Job Opportunity Banner */}
-          <div className="mb-8 sm:mb-10 md:mb-12">
+          <div className="className=mb-6">
             <div className="bg-gradient-to-r from-[#17960b] to-[#0d5e06] rounded-2xl p-1">
               <div className="bg-white rounded-xl overflow-hidden">
-                <div className="p-4 sm:p-6 md:p-8">
+                <div className="p-4 sm:p-5">
                   <div className="flex items-center gap-2 mb-4">
                     <div className="bg-[#ffca1a] text-[#101828] px-3 py-1 rounded-full text-xs sm:text-sm font-semibold">
                       FEATURED OPPORTUNITY
@@ -916,7 +916,7 @@ export function JobPortal({ onApply, onSaveJob, savedJobIds = [], onNavigateToPr
                   
                   <div className="bg-gradient-to-r from-blue-50 to-green-50 rounded-lg p-4 mb-6">
                     <h3 className="text-lg font-bold text-[#17960b] mb-3">Available Positions:</h3>
-                    <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-2">
+                    <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-x-4 gap-y-1">
                       <div className="flex items-start gap-2">
                         <span className="text-[#17960b] text-lg mt-0.5">•</span>
                         <span className="text-sm font-medium text-gray-800">Pipe Fitter (100 openings)</span>
@@ -995,7 +995,7 @@ export function JobPortal({ onApply, onSaveJob, savedJobIds = [], onNavigateToPr
                     </p>
                   </div>
 
-                  <div className="flex flex-col sm:flex-row gap-4 items-center justify-between">
+                  <div className="flex flex-col sm:flex-row gap-3 items-start justify-between">
                     <div>
                       <p className="text-sm text-gray-600 mb-2">Contact Details:</p>
                       <div className="space-y-1 text-sm">
@@ -1006,7 +1006,7 @@ export function JobPortal({ onApply, onSaveJob, savedJobIds = [], onNavigateToPr
                     
                     <button
                       onClick={() => setShowGulfAsiaPosterModal(true)}
-                      className="bg-[#ffca1a] hover:bg-[#e6b617] text-[#101828] px-6 py-3 rounded-lg font-semibold transition-colors shadow-md hover:shadow-lg flex items-center gap-2"
+                      className="bg-[#ffca1a] hover:bg-[#e6b617] text-[#101828] px-4 py-2 text-sm rounded-lg font-semibold transition-colors shadow-md hover:shadow-lg flex items-center justify-center gap-2"
                     >
                       <span>View Full Details</span>
                       <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1016,7 +1016,7 @@ export function JobPortal({ onApply, onSaveJob, savedJobIds = [], onNavigateToPr
                     {/*view all positions*/}
                     <button
                         onClick={onNavigateToPositions}
-                        className="bg-[#17960b] hover:bg-[#148509] text-white px-6 py-3 rounded-lg font-semibold transition-colors shadow-md hover:shadow-lg flex items-center justify-center gap-2"
+                        className="bg-[#17960b] hover:bg-[#148509] text-white px-4 py-2 rounded-lg font-semibold transition-colors shadow-md hover:shadow-lg flex items-center justify-center gap-2"
                       >
                         <span>View All Positions</span>
                         <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
