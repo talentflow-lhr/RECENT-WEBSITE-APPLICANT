@@ -518,6 +518,147 @@ export function ResumeBuilder({ onResumeSubmit }: ResumeBuilderProps = {}) {
       clearTimeout(timeout); 
     };
   }, []);
+
+  // Fetch existing resume data on mount
+  useEffect(() => {
+    if (!account) return;
+  
+    const fetchExistingResume = async () => {
+      try {
+        // 1. Fetch applicant personal info
+        const { data: applicant } = await supabase
+          .from('t_applicant')
+          .select('*')
+          .eq('applicant_id', account.applicant_id)
+          .single();
+  
+        if (applicant) {
+          const dobYear  = applicant.app_dob_year  ? String(applicant.app_dob_year).padStart(4, '0')  : '';
+          const dobMonth = applicant.app_dob_month ? String(applicant.app_dob_month).padStart(2, '0') : '';
+          const dobDay   = applicant.app_dob_day   ? String(applicant.app_dob_day).padStart(2, '0')   : '';
+          const dateOfBirth = dobYear && dobMonth && dobDay
+            ? `${dobYear}-${dobMonth}-${dobDay}`
+            : '';
+  
+          setPersonalInfo({
+            firstName:     applicant.app_first_name     ?? '',
+            middleInitial: applicant.app_middle_name    ?? '',
+            lastName:      applicant.app_last_name      ?? '',
+            suffix:        applicant.app_suffix         ?? '',
+            dateOfBirth,
+            city:          applicant.app_present_address_city     ?? '',
+            province:      applicant.app_present_address_province ?? '',
+            country:       applicant.app_present_address_country  ?? '',
+            email:         applicant.app_email          ?? '',
+            phone:         applicant.app_present_tele_mobile      ?? '',
+          });
+        }
+  
+        // 2. Fetch latest resume
+        const { data: resume } = await supabase
+          .from('t_resume')
+          .select('resume_id')
+          .eq('applicant_id', account.applicant_id)
+          .order('res_last_updated', { ascending: false })
+          .order('resume_id', { ascending: false })
+          .limit(1)
+          .maybeSingle();
+  
+        if (!resume) return;
+        const resumeId = resume.resume_id;
+  
+        // 3. Fetch work experiences
+        const { data: experiences } = await supabase
+          .from('t_work_experience')
+          .select('*')
+          .eq('resume_id', resumeId);
+  
+        if (experiences && experiences.length > 0) {
+          setWorkExperiences(experiences.map((exp) => {
+            const endDateRaw = exp.exp_end_date ?? '';
+            const isCurrent  = !endDateRaw || 
+              endDateRaw.toLowerCase() === 'present' || 
+              endDateRaw.toLowerCase() === 'current';
+            const description = Array.isArray(exp.exp_description)
+              ? exp.exp_description.join('\n')
+              : exp.exp_description ?? '';
+  
+            return {
+              position:      exp.exp_position  ?? '',
+              company:       exp.exp_company   ?? '',
+              city:          exp.exp_city      ?? '',
+              stateProvince: exp.exp_province  ?? '',
+              country:       exp.exp_country   ?? '',
+              startDate:     exp.exp_start_date ?? '',
+              endDate:       isCurrent ? '' : endDateRaw,
+              current:       isCurrent,
+              description,
+            };
+          }));
+        }
+  
+        // 4. Fetch education
+        const { data: educationData } = await supabase
+          .from('t_education')
+          .select('*')
+          .eq('resume_id', resumeId);
+  
+        if (educationData && educationData.length > 0) {
+          setEducation(educationData.map((edu) => ({
+            level:             edu.edu_level          ?? '',
+            degree:            edu.edu_degree         ?? '',
+            school:            edu.edu_school         ?? '',
+            city:              edu.edu_school_city    ?? '',
+            stateProvince:     edu.edu_school_province ?? '',
+            country:           edu.edu_school_country ?? '',
+            startDate:         edu.edu_start_date     ?? '',
+            endDate:           edu.edu_end_date       ?? '',
+            currentlyStudying: false,
+            grade:             edu.edu_grade          ?? '',
+            description:       edu.edu_description    ?? '',
+            achievements:      edu.edu_grade_honors   ?? '',
+          })));
+        }
+  
+        // 5. Fetch skills
+        const { data: skillsData } = await supabase
+          .from('t_resume_skills')
+          .select('*')
+          .eq('resume_id', resumeId);
+  
+        if (skillsData && skillsData.length > 0) {
+          setSkills(skillsData.map((skill) => ({
+            name:     skill.rs_skill_name        ?? '',
+            level:    skill.rs_proficiency_level ?? '',
+            category: skill.rs_skill_category === 'technical' ? 'technical' : 'soft' as 'technical' | 'soft',
+          })));
+        }
+  
+        // 6. Fetch certifications
+        const { data: certsData } = await supabase
+          .from('t_certificate_training')
+          .select('*')
+          .eq('resume_id', resumeId);
+  
+        if (certsData && certsData.length > 0) {
+          setCertifications(certsData.map((cert) => ({
+            name:          cert.cert_certificate_title ?? '',
+            type:          cert.cred_type === 'training' ? 'training' : 'certificate' as 'certificate' | 'training',
+            organization:  cert.cert_issuer            ?? '',
+            dateIssued:    cert.cert_date_obtained     ?? '',
+            proofFile:     null,
+            proofFileName: '',
+            proofUrl:      cert.cert_url               ?? null,
+          })));
+        }
+  
+      } catch (err) {
+        console.error('Failed to fetch existing resume:', err);
+      }
+    };
+  
+    fetchExistingResume();
+  }, [account]);
   
   const handleNext = () => {
     if (currentStep < 5) setCurrentStep(currentStep + 1);
