@@ -252,16 +252,24 @@ const ResumePreview = ({ personalInfo, workExperiences, certifications, educatio
   previewScale: number;
 }) => {
   return (
+    // Outer wrapper matches the *visual* size of the scaled page so it
+    // can be centred normally with margin: auto.
     <div
-      className="bg-white shadow-2xl mx-auto relative origin-top"
       style={{
-        width: '794px',
-        minHeight: '1123px',
-        transform: `scale(${previewScale})`,
-        transformOrigin: 'top center',
-        marginBottom: `${(1123 * previewScale) - 1123}px`,
+        width: `${794 * previewScale}px`,
+        minHeight: `${1123 * previewScale}px`,
+        margin: '0 auto',
       }}
     >
+      <div
+        className="bg-white shadow-2xl relative"
+        style={{
+          width: '794px',
+          minHeight: '1123px',
+          transform: `scale(${previewScale})`,
+          transformOrigin: 'top left',
+        }}
+      >
       <div className="p-16">
         {/* Name */}
         <div className="mb-6">
@@ -418,6 +426,7 @@ const ResumePreview = ({ personalInfo, workExperiences, certifications, educatio
           )}
         </div>
       </div>
+    </div>
     </div>
   );
 };
@@ -1455,7 +1464,7 @@ export function ResumeBuilder({ onResumeSubmit }: ResumeBuilderProps = {}) {
                 ref={previewContainerRef}
                 className="bg-gray-100 p-4 sm:p-6 rounded-b-lg shadow-sm overflow-hidden"
               >
-                <div className="overflow-y-auto overflow-x-hidden" style={{ maxHeight: 'calc(100vh - 12rem)' }}>
+                <div className="overflow-y-auto overflow-x-auto" style={{ maxHeight: 'calc(100vh - 12rem)' }}>
                   <ResumePreview
                     personalInfo={personalInfo}
                     workExperiences={workExperiences}
