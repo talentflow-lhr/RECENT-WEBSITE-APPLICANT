@@ -65,6 +65,7 @@ interface PersonalInfo {
   firstName: string;
   middleInitial: string;
   lastName: string;
+  suffix: string;
   dateOfBirth: string;
   city: string;
   province: string;
@@ -155,7 +156,8 @@ const parsePdfToImages = async (pdfFile: File): Promise<HTMLImageElement> => {
   const maxWidth = Math.max(...pages.map(p => p.viewport.width));
 
   const canvas = document.createElement('canvas');
-  const context = canvas.getContext('2d')!;
+  const context = canvas.getContext('2d');
+  if (!context) throw new Error('Failed to get canvas 2D context');
   canvas.width = maxWidth;
   canvas.height = totalHeight;
 
@@ -261,11 +263,13 @@ export function ResumeBuilder({ onResumeSubmit }: ResumeBuilderProps = {}) {
   const [showDownloadDropdown, setShowDownloadDropdown] = useState(false);
   const [resumeUploaded, setResumeUploaded] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false) // prevents double submit (pakitanggal if di need)
   const [uploadedFileName, setUploadedFileName] = useState('');
   const [personalInfo, setPersonalInfo] = useState<PersonalInfo>({
     firstName: '',
     middleInitial: '',
     lastName: '',
+    suffix: '',
     dateOfBirth: '',
     city: '',
     province: '',
@@ -314,19 +318,25 @@ export function ResumeBuilder({ onResumeSubmit }: ResumeBuilderProps = {}) {
   ]);
 
   const previewContainerRef = useRef<HTMLDivElement>(null);
-  const [previewScale, setPreviewScale] = useState(0.55);
+  const [previewScale, setPreviewScale] = useState(0.4);
 
   useEffect(() => {
     const updateScale = () => {
       if (previewContainerRef.current) {
         const containerWidth = previewContainerRef.current.offsetWidth - 32;
-        setPreviewScale(containerWidth / 794);
+        const scale = containerWidth / 794
+        setPreviewScale(Math.min(scale, 1));
       }
     };
 
     updateScale();
+    const timeout = setTimeout(updateScale, 100);
+    
     window.addEventListener('resize', updateScale);
-    return () => window.removeEventListener('resize', updateScale);
+    return () => {
+      window.removeEventListener('resize', updateScale);
+      clearTimeout(timeout); 
+    };
   }, []);
   
   const handleNext = () => {
@@ -359,8 +369,9 @@ export function ResumeBuilder({ onResumeSubmit }: ResumeBuilderProps = {}) {
   };
 
   const handleSubmit = async () => {
-
-    if (!account) return null;
+    if (!account || isSubmitting) return;
+    setIsSubmitting(true);
+    try {
 
     const list_of_education_levels = [
       "elementary",
@@ -408,6 +419,15 @@ export function ResumeBuilder({ onResumeSubmit }: ResumeBuilderProps = {}) {
     const { data, error } = await supabase.rpc(rpcFunction, {
       ...(existingResume && { p_resume_id: existingResume.resume_id }),
       p_applicant_id: account.applicant_id,
+      p_first_name:     personalInfo.firstName,
+      p_middle_initial: personalInfo.middleInitial,
+      p_last_name:      personalInfo.lastName,
+      p_suffix:         personalInfo.suffix,
+      p_email:          personalInfo.email,
+      p_phone:          personalInfo.phone,
+      p_city:           personalInfo.city,
+      p_province:       personalInfo.province,
+      p_country:        personalInfo.country,
       p_dob_year: dob_year,
       p_dob_month: dob_month,
       p_dob_day: dob_day,
@@ -427,6 +447,9 @@ export function ResumeBuilder({ onResumeSubmit }: ResumeBuilderProps = {}) {
     console.log('Created resume_id:', data); // the returned v_resume_id
     alert('Submitted successfully!');
     if (onResumeSubmit) onResumeSubmit();
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -529,7 +552,7 @@ export function ResumeBuilder({ onResumeSubmit }: ResumeBuilderProps = {}) {
     setEducation(education.filter((_, i) => i !== index));
   };
 
-  const updateEducation = (index: number, field: keyof Education, value: string) => {
+  const updateEducation = (index: number, field: keyof Education, value: string | boolean) => {
     const updated = [...education];
     updated[index] = { ...updated[index], [field]: value };
     setEducation(updated);
@@ -565,7 +588,7 @@ export function ResumeBuilder({ onResumeSubmit }: ResumeBuilderProps = {}) {
     setCertifications(certifications.filter((_, i) => i !== index));
   };
 
-  const updateCertification = (index: number, field: keyof Certification, value: string | File | null) => {
+  const updateCertification = (index: number, field: keyof Certification, value: string | File | null | 'certificate' | 'training') => {
     const updated = [...certifications];
     updated[index] = { ...updated[index], [field]: value };
     setCertifications(updated);
@@ -601,6 +624,7 @@ export function ResumeBuilder({ onResumeSubmit }: ResumeBuilderProps = {}) {
       firstName:     p.first_name      ?? '',
       middleInitial: p.middle_initial  ?? '',
       lastName:      p.last_name       ?? '',
+      suffix:        p.suffix          ?? '',
       dateOfBirth:   p.date_of_birth   ?? '',
       city:          p.city            ?? '',
       province:      p.province        ?? '',
@@ -693,23 +717,13 @@ export function ResumeBuilder({ onResumeSubmit }: ResumeBuilderProps = {}) {
     { number: 5, title: 'Skills', icon: 'skills' },
   ];
 
-  const ResumePreview = () => {
-  return (
-    <div
-      className="bg-white shadow-2xl mx-auto relative origin-top"
-      style={{
-        width: '794px',
-        minHeight: '1123px',
-        transform: `scale(${previewScale})`,
-        transformOrigin: 'top center',
-        marginBottom: `calc((1123px * ${previewScale}) - 1123px)`,
-      }}
-    >
+    return (
+      <div className="min-h-screen bg-[#f9fafb] py-4 sm:py-6 md:py-8 px-4 sm:px-6 md:px-8">
       <div className="p-16">
         {/* Name */}
         <div className="mb-6">
           <h1 className="text-2xl font-semibold text-[#101828] uppercase tracking-wide mb-2">
-            {personalInfo.firstName || 'FIRST'} {personalInfo.middleInitial || 'M'} {personalInfo.lastName || 'LAST'}
+            {personalInfo.firstName || 'FIRST'} {personalInfo.middleInitial || 'M'} {personalInfo.lastName || 'LAST'}{personalInfo.suffix ? ` ${personalInfo.suffix}` : ''}
           </h1>
           <div className="text-sm text-[#4a5565]">
             <p>
@@ -865,8 +879,25 @@ export function ResumeBuilder({ onResumeSubmit }: ResumeBuilderProps = {}) {
   );
 };
 
+const ResumePreview = ({ personalInfo, workExperiences, certifications, education, skills, previewScale }: {
+  personalInfo: PersonalInfo;
+  workExperiences: WorkExperience[];
+  certifications: Certification[];
+  education: Education[];
+  skills: Skill[];
+  previewScale: number;
+}) => {
   return (
-    <div className="min-h-screen bg-[#f9fafb] py-4 sm:py-6 md:py-8 px-4 sm:px-6 md:px-8">
+    <div
+      className="bg-white shadow-2xl mx-auto relative origin-top"
+      style={{
+        width: '794px',
+        minHeight: '1123px',
+        transform: `scale(${previewScale})`,
+        transformOrigin: 'top center',
+        marginBottom: `${(1123 * previewScale) - 1123}px`,
+      }}
+    >
       <div className="max-w-7xl mx-auto">
         {/* Step Indicator */}
         <div className="bg-white rounded-lg shadow-sm mb-4 sm:mb-6 md:mb-8 p-4 sm:p-6">
@@ -1010,6 +1041,17 @@ export function ResumeBuilder({ onResumeSubmit }: ResumeBuilderProps = {}) {
                           className="w-full bg-[#f3f3f5] rounded-lg px-3 py-2.5 text-sm text-gray-900 border-0 outline-none focus:ring-2 focus:ring-[#17960b]"
                           placeholder="Cuerdo"
                         />
+                      </div>
+
+                      <div>
+                        <label className="block text-sm font-medium text-[#364153] mb-2">Suffix</label>
+                        <input
+                          type="text"
+                          value={personalInfo.suffix}
+                          onChange={(e) => setPersonalInfo({ ...personalInfo, suffix: e.target.value })}
+                          className="w-full bg-[#f3f3f5] rounded-lg px-3 py-2.5 text-sm text-gray-900 border-0 outline-none focus:ring-2 focus:ring-[#17960b]"
+                          placeholder="e.g., Jr., Sr., III"
+                          />
                       </div>
 
                       <div>
@@ -1353,7 +1395,7 @@ export function ResumeBuilder({ onResumeSubmit }: ResumeBuilderProps = {}) {
                         </button>
                       </div>
                       <p className="text-sm sm:text-base text-[#4a5565]">Add your educational background.</p>
-                      </div>
+                    </div>
 
                     <div className="space-y-6 max-h-[60vh] overflow-y-auto pr-2">
                       {education.map((edu, index) => (
@@ -1682,8 +1724,17 @@ export function ResumeBuilder({ onResumeSubmit }: ResumeBuilderProps = {}) {
               <div ref={previewContainerRef}
                 className="bg-gray-100 p-4 sm:p-6 rounded-b-lg shadow-sm overflow-hidden"
                 >
-                <div className="max-h-[calc(100vh-12rem)] overflow-y-auto overflow-x-hidden">
-                  <ResumePreview />
+                <div className="overflow-y-auto overflow-x-hidden"
+                  style={{ maxHeight: 'calc(100vh - 12rem)' }}
+                  >
+                  <ResumePreview 
+                    personalInfo={personalInfo}
+                    workExperiences={workExperiences}
+                    certifications={certifications}
+                    education={education}
+                    skills={skills}
+                    previewScale={previewScale}
+                    />
                 </div>
               </div>
             </div>
@@ -1810,10 +1861,15 @@ export function ResumeBuilder({ onResumeSubmit }: ResumeBuilderProps = {}) {
                 </button>
                 <button
                   onClick={handleUploadClick}
-                  className="flex-1 px-6 py-3 bg-[#17960b] text-white rounded-lg font-semibold hover:bg-[#148509] transition-colors flex items-center justify-center gap-2"
-                >
+                  disabled={isUploading}
+                  className={`flex-1 px-6 py-3 rounded-lg font-semibold transition-colors flex items-center justify-center gap-2 ${
+                    isUploading
+                    ? 'bg-gray-400 text-white cursor-not-allowed'
+                    : 'bg-[#17960b] text-white hover:bg-[#148509]'
+                  }`}
+                  >
                   <Upload className="w-4 h-4" />
-                  Browse Files
+                  {isUploading ? 'Uploading...' : 'Browse Files'}
                 </button>
               </div>
             </div>
