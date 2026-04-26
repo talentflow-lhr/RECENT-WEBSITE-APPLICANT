@@ -540,10 +540,11 @@ export function ResumeBuilder({ onResumeSubmit }: ResumeBuilderProps = {}) {
   const handleSubmit = async () => {
     if (!account || isSubmitting) return;
     setIsSubmitting(true);
+  
     try {
       const list_of_education_levels = [
-        "elementary","junior_high_school","senior_high_school",
-        "college_graduate","masters","phd"
+        "elementary", "junior_high_school", "senior_high_school",
+        "college_graduate", "masters", "phd"
       ];
   
       const highestEducation = education.reduce((highest, edu) => {
@@ -552,17 +553,33 @@ export function ResumeBuilder({ onResumeSubmit }: ResumeBuilderProps = {}) {
         return currentIndex > highestIndex ? edu.level : highest;
       }, '');
   
+      // Sanitize all date fields before sending to Postgres
+      const sanitizedWorkExperiences = workExperiences.map((exp) => ({
+        ...exp,
+        startDate: exp.startDate || null,
+        endDate: exp.current ? null : (exp.endDate || null),
+      }));
+  
+      const sanitizedEducation = education.map((edu) => ({
+        ...edu,
+        startDate: edu.startDate || null,
+        endDate: edu.endDate || null,
+      }));
+  
       const certificationsWithUrls = await Promise.all(
         certifications.map(async (cert) => {
           if (cert.proofFile) {
             cert.proofUrl = await uploadCertProof(cert.proofFile, account.applicant_id);
           }
           const { proofFile, proofFileName, ...rest } = cert;
-          return rest;
+          return {
+            ...rest,
+            dateIssued: rest.dateIssued || null, // sanitize cert date too
+          };
         })
       );
   
-      let [dob_year, dob_month, dob_day] = personalInfo.dateOfBirth
+      const [dob_year, dob_month, dob_day] = personalInfo.dateOfBirth
         ? personalInfo.dateOfBirth.split('-').map(Number)
         : [null, null, null];
   
@@ -579,34 +596,33 @@ export function ResumeBuilder({ onResumeSubmit }: ResumeBuilderProps = {}) {
       await supabase
         .from('t_applicant')
         .update({
-          app_first_name: personalInfo.firstName,
-          app_middle_name: personalInfo.middleInitial,
-          app_last_name: personalInfo.lastName,
-          app_suffix: personalInfo.suffix,
-          app_email: personalInfo.email,
-          app_present_tele_mobile: personalInfo.phone,
-          app_present_address_city: personalInfo.city,
+          app_first_name:              personalInfo.firstName,
+          app_middle_name:             personalInfo.middleInitial,
+          app_last_name:               personalInfo.lastName,
+          app_suffix:                  personalInfo.suffix,
+          app_email:                   personalInfo.email,
+          app_present_tele_mobile:     personalInfo.phone,
+          app_present_address_city:    personalInfo.city,
           app_present_address_province: personalInfo.province,
           app_present_address_country: personalInfo.country,
-          app_dob_day: dob_day,
-          app_dob_month: dob_month,
-          app_dob_year: dob_year,
+          app_dob_day:                 dob_day,
+          app_dob_month:               dob_month,
+          app_dob_year:                dob_year,
         })
         .eq('applicant_id', account.applicant_id);
   
       if (existingResume) {
-        // update_resume only accepts these params (no personal info)
         const { data, error } = await supabase.rpc('update_resume', {
-          p_resume_id: existingResume.resume_id,
-          p_applicant_id: account.applicant_id,
-          p_dob_year: dob_year,
-          p_dob_month: dob_month,
-          p_dob_day: dob_day,
-          p_highest_edu: highestEducation,
-          p_education: education,
-          p_work_experiences: workExperiences,
-          p_skills: skills,
-          p_certifications: certificationsWithUrls,
+          p_resume_id:        existingResume.resume_id,
+          p_applicant_id:     account.applicant_id,
+          p_dob_year:         dob_year,
+          p_dob_month:        dob_month,
+          p_dob_day:          dob_day,
+          p_highest_edu:      highestEducation,
+          p_education:        sanitizedEducation,
+          p_work_experiences: sanitizedWorkExperiences,
+          p_skills:           skills,
+          p_certifications:   certificationsWithUrls,
         });
   
         if (error) {
@@ -616,26 +632,25 @@ export function ResumeBuilder({ onResumeSubmit }: ResumeBuilderProps = {}) {
         }
         console.log('Updated resume_id:', data);
       } else {
-        // submit_resume handles personal info + resume creation
         const { data, error } = await supabase.rpc('submit_resume', {
-          p_applicant_id: account.applicant_id,
-          p_first_name: personalInfo.firstName,
-          p_middle_initial: personalInfo.middleInitial,
-          p_last_name: personalInfo.lastName,
-          p_suffix: personalInfo.suffix,
-          p_email: personalInfo.email,
-          p_phone: personalInfo.phone,
-          p_city: personalInfo.city,
-          p_province: personalInfo.province,
-          p_country: personalInfo.country,
-          p_dob_year: dob_year,
-          p_dob_month: dob_month,
-          p_dob_day: dob_day,
-          p_highest_edu: highestEducation,
-          p_education: education,
-          p_work_experiences: workExperiences,
-          p_skills: skills,
-          p_certifications: certificationsWithUrls,
+          p_applicant_id:     account.applicant_id,
+          p_first_name:       personalInfo.firstName,
+          p_middle_initial:   personalInfo.middleInitial,
+          p_last_name:        personalInfo.lastName,
+          p_suffix:           personalInfo.suffix,
+          p_email:            personalInfo.email,
+          p_phone:            personalInfo.phone,
+          p_city:             personalInfo.city,
+          p_province:         personalInfo.province,
+          p_country:          personalInfo.country,
+          p_dob_year:         dob_year,
+          p_dob_month:        dob_month,
+          p_dob_day:          dob_day,
+          p_highest_edu:      highestEducation,
+          p_education:        sanitizedEducation,
+          p_work_experiences: sanitizedWorkExperiences,
+          p_skills:           skills,
+          p_certifications:   certificationsWithUrls,
         });
   
         if (error) {
