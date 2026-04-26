@@ -1,10 +1,12 @@
 import { useState } from 'react';
-import { Building2, Calendar, MapPin, DollarSign, CheckCircle, Clock, XCircle, AlertCircle, FileText, Mail, Phone, ThumbsUp, ThumbsDown, X } from 'lucide-react';
+import { Building2, Calendar, MapPin, DollarSign, CheckCircle, Clock, XCircle, AlertCircle, FileText, Mail, Phone, ThumbsUp, ThumbsDown, X, Video } from 'lucide-react';
 
 export function ApplicationProgress() {
   const [selectedApplication, setSelectedApplication] = useState<number | null>(null);
   const [showRejectModal, setShowRejectModal] = useState(false);
   const [rejectionReason, setRejectionReason] = useState('');
+  const [showOfferDetails, setShowOfferDetails] = useState(false);
+  const [showViewApplicationModal, setShowViewApplicationModal] = useState(false);
   const [applications, setApplications] = useState([
     {
       id: 1,
@@ -14,6 +16,7 @@ export function ApplicationProgress() {
       status: 'Offer Received',
       statusType: 'offer',
       location: 'Remote',
+      country: 'United States',
       salary: '$80,000 - $100,000',
       offerReceived: true,
       offerDecision: null as 'accepted' | 'rejected' | null,
@@ -21,9 +24,7 @@ export function ApplicationProgress() {
       timeline: [
         { stage: 'Application Submitted', date: 'Nov 15, 2025', completed: true },
         { stage: 'Resume Reviewed', date: 'Nov 17, 2025', completed: true },
-        { stage: 'Phone Interview', date: 'Nov 20, 2025', completed: true },
-        { stage: 'Technical Interview', date: 'Nov 25, 2025', completed: true },
-        { stage: 'Final Interview', date: 'Nov 28, 2025', completed: true },
+        { stage: 'Interview Scheduled', date: 'Nov 28, 2025', completed: true },
         { stage: 'Offer Received', date: 'Dec 1, 2025', completed: true },
       ],
       contactPerson: 'Naomi Cuerdo',
@@ -34,17 +35,17 @@ export function ApplicationProgress() {
       company: 'Digital Marketing Pro',
       position: 'Marketing Manager',
       appliedDate: 'November 10, 2025',
-      status: 'Under Review',
-      statusType: 'review',
+      status: 'Interview Scheduled',
+      statusType: 'interview',
       location: 'New York, NY',
+      country: 'United States',
       salary: '$70,000 - $90,000',
       offerReceived: false,
       offerDecision: null as 'accepted' | 'rejected' | null,
       rejectionReason: null as string | null,
       timeline: [
-        { stage: 'Application Submitted', date: 'Nov 10, 2025', completed: true },
         { stage: 'Resume Reviewed', date: 'Nov 12, 2025', completed: true },
-        { stage: 'Initial Screening', date: 'In Progress', completed: false, upcoming: true },
+        { stage: 'Interview Scheduled', date: 'May 5, 2026', time: '2:00 PM EST', meetingLink: 'https://zoom.us/j/123456789', completed: false, upcoming: true },
         { stage: 'Interview Round', date: 'Pending', completed: false },
         { stage: 'Offer Decision', date: 'Pending', completed: false },
       ],
@@ -59,6 +60,7 @@ export function ApplicationProgress() {
       status: 'Accepted',
       statusType: 'accepted',
       location: 'San Francisco, CA',
+      country: 'United States',
       salary: '$90,000 - $110,000',
       offerReceived: true,
       offerDecision: 'accepted' as 'accepted' | 'rejected' | null,
@@ -66,10 +68,7 @@ export function ApplicationProgress() {
       timeline: [
         { stage: 'Application Submitted', date: 'Nov 5, 2025', completed: true },
         { stage: 'Resume Reviewed', date: 'Nov 6, 2025', completed: true },
-        { stage: 'Phone Interview', date: 'Nov 8, 2025', completed: true },
-        { stage: 'Technical Interview', date: 'Nov 12, 2025', completed: true },
-        { stage: 'Final Interview', date: 'Nov 18, 2025', completed: true },
-        { stage: 'Offer Received', date: 'Nov 22, 2025', completed: true },
+        { stage: 'Interview Scheduled', date: 'Nov 18, 2025', completed: true }
       ],
       contactPerson: 'Naomi Cuerdo',
       contactPhone: '09345234576',
@@ -79,9 +78,10 @@ export function ApplicationProgress() {
       company: 'Finance Corp',
       position: 'Financial Analyst',
       appliedDate: 'November 1, 2025',
-      status: 'Rejected',
+      status: 'Application Not Selected',
       statusType: 'rejected',
       location: 'Chicago, IL',
+      country: 'United States',
       salary: '$65,000 - $85,000',
       offerReceived: false,
       offerDecision: null as 'accepted' | 'rejected' | null,
@@ -89,7 +89,7 @@ export function ApplicationProgress() {
       timeline: [
         { stage: 'Application Submitted', date: 'Nov 1, 2025', completed: true },
         { stage: 'Resume Reviewed', date: 'Nov 3, 2025', completed: true },
-        { stage: 'Application Not Selected', date: 'Nov 5, 2025', completed: true },
+        { stage: 'Application Not Selected', date: 'Nov 5, 2025', completed: true, rejected: true },
       ],
       contactPerson: 'Naomi Cuerdo',
       contactPhone: '09345234576',
@@ -131,10 +131,7 @@ export function ApplicationProgress() {
   };
 
   const handleViewApplication = () => {
-    const app = applications.find((a) => a.id === selectedApplication);
-    if (app) {
-      alert(`Viewing application for ${app.position} at ${app.company}\n\nStatus: ${app.status}\nApplied: ${app.appliedDate}\nLocation: ${app.location}\nSalary: ${app.salary}\n\nContact: ${app.contactPerson}\nPhone: ${app.contactPhone}`);
-    }
+        setShowViewApplicationModal(true);
   };
 
   const handleWithdrawApplication = () => {
@@ -260,14 +257,17 @@ export function ApplicationProgress() {
                             <div className="flex flex-col items-center">
                               <div
                                 className={`w-8 h-8 rounded-full flex items-center justify-center ${
-                                  stage.completed
-                                    ? 'bg-[#17960b]'
-                                    : stage.upcoming
-                                    ? 'bg-[#ffca1a]'
-                                    : 'bg-gray-200'
-                                }`}
-                              >
-                                {stage.completed ? (
+                                  stage.rejected
+                                  ? 'bg-red-600'
+                                  : stage.completed
+                                  ? 'bg-[#17960b]'
+                                  : stage.upcoming
+                                  ? 'bg-[#ffca1a]'
+                                  : 'bg-gray-200'
+                                }`}>
+                                {stage.rejected ? (
+                                  <X className="w-5 h-5 text-white" />
+                                ) : stage.completed ? (
                                   <CheckCircle className="w-5 h-5 text-white" />
                                 ) : stage.upcoming ? (
                                   <Clock className="w-5 h-5 text-gray-900" />
@@ -283,11 +283,49 @@ export function ApplicationProgress() {
                                 />
                               )}
                             </div>
-                            <div className="flex-1 pb-8">
-                              <p className={`font-medium ${stage.completed || stage.upcoming ? 'text-gray-900' : 'text-gray-500'}`}>
+                            <div className="flex-1 pb-8"> 
+                              <p className={`font-medium ${
+                                stage.rejected
+                                  ? 'text-red-600'
+                                  : stage.completed || stage.upcoming
+                                  ? 'text-gray-900'
+                                  : 'text-gray-500'
+                              }`}>
                                 {stage.stage}
                               </p>
-                              <p className="text-gray-500">{stage.date}</p>
+                              {stage.upcoming && stage.stage === 'Interview Scheduled' && (
+                            <div className="mt-2 p-3 bg-[#ffca1a]/10 border border-[#ffca1a] rounded-lg">
+                              <p className="text-sm font-medium text-gray-900 mb-2">
+                                You have an upcoming interview on {stage.date}
+                              </p>
+                            <div className="space-y-1 text-sm text-gray-700">
+                              <div className="flex items-center gap-2">
+                                <Calendar className="w-4 h-4 text-[#ffca1a]" />
+                                <span><strong>Date:</strong> {stage.date}</span>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <Clock className="w-4 h-4 text-[#ffca1a]" />
+                                <span><strong>Time:</strong> {stage.time}</span>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <Video className="w-4 h-4 text-[#ffca1a]" />
+                                <a
+                                  href={stage.meetingLink}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="text-[#17960b] hover:underline font-medium"
+                                  >
+                                  Join Meeting
+                                </a>
+                              </div>
+                            </div>
+                            </div>
+                          )}
+                              {!stage.upcoming && (
+                                <p className={`${stage.rejected ? 'text-red-600' : 'text-gray-500'}`}>
+                                  {stage.date}
+                                </p>
+                              )}
                             </div>
                           </div>
                         ))}
@@ -311,18 +349,66 @@ export function ApplicationProgress() {
 
                     {/* Action Buttons */}
                     <div className="mt-6 flex flex-col gap-3">
+                     {/* View Offer Details */}
+                      {app.offerReceived && app.offerDecision === null && (
+                        <div className="bg-purple-50 border-2 border-purple-200 rounded-lg p-4 mb-2">
+                          <div className="flex items-center justify-between mb-3">
+                            <h4 className="font-semibold text-gray-900">Offer Details</h4>
+                            <button
+                              onClick={() => setShowOfferDetails(!showOfferDetails)}
+                              className="text-[#17960b] hover:text-[#147509] font-medium text-sm transition-colors"
+                            >
+                              {showOfferDetails ? 'Hide Details' : 'View Offer'}
+                            </button>
+                          </div>
+
+                          {showOfferDetails && (
+                            <div className="space-y-2 pt-3 border-t border-purple-200">
+                              <div className="flex items-start gap-3">
+                                <Building2 className="w-5 h-5 text-purple-600 mt-0.5 flex-shrink-0" />
+                                <div className="flex-1">
+                                  <p className="text-sm font-medium text-gray-700">Company:</p>
+                                  <p className="text-gray-900">{app.company}</p>
+                                </div>
+                              </div>
+                              <div className="flex items-start gap-3">
+                                <MapPin className="w-5 h-5 text-purple-600 mt-0.5 flex-shrink-0" />
+                                <div className="flex-1">
+                                  <p className="text-sm font-medium text-gray-700">Country:</p>
+                                  <p className="text-gray-900">{app.country}</p>
+                                </div>
+                              </div>
+                              <div className="flex items-start gap-3">
+                                <FileText className="w-5 h-5 text-purple-600 mt-0.5 flex-shrink-0" />
+                                <div className="flex-1">
+                                  <p className="text-sm font-medium text-gray-700">Position:</p>
+                                  <p className="text-gray-900">{app.position}</p>
+                                </div>
+                              </div>
+                              <div className="flex items-start gap-3">
+                                <DollarSign className="w-5 h-5 text-purple-600 mt-0.5 flex-shrink-0" />
+                                <div className="flex-1">
+                                  <p className="text-sm font-medium text-gray-700">Salary:</p>
+                                  <p className="text-gray-900">{app.salary}</p>
+                                </div>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      )}
+                      
                       {/* Offer Accept/Reject Buttons */}
                       {app.offerReceived && app.offerDecision === null && (
                         <div className="flex gap-3">
-                          <button 
-                            className="flex-1 bg-[#17960b] hover:bg-[#147509] text-white px-6 py-3 rounded-lg transition-colors flex items-center justify-center gap-2 font-semibold" 
+                          <button
+                            className="flex-1 bg-[#17960b] hover:bg-[#147509] text-white px-6 py-3 rounded-lg transition-colors flex items-center justify-center gap-2 font-semibold"
                             onClick={handleAcceptOffer}
                           >
                             <ThumbsUp className="w-5 h-5" />
                             <span>Accept Offer</span>
                           </button>
-                          <button 
-                            className="flex-1 bg-red-600 hover:bg-red-700 text-white px-6 py-3 rounded-lg transition-colors flex items-center justify-center gap-2 font-semibold" 
+                                  <button
+                            className="flex-1 bg-red-600 hover:bg-red-700 text-white px-6 py-3 rounded-lg transition-colors flex items-center justify-center gap-2 font-semibold"
                             onClick={handleOpenRejectModal}
                           >
                             <ThumbsDown className="w-5 h-5" />
@@ -362,13 +448,13 @@ export function ApplicationProgress() {
                       {/* Standard Action Buttons */}
                       <div className="flex gap-3">
                         <button 
-                          className="flex-1 bg-[#ffca1a] hover:bg-[#e6b617] text-gray-900 px-6 py-3 rounded-lg transition-colors flex items-center justify-center gap-2 font-semibold" 
+                          className="flex-1 bg-[#ffca1a] hover:bg-[#e6b617] text-gray-900 px-6 py-3 rounded-lg transition-colors flex items-center justify-center gap-2 font-semibold"
                           onClick={handleViewApplication}
                         >
                           <FileText className="w-5 h-5" />
                           <span>View Application</span>
                         </button>
-                        {app.statusType !== 'rejected' && app.statusType !== 'accepted' && !app.offerDecision && (
+                        {app.statusType !== 'rejected' && app.statusType !== 'accepted' && !app.offerReceived && (
                           <button 
                             className="flex-1 bg-white hover:bg-gray-50 text-gray-900 px-6 py-3 rounded-lg border-2 border-gray-200 transition-colors font-semibold" 
                             onClick={handleWithdrawApplication}
@@ -396,7 +482,7 @@ export function ApplicationProgress() {
 
       {/* Reject Offer Modal */}
       {showRejectModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-xl shadow-xl p-6 sm:p-8 w-full max-w-md">
             <div className="flex items-center gap-3 mb-4">
               <div className="w-10 h-10 bg-red-100 rounded-full flex items-center justify-center">
@@ -442,6 +528,71 @@ export function ApplicationProgress() {
                 <span>Cancel</span>
               </button>
             </div>
+          </div>
+        </div>
+      )}
+      {/* View Application Modal */}
+      {showViewApplicationModal && selectedApplication && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-lg">
+            {(() => {
+              const app = applications.find((a) => a.id === selectedApplication)!;
+              return (
+                <>
+                  {/* Modal Header */}
+                  <div className="flex items-center justify-between p-6 border-b border-gray-200">
+                    <h2 className="text-lg font-semibold text-gray-900">Figma</h2>
+                    <button
+                      onClick={() => setShowViewApplicationModal(false)}
+                      className="text-gray-500 hover:text-gray-700 transition-colors"
+                    >
+                      <X className="w-6 h-6" />
+                    </button>
+                  </div>
+
+                  {/* Modal Content */}
+                  <div className="p-6">
+                    <p className="text-gray-900 mb-6">
+                      Viewing application for <span className="font-semibold">{app.position}</span> at <span className="font-semibold">{app.company}</span>.
+                    </p>
+
+                    <div className="space-y-3 mb-6">
+                      <p className="text-gray-900">
+                        <span className="font-semibold">Status:</span> <span className="text-blue-600">{app.status}</span>
+                      </p>
+                      <p className="text-gray-900">
+                        <span className="font-semibold">Applied:</span> {app.appliedDate}
+                      </p>
+                      <p className="text-gray-900">
+                        <span className="font-semibold">Location:</span> {app.location}
+                      </p>
+                      <p className="text-gray-900">
+                        <span className="font-semibold">Salary:</span> <span className="text-blue-600">{app.salary}</span>
+                      </p>
+                    </div>
+
+                    <div className="space-y-3 mb-6 pt-4 border-t border-gray-200">
+                      <p className="text-gray-900">
+                        <span className="font-semibold">Contact:</span> <span className="text-blue-600">{app.contactPerson}</span>
+                      </p>
+                      <p className="text-gray-900">
+                        <span className="font-semibold">Phone:</span> <span className="text-blue-600">{app.contactPhone}</span>
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Modal Footer */}
+                  <div className="flex justify-end p-6 border-t border-gray-200">
+                    <button
+                      onClick={() => setShowViewApplicationModal(false)}
+                      className="px-8 py-2 bg-white hover:bg-gray-50 text-blue-600 border-2 border-blue-600 rounded-lg transition-colors font-semibold"
+                    >
+                      OK
+                    </button>
+                  </div>
+                </>
+              );
+            })()}
           </div>
         </div>
       )}
