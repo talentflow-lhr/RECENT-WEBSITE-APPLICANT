@@ -9,13 +9,6 @@ This guide provides comprehensive navigation instructions for all components in 
 - Primary Yellow: `#ffca1a`
 - Primary Green: `#17960b`
 
-## Motto
-"We recruit the right people with the right skills at the right time"
-
----
-
-## Public Pages (No Login Required)
-
 ### 1. Homepage / Job Portal (`/`)
 **Component:** `JobPortal.tsx`
 
@@ -26,8 +19,6 @@ This guide provides comprehensive navigation instructions for all components in 
 - View job details including description, requirements, and benefits
 - Apply for jobs (redirects to login if not authenticated)
 - Interactive chatbot for assistance
-- Success rate statistics
-- Top principal companies showcase
 
 **Navigation:**
 - Header with logo and navigation links
@@ -393,21 +384,5 @@ This guide provides comprehensive navigation instructions for all components in 
 └── styles/
     └── globals.css                  # Global styles and Tailwind config
 ```
-
----
-
-## Contact Information (Pre-filled in forms)
-- **Contact Person:** Naomi Cuerdo
-- **Phone:** 09345234576
-
----
-
-## Support
-For technical issues or questions:
-- Use the ChatBot on the homepage
-- Contact: Naomi Cuerdo (09345234576)
-- Email support through Contact form in Footer
-
----
 
 **Last Updated:** March 25, 2026
