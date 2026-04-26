@@ -666,43 +666,124 @@ export function ResumeBuilder({ onResumeSubmit }: ResumeBuilderProps = {}) {
 
   const resumePreviewRef = useRef<HTMLDivElement>(null);
 
+  const buildResumeHTML = () => {
+    const expHTML = workExperiences.filter(e => e.position).map(exp => `
+      <div style="margin-bottom:16px;">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;">
+          <div>
+            <p style="font-weight:600;font-size:15px;color:#101828;margin:0 0 2px;">${exp.position}</p>
+            <p style="font-size:13px;color:#4a5565;margin:0;">${exp.company}, ${exp.city}, ${exp.stateProvince}</p>
+          </div>
+          <p style="font-size:13px;color:#4a5565;white-space:nowrap;margin-left:16px;">
+            ${formatDateToMonthYear(exp.startDate)} - ${exp.current ? 'Present' : formatDateToMonthYear(exp.endDate)}
+          </p>
+        </div>
+        ${exp.description ? `<p style="font-size:13px;color:#4a5565;margin:6px 0 0;white-space:pre-line;">${exp.description}</p>` : ''}
+      </div>
+    `).join('');
+  
+    const certHTML = certifications.filter(c => c.name).map(cert => `
+      <div style="margin-bottom:12px;">
+        <p style="font-weight:600;font-size:15px;color:#101828;margin:0 0 2px;">${cert.name}</p>
+        <p style="font-size:13px;color:#4a5565;margin:0;">${cert.organization}</p>
+        ${cert.dateIssued ? `<p style="font-size:13px;color:#4a5565;margin:0;">Date Issued: ${formatDateToMonthYear(cert.dateIssued)}</p>` : ''}
+      </div>
+    `).join('');
+  
+    const eduHTML = education.filter(e => e.degree).map(edu => `
+      <div style="margin-bottom:16px;">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;">
+          <div>
+            <p style="font-weight:600;font-size:15px;color:#101828;margin:0 0 2px;">${edu.degree}</p>
+            <p style="font-size:13px;color:#4a5565;margin:0;">${edu.school}, ${edu.city}, ${edu.stateProvince}</p>
+          </div>
+          <p style="font-size:13px;color:#4a5565;white-space:nowrap;margin-left:16px;">
+            ${formatDateToMonthYear(edu.startDate)} - ${formatDateToMonthYear(edu.endDate)}
+          </p>
+        </div>
+        ${edu.achievements ? `<p style="font-size:13px;color:#4a5565;margin:6px 0 0;">${edu.achievements}</p>` : ''}
+      </div>
+    `).join('');
+  
+    const techSkills = skills.filter(s => s.category === 'technical' && s.name);
+    const softSkills = skills.filter(s => s.category === 'soft' && s.name);
+    const skillsHTML = `
+      ${techSkills.length ? `
+        <p style="font-weight:600;font-size:13px;color:#101828;margin:0 0 6px;">Technical Skills:</p>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:4px 16px;margin-bottom:12px;">
+          ${techSkills.map(s => `<p style="font-size:13px;color:#4a5565;margin:0;">• ${s.name} - ${s.level}</p>`).join('')}
+        </div>
+      ` : ''}
+      ${softSkills.length ? `
+        <p style="font-weight:600;font-size:13px;color:#101828;margin:0 0 6px;">Soft Skills:</p>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:4px 16px;">
+          ${softSkills.map(s => `<p style="font-size:13px;color:#4a5565;margin:0;">• ${s.name} - ${s.level}</p>`).join('')}
+        </div>
+      ` : ''}
+    `;
+  
+    const sectionStyle = `margin-bottom:24px;`;
+    const headingStyle = `font-size:16px;font-weight:600;color:#101828;text-transform:uppercase;
+      border-bottom:2px solid #101828;padding-bottom:6px;margin:0 0 12px;letter-spacing:0.05em;`;
+  
+    return `
+      <div style="padding:64px;background:#ffffff;width:794px;box-sizing:border-box;">
+        <div style="margin-bottom:24px;">
+          <h1 style="font-size:22px;font-weight:600;color:#101828;text-transform:uppercase;letter-spacing:0.05em;margin:0 0 6px;">
+            ${personalInfo.firstName} ${personalInfo.middleInitial} ${personalInfo.lastName}${personalInfo.suffix ? ` ${personalInfo.suffix}` : ''}
+          </h1>
+          <p style="font-size:13px;color:#4a5565;margin:0;">
+            ${personalInfo.city} ${personalInfo.province}, ${personalInfo.country} | ${personalInfo.email} | ${personalInfo.phone}
+          </p>
+        </div>
+        ${expHTML ? `<div style="${sectionStyle}"><h2 style="${headingStyle}">Work Experience</h2>${expHTML}</div>` : ''}
+        ${certHTML ? `<div style="${sectionStyle}"><h2 style="${headingStyle}">Certifications</h2>${certHTML}</div>` : ''}
+        ${eduHTML ? `<div style="${sectionStyle}"><h2 style="${headingStyle}">Education</h2>${eduHTML}</div>` : ''}
+        <div style="${sectionStyle}"><h2 style="${headingStyle}">Skills</h2>${skillsHTML}</div>
+      </div>
+    `;
+  };
+  
   const handleDownloadPDF = async () => {
-  const previewEl = resumePreviewRef.current;
-  if (!previewEl) return;
-
   try {
-    const canvas = await html2canvas(previewEl, {
+    // Create an off-screen container with safe colors (no oklch)
+    const container = document.createElement('div');
+    container.style.cssText = `
+      position: fixed;
+      top: -9999px;
+      left: -9999px;
+      width: 794px;
+      background: white;
+      font-family: ui-sans-serif, system-ui, sans-serif;
+    `;
+
+    container.innerHTML = buildResumeHTML();
+    document.body.appendChild(container);
+
+    const canvas = await html2canvas(container, {
       scale: 2,
       useCORS: true,
       backgroundColor: '#ffffff',
+      logging: false,
     });
 
+    document.body.removeChild(container);
+
     const imgData = canvas.toDataURL('image/png');
-    const pdf = new jsPDF({
-      orientation: 'portrait',
-      unit: 'mm',
-      format: 'a4',
-    });
+    const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
 
     const pdfWidth  = pdf.internal.pageSize.getWidth();
     const pdfHeight = pdf.internal.pageSize.getHeight();
-    const imgWidth  = canvas.width;
-    const imgHeight = canvas.height;
-    const ratio     = pdfWidth / imgWidth;
-    const scaledHeight = imgHeight * ratio;
+    const ratio     = pdfWidth / canvas.width;
+    const scaledHeight = canvas.height * ratio;
 
     let yOffset = 0;
-    let remainingHeight = scaledHeight;
-
-    while (remainingHeight > 0) {
+    let remaining = scaledHeight;
+    while (remaining > 0) {
       if (yOffset > 0) pdf.addPage();
-      pdf.addImage(
-        imgData, 'PNG',
-        0, -yOffset,
-        pdfWidth, scaledHeight
-      );
+      pdf.addImage(imgData, 'PNG', 0, -(yOffset), pdfWidth, scaledHeight);
       yOffset += pdfHeight;
-      remainingHeight -= pdfHeight;
+      remaining -= pdfHeight;
     }
 
     const fileName = `${personalInfo.firstName || 'Resume'}_${personalInfo.lastName || ''}.pdf`.trim();
