@@ -897,7 +897,7 @@ export function JobPortal({ onApply, onSaveJob, savedJobIds = [], onNavigateToPr
           </div>
 
           {/* Gulf Asia Featured Job Opportunity Banner */}
-          <div className="className="mb-6">
+          <div className="className=mb-6">
             <div className="bg-gradient-to-r from-[#17960b] to-[#0d5e06] rounded-2xl p-1">
               <div className="bg-white rounded-xl overflow-hidden">
                 <div className="p-4 sm:p-5">
