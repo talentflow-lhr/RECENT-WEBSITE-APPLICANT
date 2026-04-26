@@ -556,12 +556,20 @@ export function ResumeBuilder({ onResumeSubmit }: ResumeBuilderProps = {}) {
       // Helper to validate a date string is actually a YYYY-MM-DD format
       const isValidDate = (val: string) => /^\d{4}-\d{2}-\d{2}$/.test(val);
       
-      const sanitizedWorkExperiences = workExperiences.map((exp) => ({
-        ...exp,
-        startDate: isValidDate(exp.startDate) ? exp.startDate : null,
-        endDate: exp.current ? null : (isValidDate(exp.endDate) ? exp.endDate : null),
-        description: exp.description ? [exp.description] : [],  // wrap in array
-      }));
+     const sanitizedWorkExperiences = workExperiences.map((exp) => ({
+      position:      exp.position,
+      company:       exp.company,
+      city:          exp.city,
+      stateProvince: exp.stateProvince,
+      country:       exp.country,
+      startDate:     isValidDate(exp.startDate) ? exp.startDate : null,
+      endDate:       exp.current ? null : (isValidDate(exp.endDate) ? exp.endDate : null),
+      current:       exp.current,
+      // Send as array — matches text[] column in t_work_experience
+      description:   exp.description
+        ? exp.description.split('\n').map(s => s.trim()).filter(Boolean)
+        : [],
+    }));
       
       const sanitizedEducation = education.map((edu) => ({
         ...edu,
