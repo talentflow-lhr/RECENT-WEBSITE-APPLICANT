@@ -156,12 +156,14 @@ export function ApplicantDashboard({
   const getScoreColor = (score: number) => {
     if (score >= 80) return 'text-[#17960b]';
     if (score >= 60) return 'text-[#ffca1a]';
+    if (score >= 40) return 'text-orange-500';
     return 'text-red-500';
   };
 
   const getScoreBorderColor = (score: number) => {
     if (score >= 80) return 'border-[#17960b]';
     if (score >= 60) return 'border-[#ffca1a]';
+    if (score >=40) return 'border-orange-500';
     return 'border-red-500';
   };
 
