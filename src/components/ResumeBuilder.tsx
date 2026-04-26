@@ -553,17 +553,19 @@ export function ResumeBuilder({ onResumeSubmit }: ResumeBuilderProps = {}) {
         return currentIndex > highestIndex ? edu.level : highest;
       }, '');
   
-      // Sanitize all date fields before sending to Postgres
+      // Helper to validate a date string is actually a YYYY-MM-DD format
+      const isValidDate = (val: string) => /^\d{4}-\d{2}-\d{2}$/.test(val);
+      
       const sanitizedWorkExperiences = workExperiences.map((exp) => ({
         ...exp,
-        startDate: exp.startDate || null,
-        endDate: exp.current ? null : (exp.endDate && exp.endDate.toLowerCase() !== 'present' ? exp.endDate : null),
+        startDate: isValidDate(exp.startDate) ? exp.startDate : null,
+        endDate: exp.current ? null : (isValidDate(exp.endDate) ? exp.endDate : null),
       }));
-  
+      
       const sanitizedEducation = education.map((edu) => ({
         ...edu,
-        startDate: edu.startDate || null,
-        endDate: edu.endDate || null,
+        startDate: isValidDate(edu.startDate) ? edu.startDate : null,
+        endDate: isValidDate(edu.endDate) ? edu.endDate : null,
       }));
   
       const certificationsWithUrls = await Promise.all(
@@ -831,22 +833,22 @@ export function ResumeBuilder({ onResumeSubmit }: ResumeBuilderProps = {}) {
     const experiences = resumeJSON.experiences as Record<string, unknown>[] | undefined;
     if (experiences && experiences.length > 0) {
       setWorkExperiences(experiences.map((exp) => {
-        const endDateRaw = (exp.endDate as string) ?? '';
-        const isCurrent = (exp.current as boolean) ?? 
-          endDateRaw.toLowerCase() === 'present' || 
+        const endDateRaw = ((exp.endDate as string) ?? '').trim();
+        const isCurrent = Boolean(exp.current) ||
+          endDateRaw.toLowerCase() === 'present' ||
           endDateRaw.toLowerCase() === 'current' ||
           endDateRaw === '';
     
         return {
-          position:      (exp.position    as string)  ?? '',
-          company:       (exp.company     as string)  ?? '',
-          city:          (exp.city        as string)  ?? '',
-          stateProvince: (exp.province    as string)  ?? '',
-          country:       (exp.country     as string)  ?? '',
-          startDate:     (exp.startDate   as string)  ?? '',
-          endDate:       isCurrent ? '' : endDateRaw,  // never store "Present" as endDate
+          position:      (exp.position    as string) ?? '',
+          company:       (exp.company     as string) ?? '',
+          city:          (exp.city        as string) ?? '',
+          stateProvince: (exp.province    as string) ?? '',
+          country:       (exp.country     as string) ?? '',
+          startDate:     (exp.startDate   as string) ?? '',
+          endDate:       isCurrent ? '' : endDateRaw,
           current:       isCurrent,
-          description:   (exp.description as string)  ?? '',
+          description:   (exp.description as string) ?? '',
         };
       }));
     }
