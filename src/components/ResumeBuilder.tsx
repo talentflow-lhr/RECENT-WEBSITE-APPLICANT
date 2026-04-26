@@ -545,13 +545,13 @@ export function ResumeBuilder({ onResumeSubmit }: ResumeBuilderProps = {}) {
         "elementary","junior_high_school","senior_high_school",
         "college_graduate","masters","phd"
       ];
-
+  
       const highestEducation = education.reduce((highest, edu) => {
         const currentIndex = list_of_education_levels.indexOf(edu.level);
         const highestIndex = list_of_education_levels.indexOf(highest);
         return currentIndex > highestIndex ? edu.level : highest;
       }, '');
-
+  
       const certificationsWithUrls = await Promise.all(
         certifications.map(async (cert) => {
           if (cert.proofFile) {
@@ -561,11 +561,11 @@ export function ResumeBuilder({ onResumeSubmit }: ResumeBuilderProps = {}) {
           return rest;
         })
       );
-
+  
       let [dob_year, dob_month, dob_day] = personalInfo.dateOfBirth
         ? personalInfo.dateOfBirth.split('-').map(Number)
         : [null, null, null];
-
+  
       const { data: existingResume } = await supabase
         .from('t_resume')
         .select('resume_id')
@@ -574,38 +574,78 @@ export function ResumeBuilder({ onResumeSubmit }: ResumeBuilderProps = {}) {
         .order('resume_id', { ascending: false })
         .limit(1)
         .maybeSingle();
-
-      const rpcFunction = existingResume ? 'update_resume' : 'submit_resume';
-
-      const { data, error } = await supabase.rpc(rpcFunction, {
-        ...(existingResume && { p_resume_id: existingResume.resume_id }),
-        p_applicant_id: account.applicant_id,
-        p_first_name:     personalInfo.firstName,
-        p_middle_initial: personalInfo.middleInitial,
-        p_last_name:      personalInfo.lastName,
-        p_suffix:         personalInfo.suffix,
-        p_email:          personalInfo.email,
-        p_phone:          personalInfo.phone,
-        p_city:           personalInfo.city,
-        p_province:       personalInfo.province,
-        p_country:        personalInfo.country,
-        p_dob_year:  dob_year,
-        p_dob_month: dob_month,
-        p_dob_day:   dob_day,
-        p_highest_edu:       highestEducation,
-        p_education:         education,
-        p_work_experiences:  workExperiences,
-        p_skills:            skills,
-        p_certifications:    certificationsWithUrls,
-      });
-
-      if (error) {
-        console.error(error);
-        alert('Submission failed.');
-        return;
+  
+      // Always update applicant personal info directly
+      await supabase
+        .from('t_applicant')
+        .update({
+          app_first_name: personalInfo.firstName,
+          app_middle_name: personalInfo.middleInitial,
+          app_last_name: personalInfo.lastName,
+          app_suffix: personalInfo.suffix,
+          app_email: personalInfo.email,
+          app_present_tele_mobile: personalInfo.phone,
+          app_present_address_city: personalInfo.city,
+          app_present_address_province: personalInfo.province,
+          app_present_address_country: personalInfo.country,
+          app_dob_day: dob_day,
+          app_dob_month: dob_month,
+          app_dob_year: dob_year,
+        })
+        .eq('applicant_id', account.applicant_id);
+  
+      if (existingResume) {
+        // update_resume only accepts these params (no personal info)
+        const { data, error } = await supabase.rpc('update_resume', {
+          p_resume_id: existingResume.resume_id,
+          p_applicant_id: account.applicant_id,
+          p_dob_year: dob_year,
+          p_dob_month: dob_month,
+          p_dob_day: dob_day,
+          p_highest_edu: highestEducation,
+          p_education: education,
+          p_work_experiences: workExperiences,
+          p_skills: skills,
+          p_certifications: certificationsWithUrls,
+        });
+  
+        if (error) {
+          console.error(error);
+          alert('Submission failed.');
+          return;
+        }
+        console.log('Updated resume_id:', data);
+      } else {
+        // submit_resume handles personal info + resume creation
+        const { data, error } = await supabase.rpc('submit_resume', {
+          p_applicant_id: account.applicant_id,
+          p_first_name: personalInfo.firstName,
+          p_middle_initial: personalInfo.middleInitial,
+          p_last_name: personalInfo.lastName,
+          p_suffix: personalInfo.suffix,
+          p_email: personalInfo.email,
+          p_phone: personalInfo.phone,
+          p_city: personalInfo.city,
+          p_province: personalInfo.province,
+          p_country: personalInfo.country,
+          p_dob_year: dob_year,
+          p_dob_month: dob_month,
+          p_dob_day: dob_day,
+          p_highest_edu: highestEducation,
+          p_education: education,
+          p_work_experiences: workExperiences,
+          p_skills: skills,
+          p_certifications: certificationsWithUrls,
+        });
+  
+        if (error) {
+          console.error(error);
+          alert('Submission failed.');
+          return;
+        }
+        console.log('Created resume_id:', data);
       }
-
-      console.log('Created resume_id:', data);
+  
       alert('Submitted successfully!');
       if (onResumeSubmit) onResumeSubmit();
     } finally {
