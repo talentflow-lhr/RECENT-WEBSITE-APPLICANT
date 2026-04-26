@@ -697,16 +697,17 @@ export function ResumeBuilder({ onResumeSubmit }: ResumeBuilderProps = {}) {
       // Helper to validate a date string is actually a YYYY-MM-DD format
       const isValidDate = (val: string) => /^\d{4}-\d{2}-\d{2}$/.test(val);
       
-     const sanitizedWorkExperiences = workExperiences.map((exp) => ({
-      position:        exp.position,
-      company:         exp.company,
-      city:            exp.city,
-      stateProvince:   exp.stateProvince,
-      country:         exp.country,
-      startDate:       isValidDate(exp.startDate) ? exp.startDate : null,
-      endDate:         exp.current ? null : (isValidDate(exp.endDate) ? exp.endDate : null),
-      current:         exp.current,
-      exp_description: exp.description     // <-- renamed to match what the SQL function reads
+    const sanitizedWorkExperiences = workExperiences.map((exp) => ({
+      position:      exp.position,
+      company:       exp.company,
+      city:          exp.city,
+      stateProvince: exp.stateProvince,
+      country:       exp.country,
+      startDate:     isValidDate(exp.startDate) ? exp.startDate : null,
+      endDate:       exp.current ? null : (isValidDate(exp.endDate) ? exp.endDate : null),
+      current:       exp.current,
+      // Split by newline into array, filter blanks — sends [] if empty so SQL gets ARRAY[null] → null avoided
+      description:   exp.description
         ? exp.description.split('\n').map((s: string) => s.trim()).filter(Boolean)
         : [],
     }));
