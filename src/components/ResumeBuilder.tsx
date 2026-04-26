@@ -557,7 +557,7 @@ export function ResumeBuilder({ onResumeSubmit }: ResumeBuilderProps = {}) {
       const sanitizedWorkExperiences = workExperiences.map((exp) => ({
         ...exp,
         startDate: exp.startDate || null,
-        endDate: exp.current ? null : (exp.endDate || null),
+        endDate: exp.current ? null : (exp.endDate && exp.endDate.toLowerCase() !== 'present' ? exp.endDate : null),
       }));
   
       const sanitizedEducation = education.map((edu) => ({
@@ -830,17 +830,25 @@ export function ResumeBuilder({ onResumeSubmit }: ResumeBuilderProps = {}) {
 
     const experiences = resumeJSON.experiences as Record<string, unknown>[] | undefined;
     if (experiences && experiences.length > 0) {
-      setWorkExperiences(experiences.map((exp) => ({
-        position:      (exp.position    as string)  ?? '',
-        company:       (exp.company     as string)  ?? '',
-        city:          (exp.city        as string)  ?? '',
-        stateProvince: (exp.province    as string)  ?? '',
-        country:       (exp.country     as string)  ?? '',
-        startDate:     (exp.startDate   as string)  ?? '',
-        endDate:       (exp.endDate     as string)  ?? '',
-        current:       (exp.current     as boolean) ?? false,
-        description:   (exp.description as string)  ?? '',
-      })));
+      setWorkExperiences(experiences.map((exp) => {
+        const endDateRaw = (exp.endDate as string) ?? '';
+        const isCurrent = (exp.current as boolean) ?? 
+          endDateRaw.toLowerCase() === 'present' || 
+          endDateRaw.toLowerCase() === 'current' ||
+          endDateRaw === '';
+    
+        return {
+          position:      (exp.position    as string)  ?? '',
+          company:       (exp.company     as string)  ?? '',
+          city:          (exp.city        as string)  ?? '',
+          stateProvince: (exp.province    as string)  ?? '',
+          country:       (exp.country     as string)  ?? '',
+          startDate:     (exp.startDate   as string)  ?? '',
+          endDate:       isCurrent ? '' : endDateRaw,  // never store "Present" as endDate
+          current:       isCurrent,
+          description:   (exp.description as string)  ?? '',
+        };
+      }));
     }
 
     const certEntries = resumeJSON.certificates as Record<string, string>[] | undefined;
