@@ -656,64 +656,53 @@ export function ResumeBuilder({ onResumeSubmit }: ResumeBuilderProps = {}) {
     fetchExistingResume();
   }, [account]);
   
-  const handleDownloadPDF = async () => {
-    if (!pdfCaptureRef.current) return;
+  const handleDownloadPDF = () => {
     const el = pdfCaptureRef.current;
-    try {
-      const { toPng } = await import('html-to-image');
+    if (!el) return;
   
-      // Reveal for capture
-      el.style.opacity = '1';
-      el.style.zIndex = '9999';
-      await new Promise((r) => setTimeout(r, 150));
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) return;
   
-      // Capture full height at 1:1 — no pixelRatio, no fixed height
-      const imgData = await toPng(el, { width: 794 });
+    // Grab all existing stylesheets from the current page
+    const styles = Array.from(document.styleSheets)
+      .map((sheet) => {
+        try {
+          return Array.from(sheet.cssRules).map((r) => r.cssText).join('\n');
+        } catch {
+          return '';
+        }
+      })
+      .join('\n');
   
-      el.style.opacity = '0';
-      el.style.zIndex = '-1';
+    printWindow.document.write(`
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <meta charset="utf-8" />
+          <title>${personalInfo.firstName || 'Resume'}_${personalInfo.lastName || ''}</title>
+          <style>
+            ${styles}
+            * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+            @page { size: A4 portrait; margin: 0; }
+            body { margin: 0; padding: 0; }
+          </style>
+        </head>
+        <body>
+          ${el.innerHTML}
+        </body>
+      </html>
+    `);
   
-      // Get actual pixel dimensions of the captured image
-      const img = new Image();
-      await new Promise<void>((r) => { img.onload = () => r(); img.src = imgData; });
+    printWindow.document.close();
+    printWindow.focus();
   
-      const A4_W = 210; // mm
-      const A4_H = 297; // mm
-  
-      // 794px maps to 210mm, so scale everything from that
-      const mmPerPx   = A4_W / img.width;         // mm per captured pixel
-      const totalHmm  = img.height * mmPerPx;      // total content height in mm
-      const pageHpx   = Math.round(A4_H / mmPerPx); // how many px fit in one A4 page
-      const numPages  = Math.ceil(img.height / pageHpx);
-  
-      const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
-  
-      for (let i = 0; i < numPages; i++) {
-        if (i > 0) pdf.addPage('a4', 'portrait');
-  
-        // Slice one page's worth of pixels
-        const sliceCanvas = document.createElement('canvas');
-        sliceCanvas.width  = img.width;
-        sliceCanvas.height = pageHpx;
-        const ctx = sliceCanvas.getContext('2d')!;
-        ctx.fillStyle = 'white';
-        ctx.fillRect(0, 0, sliceCanvas.width, sliceCanvas.height);
-  
-        const srcY = i * pageHpx;
-        const srcH = Math.min(pageHpx, img.height - srcY);
-        ctx.drawImage(img, 0, srcY, img.width, srcH, 0, 0, img.width, srcH);
-  
-        pdf.addImage(sliceCanvas.toDataURL('image/png'), 'PNG', 0, 0, A4_W, A4_H);
-      }
-  
-      const fileName = `${personalInfo.firstName || 'Resume'}_${personalInfo.lastName || ''}.pdf`.trim();
-      pdf.save(fileName);
-    } catch (err) {
-      el.style.opacity = '0';
-      el.style.zIndex = '-1';
-      console.error('PDF generation failed:', err);
-      alert('Failed to generate PDF.');
-    }
+    // Wait for fonts/images to load before printing
+    printWindow.onload = () => {
+      setTimeout(() => {
+        printWindow.print();
+        printWindow.close();
+      }, 300);
+    };
   };
 
 
