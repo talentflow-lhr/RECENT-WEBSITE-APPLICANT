@@ -862,7 +862,7 @@ export function JobPortal({ onApply, onSaveJob, savedJobIds = [], onNavigateToPr
                     </p>
                   </div>
 
-                   <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center justify-between">
+                  <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
                     <div>
                       <p className="text-sm text-gray-600 mb-2">Contact Details:</p>
                       <div className="space-y-1 text-sm">
@@ -870,26 +870,26 @@ export function JobPortal({ onApply, onSaveJob, savedJobIds = [], onNavigateToPr
                         <p className="text-[#17960b]">landbasecv1@gmail.com</p>
                       </div>
                     </div>
-                    
-                    <button
-                      onClick={() => setShowPosterModal(true)}
-                      className="bg-[#ffca1a] hover:bg-[#e6b617] text-[#101828] px-6 py-3 rounded-lg font-semibold transition-colors shadow-md hover:shadow-lg flex items-center gap-2"
-                    >
-                      <span>View Full Details</span>
-                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                      </svg>
-                    </button>
-                    {/*view all positions*/}
-                     <button
+                    <div className="flex flex-col sm:flex-row gap-3">
+                      <button
+                        onClick={() => setShowPosterModal(true)}
+                        className="bg-[#ffca1a] hover:bg-[#e6b617] text-[#101828] px-6 py-3 rounded-lg font-semibold transition-colors shadow-md hover:shadow-lg flex items-center justify-center gap-2"
+                        >
+                        <span>View Full Details</span>
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                        </svg>
+                      </button>
+                      <button
                         onClick={onNavigateToPositions}
-                        className="bg-[#17960b] hover:bg-[#148509] text-white px-4 py-2 text-sm rounded-lg font-semibold transition-colors shadow-md hover:shadow-lg flex items-center justify-center gap-2"
-                      >
+                        className="bg-[#17960b] hover:bg-[#148509] text-white px-6 py-3 rounded-lg font-semibold transition-colors shadow-md hover:shadow-lg flex items-center justify-center gap-2"
+                        >
                         <span>View All Positions</span>
                         <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                         </svg>
                       </button>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -897,7 +897,7 @@ export function JobPortal({ onApply, onSaveJob, savedJobIds = [], onNavigateToPr
           </div>
 
           {/* Gulf Asia Featured Job Opportunity Banner */}
-          <div className="className=mb-6">
+          <div className="mb-6">
             <div className="bg-gradient-to-r from-[#17960b] to-[#0d5e06] rounded-2xl p-1">
               <div className="bg-white rounded-xl overflow-hidden">
                 <div className="p-4 sm:p-5">
@@ -995,34 +995,35 @@ export function JobPortal({ onApply, onSaveJob, savedJobIds = [], onNavigateToPr
                     </p>
                   </div>
 
-                  <div className="flex flex-col sm:flex-row gap-3 items-start justify-between">
+                  <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
                     <div>
                       <p className="text-sm text-gray-600 mb-2">Contact Details:</p>
                       <div className="space-y-1 text-sm">
-                        <p className="font-semibold text-[#101828]">landbasecv1@gmail.com</p>
-                        <p className="text-[#17960b]">landbaseskilled2025@gmail.com</p>
+                        <p className="font-semibold text-[#101828]">CP# 09171499075 / 09658309775</p>
+                        <p className="text-[#17960b]">landbasecv1@gmail.com</p>
                       </div>
                     </div>
                     
-                    <button
-                      onClick={() => setShowGulfAsiaPosterModal(true)}
-                      className="bg-[#ffca1a] hover:bg-[#e6b617] text-[#101828] px-4 py-2 text-sm rounded-lg font-semibold transition-colors shadow-md hover:shadow-lg flex items-center justify-center gap-2"
-                    >
-                      <span>View Full Details</span>
-                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                      </svg>
-                    </button>
-                    {/*view all positions*/}
-                    <button
+                    <div className="flex flex-col sm:flex-row gap-3">
+                      <button
+                        onClick={() => setShowGulfAsiaPosterModal(true)}
+                        className="bg-[#ffca1a] hover:bg-[#e6b617] text-[#101828] px-6 py-3 rounded-lg font-semibold transition-colors shadow-md hover:shadow-lg flex items-center justify-center gap-2"
+                        >
+                        <span>View Full Details</span>
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                        </svg>
+                      </button>
+                      <button
                         onClick={onNavigateToPositions}
-                        className="bg-[#17960b] hover:bg-[#148509] text-white px-4 py-2 rounded-lg font-semibold transition-colors shadow-md hover:shadow-lg flex items-center justify-center gap-2"
-                      >
+                        className="bg-[#17960b] hover:bg-[#148509] text-white px-6 py-3 rounded-lg font-semibold transition-colors shadow-md hover:shadow-lg flex items-center justify-center gap-2"
+                        >
                         <span>View All Positions</span>
                         <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                         </svg>
                       </button>
+                    </div>
                   </div>
                 </div>
               </div>
