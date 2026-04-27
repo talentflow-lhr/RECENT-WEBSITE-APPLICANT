@@ -65,6 +65,9 @@ export function JobPortal({ onApply, onSaveJob, savedJobIds = [], onNavigateToPr
   const [selectedJob, setSelectedJob] = useState<any>(null);
   const [savedIds, setSavedIds] = useState<number[]>([]);
 
+  const [jobOrders, setJobOrders] = useState<any[]>([]);
+  const [jobOrdersLoading, setJobOrdersLoading] = useState(true);
+
   // Featured job orders from Supabase
   const [featuredOrders, setFeaturedOrders] = useState<FeaturedJobOrder[]>([]);
   const [featuredLoading, setFeaturedLoading] = useState(true);
@@ -74,6 +77,66 @@ export function JobPortal({ onApply, onSaveJob, savedJobIds = [], onNavigateToPr
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+
+  // ─── Fetch all jobs posted and active ───────────────────────────────────────────────────────
+  const fetchJobOrders = async () => {
+    setJobOrdersLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from('t_job_orders')
+        .select(`
+          jo_id,
+          jo_country,
+          jo_posted_date,
+          jo_deadline,
+          jo_requirements,
+          jo_highlights,
+          jo_image_url,
+          jo_phone_number,
+          jo_email,
+          is_featured,
+          placement_fee,
+          t_companies ( company_name ),
+          t_date!t_job_orders_jo_interview_start_date_id_fkey ( full_date ),
+          interview_end:t_date!t_job_orders_jo_interview_end_date_id_fkey ( full_date ),
+          t_job_positions ( position_id, job_title, job_number_needed )
+        `)
+        .eq('is_active', true)
+        .eq('is_posted', true);
+  
+      if (error) throw error;
+  
+      const mapped = (data || []).map((order: any) => ({
+        jo_id: order.jo_id,
+        company_name: order.t_companies?.company_name || 'Unknown Company',
+        jo_country: order.jo_country || '',
+        jo_posted_date: order.jo_posted_date || '',
+        jo_deadline: order.jo_deadline || '',
+        jo_requirements: order.jo_requirements || [],
+        jo_highlights: order.jo_highlights || [],
+        jo_image_url: order.jo_image_url || null,
+        jo_phone_number: order.jo_phone_number || '',
+        jo_email: order.jo_email || '',
+        jo_interview_start_date: order.t_date?.full_date || null,
+        jo_interview_end_date: order.interview_end?.full_date || null,
+        is_featured: order.is_featured,
+        placement_fee: order.placement_fee ?? null,
+        positions: (order.t_job_positions || []).map((p: any) => ({
+          position_id: p.position_id,
+          job_title: p.job_title,
+          job_number_needed: p.job_number_needed,
+        })),
+      }));
+  
+      setJobOrders(mapped);
+    } catch (err) {
+      console.error('Error fetching job orders:', err);
+    } finally {
+      setJobOrdersLoading(false);
+    }
+  };
+
+  
   // ─── Fetch saved jobs ───────────────────────────────────────────────────────
   const fetchSavedJobs = async () => {
     if (!account) return;
@@ -250,6 +313,7 @@ export function JobPortal({ onApply, onSaveJob, savedJobIds = [], onNavigateToPr
 
   useEffect(() => {
     fetchFeaturedOrders();
+    fetchJobOrders();
     fetchJobs();
   }, []);
 
@@ -609,6 +673,109 @@ export function JobPortal({ onApply, onSaveJob, savedJobIds = [], onNavigateToPr
               <FeaturedBannerCard key={order.jo_id} order={order} />
             ))
           )}
+
+          {/* All Active Job Orders */}
+          <div className="mb-10">
+            <div className="flex items-center gap-3 mb-6">
+              <h2 className="text-xl font-bold text-[#101828]">All Open Job Orders</h2>
+              {!jobOrdersLoading && (
+                <span className="bg-[#17960b] text-white text-xs font-semibold px-2.5 py-1 rounded-full">
+                  {jobOrders.length}
+                </span>
+              )}
+            </div>
+          
+            {jobOrdersLoading ? (
+              <div className="flex items-center justify-center py-8">
+                <svg className="w-8 h-8 animate-spin text-[#17960b]" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                </svg>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {jobOrders.map(order => {
+                  const isNoFee = !order.placement_fee || order.placement_fee === 0;
+                  const file = getFeaturedFileUrl(order.jo_image_url);
+                  return (
+                    <div key={order.jo_id} className="border border-[#e5e7eb] rounded-xl p-5 hover:shadow-md transition-shadow bg-white">
+                      {/* Header */}
+                      <div className="flex items-start justify-between gap-3 mb-3">
+                        <div>
+                          <h3 className="text-base font-bold text-[#101828]">{order.company_name}</h3>
+                          {order.jo_country && (
+                            <div className="flex items-center gap-1 mt-1 text-sm text-[#6a7282]">
+                              <MapPin className="w-3.5 h-3.5" />
+                              <span>{order.jo_country}</span>
+                            </div>
+                          )}
+                        </div>
+                        <div className="flex flex-col gap-1 items-end shrink-0">
+                          {order.is_featured && (
+                            <span className="bg-[#ffca1a] text-[#101828] text-[10px] font-semibold px-2 py-0.5 rounded-full">
+                              FEATURED
+                            </span>
+                          )}
+                          {isNoFee && (
+                            <span className="bg-red-500 text-white text-[10px] font-semibold px-2 py-0.5 rounded-full">
+                              NO FEE
+                            </span>
+                          )}
+                        </div>
+                      </div>
+          
+                      {/* Positions */}
+                      {order.positions.length > 0 && (
+                        <div className="mb-3">
+                          <p className="text-xs font-semibold text-[#17960b] uppercase tracking-wide mb-1.5">
+                            Positions ({order.positions.length})
+                          </p>
+                          <div className="flex flex-wrap gap-1.5">
+                            {order.positions.slice(0, 5).map((pos: any) => (
+                              <span key={pos.position_id} className="bg-gray-100 text-gray-700 text-xs px-2 py-0.5 rounded-md">
+                                {pos.job_title}{pos.job_number_needed ? ` ×${pos.job_number_needed}` : ''}
+                              </span>
+                            ))}
+                            {order.positions.length > 5 && (
+                              <span className="bg-gray-100 text-gray-500 text-xs px-2 py-0.5 rounded-md">
+                                +{order.positions.length - 5} more
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      )}
+          
+                      {/* Deadline */}
+                      {order.jo_deadline && (
+                        <div className="flex items-center gap-1.5 text-xs text-gray-500 mb-4">
+                          <Clock className="w-3.5 h-3.5" />
+                          <span>Deadline: {new Date(order.jo_deadline).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</span>
+                        </div>
+                      )}
+          
+                      {/* Buttons */}
+                      <div className="flex gap-2">
+                        {file && (
+                          <button
+                            onClick={() => setSelectedFeaturedOrder(order)}
+                            className="flex-1 bg-[#ffca1a] hover:bg-[#e6b617] text-[#101828] py-2 rounded-lg text-sm font-semibold transition-colors"
+                          >
+                            View Details
+                          </button>
+                        )}
+                        <button
+                          onClick={onNavigateToPositions}
+                          className="flex-1 bg-[#17960b] hover:bg-[#148509] text-white py-2 rounded-lg text-sm font-semibold transition-colors"
+                        >
+                          View Positions
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
 
           {/* Regular Positions */}
           {loading && (
