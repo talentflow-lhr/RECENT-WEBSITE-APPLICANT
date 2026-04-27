@@ -95,7 +95,7 @@ export function Header({ currentPage = 'jobs', onNavigate, isLoggedIn = false, o
             <div className="relative hidden lg:block" ref={dropdownRef}>
               <button
                 onClick={() => setProfileMenuOpen(!profileMenuOpen)}
-                className="flex items-center gap-2 px-4 py-2 border-[0.8px] border-[#d1d5dc] rounded-[10px] hover:bg-gray-50 transition-colors"
+                className="flex items-center gap-2 px-4 py-2 border-[0.8px] border-[#d1d5dc] rounded-[10px] hover:bg-gray-100 transition-colors"
               >
                 <div className="w-8 h-8 bg-gradient-to-b from-[#ffca1a] to-[#17960b] rounded-full flex items-center justify-center">
                   <svg className="block w-5 h-5" fill="none" preserveAspectRatio="none" viewBox="0 0 20 20">
@@ -121,7 +121,7 @@ export function Header({ currentPage = 'jobs', onNavigate, isLoggedIn = false, o
                       onNavigate?.('dashboard');
                       setProfileMenuOpen(false);
                     }}
-                    className="w-full flex items-center gap-3 px-4 py-3 text-left text-gray-700 hover:bg-gray-50 transition-colors"
+                    className="w-full flex items-center gap-3 px-4 py-3 text-left text-gray-700 hover:bg-gray-100 transition-colors"
                   >
                     <User className="w-5 h-5 text-gray-500" />
                     <span className="text-sm font-medium">My Profile</span>
@@ -131,7 +131,7 @@ export function Header({ currentPage = 'jobs', onNavigate, isLoggedIn = false, o
                       onNavigate?.('savedjobs');
                       setProfileMenuOpen(false);
                     }}
-                    className="w-full flex items-center gap-3 px-4 py-3 text-left text-gray-700 hover:bg-gray-50 transition-colors"
+                    className="w-full flex items-center gap-3 px-4 py-3 text-left text-gray-700 hover:bg-gray-100 transition-colors"
                   >
                     <Bookmark className="w-5 h-5 text-gray-500" />
                     <span className="text-sm font-medium">Saved Jobs</span>
@@ -141,7 +141,7 @@ export function Header({ currentPage = 'jobs', onNavigate, isLoggedIn = false, o
                       onNavigate?.('applications');
                       setProfileMenuOpen(false);
                     }}
-                    className="w-full flex items-center gap-3 px-4 py-3 text-left text-gray-700 hover:bg-gray-50 transition-colors"
+                    className="w-full flex items-center gap-3 px-4 py-3 text-left text-gray-700 hover:bg-gray-100 transition-colors"
                   >
                     <Briefcase className="w-5 h-5 text-gray-500" />
                     <span className="text-sm font-medium">My Applications</span>
@@ -151,7 +151,7 @@ export function Header({ currentPage = 'jobs', onNavigate, isLoggedIn = false, o
                       onNavigate?.('profile');
                       setProfileMenuOpen(false);
                     }}
-                    className="w-full flex items-center gap-3 px-4 py-3 text-left text-gray-700 hover:bg-gray-50 transition-colors"
+                    className="w-full flex items-center gap-3 px-4 py-3 text-left text-gray-700 hover:bg-gray-100 transition-colors"
                   >
                     <Settings className="w-5 h-5 text-gray-500" />
                     <span className="text-sm font-medium">Account Settings</span>
@@ -164,7 +164,7 @@ export function Header({ currentPage = 'jobs', onNavigate, isLoggedIn = false, o
                         onAuthClick?.();
                       }
                     }}
-                    className="w-full flex items-center gap-3 px-4 py-3 text-left text-red-600 hover:bg-red-50 transition-colors"
+                    className="w-full flex items-center gap-3 px-4 py-3 text-left text-red-600 hover:bg-red-100 transition-colors"
                   >
                     <LogOut className="w-5 h-5" />
                     <span className="text-sm font-medium">Logout</span>
@@ -307,7 +307,7 @@ export function Header({ currentPage = 'jobs', onNavigate, isLoggedIn = false, o
                       onAuthClick?.();
                     }
                   }}
-                  className="w-full flex items-center gap-3 px-4 py-3 text-left text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                  className="w-full flex items-center gap-3 px-4 py-3 text-left text-red-600 hover:bg-red-100 rounded-lg transition-colors"
                 >
                   <LogOut className="w-5 h-5" />
                   <span className="text-sm font-medium">Logout</span>
