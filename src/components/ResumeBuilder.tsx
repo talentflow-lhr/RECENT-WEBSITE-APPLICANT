@@ -656,11 +656,13 @@ export function ResumeBuilder({ onResumeSubmit }: ResumeBuilderProps = {}) {
   }, [account]);
   
   const handleDownloadPDF = () => {
-    const printWindow = window.open('', '_blank');
-    if (!printWindow) return;
-  
     const name = `${personalInfo.firstName || 'FIRST'} ${personalInfo.middleInitial || ''} ${personalInfo.lastName || 'LAST'}${personalInfo.suffix ? ` ${personalInfo.suffix}` : ''}`.trim().toUpperCase();
-    const contact = `${personalInfo.city || ''}${personalInfo.province ? `, ${personalInfo.province}` : ''} ${personalInfo.country || ''} | ${personalInfo.email || ''} | ${personalInfo.phone || ''}`.trim();
+    const contact = [
+      personalInfo.city && personalInfo.province ? `${personalInfo.city}, ${personalInfo.province}` : personalInfo.city || personalInfo.province,
+      personalInfo.country,
+      personalInfo.email,
+      personalInfo.phone,
+    ].filter(Boolean).join(' | ');
   
     const validExp   = workExperiences.filter(e => e.position);
     const validCerts = certifications.filter(c => c.name);
@@ -671,16 +673,16 @@ export function ResumeBuilder({ onResumeSubmit }: ResumeBuilderProps = {}) {
     const sectionHeading = (title: string) => `
       <h2 style="font-size:13pt;font-weight:700;text-transform:uppercase;
                  border-bottom:2px solid #101828;padding-bottom:4px;
-                 margin:18px 0 10px 0;color:#101828;">${title}</h2>`;
+                 margin:16px 0 10px;color:#101828;">${title}</h2>`;
   
     const expHTML = validExp.map(exp => `
       <div style="margin-bottom:12px;">
         <div style="display:flex;justify-content:space-between;align-items:flex-start;">
           <div>
             <p style="font-weight:700;font-size:10.5pt;margin:0;color:#101828;">${exp.position}</p>
-            <p style="font-size:9.5pt;margin:2px 0 0;color:#4a5565;">${[exp.company, exp.city, exp.stateProvince].filter(Boolean).join(', ')}</p>
+            <p style="font-size:9.5pt;margin:2px 0 0;color:#4a5565;">${[exp.company,exp.city,exp.stateProvince].filter(Boolean).join(', ')}</p>
           </div>
-          <p style="font-size:9.5pt;white-space:nowrap;margin:0;color:#4a5565;">
+          <p style="font-size:9.5pt;white-space:nowrap;margin:0;color:#4a5565;padding-left:12px;">
             ${formatDateToMonthYear(exp.startDate)} – ${exp.current ? 'Present' : formatDateToMonthYear(exp.endDate)}
           </p>
         </div>
@@ -699,9 +701,9 @@ export function ResumeBuilder({ onResumeSubmit }: ResumeBuilderProps = {}) {
         <div style="display:flex;justify-content:space-between;align-items:flex-start;">
           <div>
             <p style="font-weight:700;font-size:10.5pt;margin:0;color:#101828;">${edu.degree}</p>
-            <p style="font-size:9.5pt;margin:2px 0 0;color:#4a5565;">${[edu.school, edu.city, edu.stateProvince].filter(Boolean).join(', ')}</p>
+            <p style="font-size:9.5pt;margin:2px 0 0;color:#4a5565;">${[edu.school,edu.city,edu.stateProvince].filter(Boolean).join(', ')}</p>
           </div>
-          <p style="font-size:9.5pt;white-space:nowrap;margin:0;color:#4a5565;">
+          <p style="font-size:9.5pt;white-space:nowrap;margin:0;color:#4a5565;padding-left:12px;">
             ${formatDateToMonthYear(edu.startDate)} – ${formatDateToMonthYear(edu.endDate)}
           </p>
         </div>
@@ -712,49 +714,51 @@ export function ResumeBuilder({ onResumeSubmit }: ResumeBuilderProps = {}) {
       ${techSkills.length ? `
         <p style="font-weight:700;font-size:9.5pt;margin:0 0 6px;color:#101828;">Technical Skills:</p>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:2px 16px;margin-bottom:10px;">
-          ${techSkills.map(s => `<p style="font-size:9.5pt;margin:0;color:#4a5565;">• ${s.name} - ${s.level}</p>`).join('')}
+          ${techSkills.map(s => `<p style="font-size:9.5pt;margin:0;color:#4a5565;">• ${s.name}${s.level ? ` - ${s.level}` : ''}</p>`).join('')}
         </div>` : ''}
       ${softSkills.length ? `
         <p style="font-weight:700;font-size:9.5pt;margin:0 0 6px;color:#101828;">Soft Skills:</p>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:2px 16px;">
-          ${softSkills.map(s => `<p style="font-size:9.5pt;margin:0;color:#4a5565;">• ${s.name} - ${s.level}</p>`).join('')}
+          ${softSkills.map(s => `<p style="font-size:9.5pt;margin:0;color:#4a5565;">• ${s.name}${s.level ? ` - ${s.level}` : ''}</p>`).join('')}
         </div>` : ''}`;
   
-    printWindow.document.write(`
-      <!DOCTYPE html>
-      <html>
-        <head>
-          <meta charset="utf-8"/>
-          <title>${personalInfo.firstName || 'Resume'}_${personalInfo.lastName || ''}</title>
-          <style>
-            * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; box-sizing: border-box; }
-            @page { size: A4 portrait; margin: 18mm 20mm; }
-            body { margin: 0; padding: 0; font-family: Helvetica, Arial, sans-serif; color: #101828; }
-            p { margin: 0; }
-            @media print { body { margin: 0; } }
-          </style>
-        </head>
-        <body>
-          <h1 style="font-size:16pt;font-weight:700;text-transform:uppercase;
-                     letter-spacing:0.05em;margin:0 0 4px;color:#101828;">${name}</h1>
-          <p style="font-size:9.5pt;color:#4a5565;margin-bottom:4px;">${contact}</p>
+    const resumeHTML = `
+      <h1 style="font-size:16pt;font-weight:700;text-transform:uppercase;
+                 letter-spacing:0.05em;margin:0 0 4px;color:#101828;">${name}</h1>
+      <p style="font-size:9.5pt;color:#4a5565;margin-bottom:2px;">${contact}</p>
+      ${validExp.length              ? sectionHeading('Work Experience') + expHTML   : ''}
+      ${validCerts.length            ? sectionHeading('Certifications')  + certHTML  : ''}
+      ${validEdu.length              ? sectionHeading('Education')       + eduHTML   : ''}
+      ${techSkills.length || softSkills.length ? sectionHeading('Skills') + skillsHTML : ''}
+    `;
   
-          ${validExp.length   ? sectionHeading('Work Experience') + expHTML   : ''}
-          ${validCerts.length ? sectionHeading('Certifications')  + certHTML  : ''}
-          ${validEdu.length   ? sectionHeading('Education')       + eduHTML   : ''}
-          ${techSkills.length || softSkills.length ? sectionHeading('Skills') + skillsHTML : ''}
-        </body>
-      </html>
-    `);
+    // Inject a temporary print container + style into THIS page — no new window
+    const printContainer = document.createElement('div');
+    printContainer.id = 'resume-print-container';
+    printContainer.innerHTML = resumeHTML;
+    document.body.appendChild(printContainer);
   
-    printWindow.document.close();
-    printWindow.focus();
-    printWindow.onload = () => {
-      setTimeout(() => {
-        printWindow.print();
-        printWindow.close();
-      }, 300);
-    };
+    const printStyle = document.createElement('style');
+    printStyle.id = 'resume-print-style';
+    printStyle.innerHTML = `
+      @media print {
+        body > *:not(#resume-print-container) { display: none !important; }
+        #resume-print-container { display: block !important; }
+        @page { size: A4 portrait; margin: 18mm 20mm; }
+      }
+      #resume-print-container {
+        display: none;
+        font-family: Helvetica, Arial, sans-serif;
+        color: #101828;
+      }
+    `;
+    document.head.appendChild(printStyle);
+  
+    window.print();
+  
+    // Clean up after print dialog closes
+    document.body.removeChild(printContainer);
+    document.head.removeChild(printStyle);
   };
 
 
