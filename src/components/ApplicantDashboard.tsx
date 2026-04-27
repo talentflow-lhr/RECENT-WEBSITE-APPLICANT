@@ -70,6 +70,7 @@ export function ApplicantDashboard({
     const { data } = await supabase
       .from('t_resume')
       .select(`
+        res_stability_score,
         res_exp_score,
         res_skills_score,
         res_desc_score,
@@ -167,14 +168,57 @@ export function ApplicantDashboard({
     return 'border-red-500';
   };
 
-  const getScoreGrade = (score: number) => {
-    if (score >= 90) return 'A+';
-    if (score >= 80) return 'A';
-    if (score >= 70) return 'B+';
-    if (score >= 60) return 'B';
-    if (score >= 50) return 'C+';
-    if (score >= 40) return 'C';
-    return 'D';
+  const getScoreLabel = (category: string, score: number): { grade: string; label: string } => {
+    const rubric: Record<string, { ranges: [number, number, string, string][] }> = {
+      experience: {
+        ranges: [
+          [65, 100, 'A+', 'Excellent'],
+          [58, 64,  'A',  'Very Good'],
+          [50, 57,  'B+', 'Good'],
+          [1,  49,  'B',  'Fair'],
+          [-Infinity, 0, 'D', 'Needs Improvement'],
+        ]
+      },
+      skills: {
+        ranges: [
+          [63, 100, 'A+', 'Excellent'],
+          [49, 62,  'A',  'Very Good'],
+          [35, 48,  'B+', 'Good'],
+          [6,  34,  'B',  'Fair'],
+          [-Infinity, 5, 'D', 'Needs Improvement'],
+        ]
+      },
+      description: {
+        ranges: [
+          [67, 100, 'A+', 'Excellent'],
+          [59, 66,  'A',  'Very Good'],
+          [47, 58,  'B+', 'Good'],
+          [6,  46,  'B',  'Fair'],
+          [-Infinity, 5, 'D', 'Needs Improvement'],
+        ]
+      },
+      completeness: {
+        ranges: [
+          [92, 100, 'A+', 'Excellent'],
+          [86, 91,  'A',  'Very Good'],
+          [81, 85,  'B+', 'Good'],
+          [29, 80,  'B',  'Fair'],
+          [-Infinity, 28, 'D', 'Needs Improvement'],
+        ]
+      },
+      stability: {
+        ranges: [
+          [45, 100, 'A+', 'Excellent'],
+          [30, 44,  'A',  'Very Good'],
+          [15, 29,  'B+', 'Good'],
+          [1,  14,  'B',  'Fair'],
+          [-Infinity, 0, 'D', 'Needs Improvement'],
+        ]
+      },
+    };
+  
+    const found = rubric[category]?.ranges.find(([min, max]) => score >= min && score <= max);
+    return found ? { grade: found[2], label: found[3] } : { grade: 'D', label: 'Needs Improvement' };
   };
 
   const getStatusColor = (status: string) => {
@@ -205,31 +249,37 @@ export function ApplicantDashboard({
 
   const skillsAssessment: SkillAssessment[] = resumeData ? [
     {
-      name: "Experience",
+      name: "Career Stability",
+      score: parseFloat(resumeData.res_stability_score ?? '0'),
+      status: getScoreLabel('stability', parseFloat(resumeData.res_stability_score ?? '0')).grade as any,
+      recommendation: getScoreLabel('stability', parseFloat(resumeData.res_stability_score ?? '0')).label,
+    },
+    {
+      name: "Experience Depth",
       score: parseFloat(resumeData.res_exp_score ?? '0'),
-      status: getScoreGrade(parseFloat(resumeData.res_exp_score ?? '0')),
-      recommendation: "Strong work history with relevant positions and achievements"
+      status: getScoreLabel('experience', parseFloat(resumeData.res_exp_score ?? '0')).grade as any,
+      recommendation: getScoreLabel('experience', parseFloat(resumeData.res_exp_score ?? '0')).label,
     },
     {
-      name: "Overall Skills",
+      name: "Skill Relevance",
       score: parseFloat(resumeData.res_skills_score ?? '0'),
-      status: getScoreGrade(parseFloat(resumeData.res_skills_score ?? '0')),
-      recommendation: "Well-rounded skill set that matches industry requirements"
+      status: getScoreLabel('skills', parseFloat(resumeData.res_skills_score ?? '0')).grade as any,
+      recommendation: getScoreLabel('skills', parseFloat(resumeData.res_skills_score ?? '0')).label,
     },
     {
-      name: "Quality of Description",
+      name: "Description Quality",
       score: parseFloat(resumeData.res_desc_score ?? '0'),
-      status: getScoreGrade(parseFloat(resumeData.res_desc_score ?? '0')),
-      recommendation: "Good descriptions but could be more detailed and quantified"
+      status: getScoreLabel('description', parseFloat(resumeData.res_desc_score ?? '0')).grade as any,
+      recommendation: getScoreLabel('description', parseFloat(resumeData.res_desc_score ?? '0')).label,
     },
     {
-      name: "Completeness of Resume",
+      name: "Resume Completeness",
       score: parseFloat(resumeData.res_completeness_score ?? '0'),
-      status: getScoreGrade(parseFloat(resumeData.res_completeness_score ?? '0')),
-      recommendation: "Resume contains most essential sections with adequate detail"
-    }
+      status: getScoreLabel('completeness', parseFloat(resumeData.res_completeness_score ?? '0')).grade as any,
+      recommendation: getScoreLabel('completeness', parseFloat(resumeData.res_completeness_score ?? '0')).label,
+    },
   ] : [];
-
+  
   const areasForImprovement = [
     {
       area: "Work Experience Details",
