@@ -68,7 +68,8 @@
     "docx": "^9.5.1",
     "file-saver": "^2.0.5",
     "html2canvas": "^1.4.1",
-    "jspdf": "^2.5.2"
+    "jspdf": "^2.5.2",
+    "html-to-image": "^1.11.11"
   },
   "devDependencies": {
     "@tailwindcss/vite": "4.1.12",
