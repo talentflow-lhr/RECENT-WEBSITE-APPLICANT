@@ -88,26 +88,30 @@ export function ApplicantDashboard({
     return data;
   };
 
-  const fetchImprovements = async () => {
-    if (!account?.applicant_id) return;
-    setLoadingImprovements(true);
-    try {
-      const res = await fetch(
-        'https://onssghljexptdladoekw.supabase.co/functions/v1/targeted_resume_comments',
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ applicant_id: account.applicant_id }),
-        }
-      );
-      const data = await res.json();
-      if (data.improvements) setAiImprovements(data.improvements);
-    } catch (err) {
-      console.error('Failed to fetch improvements:', err);
-    } finally {
-      setLoadingImprovements(false);
-    }
-  };
+    const fetchImprovements = async () => {
+      if (!account?.applicant_id) return;
+      setLoadingImprovements(true);
+      try {
+        const res = await fetch(
+          'https://onssghljexptdladoekw.supabase.co/functions/v1/targeted_resume_comments',
+          {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+            },
+            body: JSON.stringify({ applicant_id: account.applicant_id }),
+          }
+        );
+        const data = await res.json();
+        console.log('improvements response:', data); // 👈 check this
+        if (data.improvements) setAiImprovements(data.improvements);
+      } catch (err) {
+        console.error('Failed to fetch improvements:', err);
+      } finally {
+        setLoadingImprovements(false);
+      }
+    };
 
   useEffect(() => {
     async function loadResumeScores() {
