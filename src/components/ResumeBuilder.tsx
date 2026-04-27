@@ -493,7 +493,6 @@ export function ResumeBuilder({ onResumeSubmit }: ResumeBuilderProps = {}) {
   ]);
 
   const previewContainerRef = useRef<HTMLDivElement>(null);
-  const pdfCaptureRef = useRef<HTMLDivElement>(null);
   const [previewScale, setPreviewScale] = useState(0.4);
 
   useEffect(() => {
@@ -657,46 +656,99 @@ export function ResumeBuilder({ onResumeSubmit }: ResumeBuilderProps = {}) {
   }, [account]);
   
   const handleDownloadPDF = () => {
-    const el = pdfCaptureRef.current;
-    if (!el) return;
-  
     const printWindow = window.open('', '_blank');
     if (!printWindow) return;
   
-    // Grab all existing stylesheets from the current page
-    const styles = Array.from(document.styleSheets)
-      .map((sheet) => {
-        try {
-          return Array.from(sheet.cssRules).map((r) => r.cssText).join('\n');
-        } catch {
-          return '';
-        }
-      })
-      .join('\n');
+    const name = `${personalInfo.firstName || 'FIRST'} ${personalInfo.middleInitial || ''} ${personalInfo.lastName || 'LAST'}${personalInfo.suffix ? ` ${personalInfo.suffix}` : ''}`.trim().toUpperCase();
+    const contact = `${personalInfo.city || ''}${personalInfo.province ? `, ${personalInfo.province}` : ''} ${personalInfo.country || ''} | ${personalInfo.email || ''} | ${personalInfo.phone || ''}`.trim();
+  
+    const validExp   = workExperiences.filter(e => e.position);
+    const validCerts = certifications.filter(c => c.name);
+    const validEdu   = education.filter(e => e.degree);
+    const techSkills = skills.filter(s => s.category === 'technical' && s.name);
+    const softSkills = skills.filter(s => s.category === 'soft' && s.name);
+  
+    const sectionHeading = (title: string) => `
+      <h2 style="font-size:13pt;font-weight:700;text-transform:uppercase;
+                 border-bottom:2px solid #101828;padding-bottom:4px;
+                 margin:18px 0 10px 0;color:#101828;">${title}</h2>`;
+  
+    const expHTML = validExp.map(exp => `
+      <div style="margin-bottom:12px;">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;">
+          <div>
+            <p style="font-weight:700;font-size:10.5pt;margin:0;color:#101828;">${exp.position}</p>
+            <p style="font-size:9.5pt;margin:2px 0 0;color:#4a5565;">${[exp.company, exp.city, exp.stateProvince].filter(Boolean).join(', ')}</p>
+          </div>
+          <p style="font-size:9.5pt;white-space:nowrap;margin:0;color:#4a5565;">
+            ${formatDateToMonthYear(exp.startDate)} – ${exp.current ? 'Present' : formatDateToMonthYear(exp.endDate)}
+          </p>
+        </div>
+        ${exp.description ? `<p style="font-size:9.5pt;margin:4px 0 0;color:#4a5565;white-space:pre-line;">${exp.description}</p>` : ''}
+      </div>`).join('');
+  
+    const certHTML = validCerts.map(cert => `
+      <div style="margin-bottom:10px;">
+        <p style="font-weight:700;font-size:10.5pt;margin:0;color:#101828;">${cert.name}</p>
+        ${cert.organization ? `<p style="font-size:9.5pt;margin:2px 0 0;color:#4a5565;">${cert.organization}</p>` : ''}
+        ${cert.dateIssued   ? `<p style="font-size:9.5pt;margin:2px 0 0;color:#4a5565;">Date Issued: ${formatDateToMonthYear(cert.dateIssued)}</p>` : ''}
+      </div>`).join('');
+  
+    const eduHTML = validEdu.map(edu => `
+      <div style="margin-bottom:12px;">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;">
+          <div>
+            <p style="font-weight:700;font-size:10.5pt;margin:0;color:#101828;">${edu.degree}</p>
+            <p style="font-size:9.5pt;margin:2px 0 0;color:#4a5565;">${[edu.school, edu.city, edu.stateProvince].filter(Boolean).join(', ')}</p>
+          </div>
+          <p style="font-size:9.5pt;white-space:nowrap;margin:0;color:#4a5565;">
+            ${formatDateToMonthYear(edu.startDate)} – ${formatDateToMonthYear(edu.endDate)}
+          </p>
+        </div>
+        ${edu.achievements ? `<p style="font-size:9.5pt;margin:4px 0 0;color:#4a5565;">${edu.achievements}</p>` : ''}
+      </div>`).join('');
+  
+    const skillsHTML = `
+      ${techSkills.length ? `
+        <p style="font-weight:700;font-size:9.5pt;margin:0 0 6px;color:#101828;">Technical Skills:</p>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:2px 16px;margin-bottom:10px;">
+          ${techSkills.map(s => `<p style="font-size:9.5pt;margin:0;color:#4a5565;">• ${s.name} - ${s.level}</p>`).join('')}
+        </div>` : ''}
+      ${softSkills.length ? `
+        <p style="font-weight:700;font-size:9.5pt;margin:0 0 6px;color:#101828;">Soft Skills:</p>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:2px 16px;">
+          ${softSkills.map(s => `<p style="font-size:9.5pt;margin:0;color:#4a5565;">• ${s.name} - ${s.level}</p>`).join('')}
+        </div>` : ''}`;
   
     printWindow.document.write(`
       <!DOCTYPE html>
       <html>
         <head>
-          <meta charset="utf-8" />
+          <meta charset="utf-8"/>
           <title>${personalInfo.firstName || 'Resume'}_${personalInfo.lastName || ''}</title>
           <style>
-            ${styles}
-            * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
-            @page { size: A4 portrait; margin: 0; }
-            body { margin: 0; padding: 0; }
+            * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; box-sizing: border-box; }
+            @page { size: A4 portrait; margin: 18mm 20mm; }
+            body { margin: 0; padding: 0; font-family: Helvetica, Arial, sans-serif; color: #101828; }
+            p { margin: 0; }
+            @media print { body { margin: 0; } }
           </style>
         </head>
         <body>
-          ${el.innerHTML}
+          <h1 style="font-size:16pt;font-weight:700;text-transform:uppercase;
+                     letter-spacing:0.05em;margin:0 0 4px;color:#101828;">${name}</h1>
+          <p style="font-size:9.5pt;color:#4a5565;margin-bottom:4px;">${contact}</p>
+  
+          ${validExp.length   ? sectionHeading('Work Experience') + expHTML   : ''}
+          ${validCerts.length ? sectionHeading('Certifications')  + certHTML  : ''}
+          ${validEdu.length   ? sectionHeading('Education')       + eduHTML   : ''}
+          ${techSkills.length || softSkills.length ? sectionHeading('Skills') + skillsHTML : ''}
         </body>
       </html>
     `);
   
     printWindow.document.close();
     printWindow.focus();
-  
-    // Wait for fonts/images to load before printing
     printWindow.onload = () => {
       setTimeout(() => {
         printWindow.print();
@@ -1233,33 +1285,7 @@ const handleDownloadDOCX = async () => {
 
   // ─── RETURN: full multi-step form UI ────────────────────────────────────────
   return (
-  <>
-    {/* Hidden capture target for PDF */}
-    <div
-      ref={pdfCaptureRef}
-      style={{
-        position: 'fixed',
-        top: 0,
-        left: 0,
-        width: '794px',
-        minHeight: '1123px',
-        background: 'white',
-        opacity: 0,               // invisible but still rendered
-        pointerEvents: 'none',    // can't be clicked
-        zIndex: -1,
-      }}
-      aria-hidden="true"
-    >
-      <ResumePreview
-        personalInfo={personalInfo}
-        workExperiences={workExperiences}
-        certifications={certifications}
-        education={education}
-        skills={skills}
-        previewScale={1}
-      />
-    </div>
-    
+
     <div className="min-h-screen bg-[#f9fafb] py-4 sm:py-6 md:py-8 px-4 sm:px-6 md:px-8">
       <div className="max-w-7xl mx-auto">
         {/* Step Indicator */}
@@ -2013,6 +2039,5 @@ const handleDownloadDOCX = async () => {
         </div>
       )}
     </div>
-  </>
   );
 }
