@@ -319,14 +319,7 @@ const ResumePreview = ({ personalInfo, workExperiences, certifications, educatio
             <p className="text-sm text-gray-400 italic">Highlight specific achievements and quantify results</p>
           )}
         </div>
-
-        {/* Page break indicator */}
-        {(workExperiences.length > 2 || (education.length > 0 && education[0].degree)) && (
-          <div className="border-t-2 border-dashed border-gray-300 my-8 relative">
-            <span className="absolute -top-3 right-0 bg-white px-2 text-xs text-gray-400">Page Break</span>
-          </div>
-        )}
-
+        
         {/* Certifications */}
         <div className="mb-6">
           <h2 className="text-lg font-semibold text-[#101828] uppercase mb-3 pb-1.5 border-b-2 border-[#101828]">
@@ -794,6 +787,7 @@ export function ResumeBuilder({ onResumeSubmit }: ResumeBuilderProps = {}) {
   }
 };
 
+
 const handleDownloadDOCX = async () => {
   try {
     const makeHeading = (text: string) =>
@@ -802,7 +796,7 @@ const handleDownloadDOCX = async () => {
         heading: HeadingLevel.HEADING_2,
         border: { bottom: { style: BorderStyle.SINGLE, size: 6, color: '101828' } },
         spacing: { after: 120 },
-      });
+      }); 
 
     const makeParagraph = (text: string, bold = false, size = 20) =>
       new Paragraph({
@@ -1432,7 +1426,7 @@ const handleDownloadDOCX = async () => {
                             value={personalInfo.firstName}
                             onChange={(e) => setPersonalInfo({ ...personalInfo, firstName: e.target.value })}
                             className="w-full bg-[#f3f3f5] rounded-lg px-3 py-2.5 text-sm text-gray-900 border-0 outline-none focus:ring-2 focus:ring-[#17960b]"
-                            placeholder="Naomi"
+                            placeholder="Juan"
                           />
                         </div>
                         <div>
@@ -1442,33 +1436,34 @@ const handleDownloadDOCX = async () => {
                             value={personalInfo.middleInitial}
                             onChange={(e) => setPersonalInfo({ ...personalInfo, middleInitial: e.target.value })}
                             className="w-full bg-[#f3f3f5] rounded-lg px-3 py-2.5 text-sm text-gray-900 border-0 outline-none focus:ring-2 focus:ring-[#17960b]"
-                            placeholder="C"
+                            placeholder="A"
                             maxLength={1}
                           />
                         </div>
                       </div>
 
-                      <div>
-                        <label className="block text-sm font-medium text-[#364153] mb-2">Last Name</label>
-                        <input
-                          type="text"
-                          value={personalInfo.lastName}
-                          onChange={(e) => setPersonalInfo({ ...personalInfo, lastName: e.target.value })}
-                          className="w-full bg-[#f3f3f5] rounded-lg px-3 py-2.5 text-sm text-gray-900 border-0 outline-none focus:ring-2 focus:ring-[#17960b]"
-                          placeholder="Cuerdo"
-                        />
-                      </div>
-
-                      <div>
-                        <label className="block text-sm font-medium text-[#364153] mb-2">Suffix</label>
-                        <input
-                          type="text"
-                          value={personalInfo.suffix}
-                          onChange={(e) => setPersonalInfo({ ...personalInfo, suffix: e.target.value })}
-                          className="w-full bg-[#f3f3f5] rounded-lg px-3 py-2.5 text-sm text-gray-900 border-0 outline-none focus:ring-2 focus:ring-[#17960b]"
-                          placeholder="e.g., Jr., Sr., III"
-                        />
-                      </div>
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                          <div className="sm:col-span-2">
+                            <label className="block text-sm font-medium text-[#364153] mb-2">Last Name</label>
+                            <input
+                              type="text"
+                              value={personalInfo.lastName}
+                              onChange={(e) => setPersonalInfo({ ...personalInfo, lastName: e.target.value })}
+                              className="w-full bg-[#f3f3f5] rounded-lg px-3 py-2.5 text-sm text-gray-900 border-0 outline-none focus:ring-2 focus:ring-[#17960b]"
+                              placeholder="Dela Cruz"
+                              />
+                          </div>
+                          <div>
+                            <label className="block text-sm font-medium text-[#364153] mb-2">Suffix</label>
+                            <input
+                              type="text"
+                              value={personalInfo.suffix}
+                              onChange={(e) => setPersonalInfo({ ...personalInfo, suffix: e.target.value })}
+                              className="w-full bg-[#f3f3f5] rounded-lg px-3 py-2.5 text-sm text-gray-900 border-0 outline-none focus:ring-2 focus:ring-[#17960b]"
+                              placeholder="Jr"
+                              />
+                          </div>
+                        </div>
 
                       <div>
                         <label className="block text-sm font-medium text-[#364153] mb-2">Date of Birth</label>
@@ -1916,10 +1911,10 @@ const handleDownloadDOCX = async () => {
                             <FileText className="w-4 h-4 text-[#17960b]" />
                             Download as PDF
                           </button>
-                          <button onClick={handleDownloadDOCX} className="w-full text-left px-4 py-2.5 hover:bg-gray-50 text-sm text-[#364153] transition-colors flex items-center gap-3">
+                          {/*<button onClick={handleDownloadDOCX} className="w-full text-left px-4 py-2.5 hover:bg-gray-50 text-sm text-[#364153] transition-colors flex items-center gap-3">
                             <FileText className="w-4 h-4 text-[#17960b]" />
                             Download as DOC
-                          </button>
+                          </button> */}
                         </div>
                       </>
                     )}
@@ -1930,17 +1925,29 @@ const handleDownloadDOCX = async () => {
               {/* Page Preview Container */}
               <div
                 ref={previewContainerRef}
-                className="bg-gray-100 p-4 sm:p-6 rounded-b-lg shadow-sm overflow-hidden"
-              >
-                <div className="overflow-y-auto overflow-x-auto" style={{ maxHeight: 'calc(100vh - 12rem)' }}>
-                  <div ref={resumePreviewRef}>
-                    <ResumePreview
-                      personalInfo={personalInfo}
-                      workExperiences={workExperiences}
-                      certifications={certifications}
-                      education={education}
-                      skills={skills}
-                      previewScale={1}  // always render at full scale for capture
+                className="bg-gray-200 rounded-b-lg shadow-sm"
+                style={{ height: 'calc(100vh - 12rem)', overflowY: 'auto' }}
+                >
+                <div className="flex justify-center py-4">
+                  <div
+                    ref={resumePreviewRef}
+                    style={{
+                      width: '210mm',
+                      minHeight: '297mm',
+                      background: 'white',
+                      boxShadow: '0 4px 24px rgba(0,0,0,0.15)',
+                      transform: `scale(${previewScale})`,
+                      transformOrigin: 'top center',
+                      marginBottom: `${(previewScale - 1) * 297}mm`,
+                    }}
+                    >
+                  <ResumePreview
+                    personalInfo={personalInfo}
+                    workExperiences={workExperiences}
+                    certifications={certifications}
+                    education={education}
+                    skills={skills}
+                    previewScale={1}
                     />
                   </div>
                 </div>
