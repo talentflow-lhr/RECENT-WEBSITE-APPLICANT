@@ -753,7 +753,10 @@ export function ResumeBuilder({ onResumeSubmit }: ResumeBuilderProps = {}) {
       }
     `;
     document.head.appendChild(printStyle);
-  
+
+    const originalTitle = document.title;
+    document.title = `${personalInfo.firstName || 'Resume'}_${personalInfo.lastName || ''}`.trim();
+
     window.print();
   
     // Clean up after print dialog closes
