@@ -319,14 +319,7 @@ const ResumePreview = ({ personalInfo, workExperiences, certifications, educatio
             <p className="text-sm text-gray-400 italic">Highlight specific achievements and quantify results</p>
           )}
         </div>
-
-        {/* Page break indicator */}
-        {(workExperiences.length > 2 || (education.length > 0 && education[0].degree)) && (
-          <div className="border-t-2 border-dashed border-gray-300 my-8 relative">
-            <span className="absolute -top-3 right-0 bg-white px-2 text-xs text-gray-400">Page Break</span>
-          </div>
-        )}
-
+        
         {/* Certifications */}
         <div className="mb-6">
           <h2 className="text-lg font-semibold text-[#101828] uppercase mb-3 pb-1.5 border-b-2 border-[#101828]">
@@ -794,6 +787,7 @@ export function ResumeBuilder({ onResumeSubmit }: ResumeBuilderProps = {}) {
   }
 };
 
+
 const handleDownloadDOCX = async () => {
   try {
     const makeHeading = (text: string) =>
@@ -802,7 +796,7 @@ const handleDownloadDOCX = async () => {
         heading: HeadingLevel.HEADING_2,
         border: { bottom: { style: BorderStyle.SINGLE, size: 6, color: '101828' } },
         spacing: { after: 120 },
-      });
+      }); 
 
     const makeParagraph = (text: string, bold = false, size = 20) =>
       new Paragraph({
@@ -1917,10 +1911,10 @@ const handleDownloadDOCX = async () => {
                             <FileText className="w-4 h-4 text-[#17960b]" />
                             Download as PDF
                           </button>
-                          <button onClick={handleDownloadDOCX} className="w-full text-left px-4 py-2.5 hover:bg-gray-50 text-sm text-[#364153] transition-colors flex items-center gap-3">
+                          {/*<button onClick={handleDownloadDOCX} className="w-full text-left px-4 py-2.5 hover:bg-gray-50 text-sm text-[#364153] transition-colors flex items-center gap-3">
                             <FileText className="w-4 h-4 text-[#17960b]" />
                             Download as DOC
-                          </button>
+                          </button> */}
                         </div>
                       </>
                     )}
