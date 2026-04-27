@@ -279,6 +279,47 @@ export function ApplicantDashboard({
       recommendation: getScoreLabel('completeness', parseFloat(resumeData.res_completeness_score ?? '0')).label,
     },
   ] : [];
+
+  const overallScore = resumeData ? (
+    parseFloat(resumeData.res_stability_score ?? '0') * 0.30 +
+    parseFloat(resumeData.res_exp_score ?? '0')        * 0.25 +
+    parseFloat(resumeData.res_skills_score ?? '0')     * 0.25 +
+    parseFloat(resumeData.res_desc_score ?? '0')       * 0.15 +
+    parseFloat(resumeData.res_completeness_score ?? '0') * 0.05
+  ) : 0;
+
+  const getOverallLabel = (score: number): { grade: string; label: string; color: string; message: string; sub: string } => {
+    if (score >= 75) return {
+      grade: 'A+', label: 'Excellent',
+      color: 'text-[#17960b]',
+      message: 'Your resume shows outstanding potential!',
+      sub: 'You have a strong, well-rounded profile. You are highly competitive for overseas deployment.'
+    };
+    if (score >= 60) return {
+      grade: 'A', label: 'Very Good',
+      color: 'text-[#17960b]',
+      message: 'Your resume shows strong potential!',
+      sub: 'You have a solid foundation. Minor improvements in a few areas will make you highly competitive.'
+    };
+    if (score >= 45) return {
+      grade: 'B+', label: 'Good',
+      color: 'text-[#ffca1a]',
+      message: 'Your resume is on the right track.',
+      sub: 'Core sections are present and adequate. Strengthening your experience details and skills will boost your score significantly.'
+    };
+    if (score >= 30) return {
+      grade: 'B', label: 'Fair',
+      color: 'text-orange-500',
+      message: 'Your resume needs some work.',
+      sub: 'There are gaps in your profile that may affect deployment consideration. Focus on completing missing sections and adding more detail.'
+    };
+    return {
+      grade: 'D', label: 'Needs Improvement',
+      color: 'text-red-500',
+      message: 'Your resume requires significant improvement.',
+      sub: 'Several critical sections are incomplete or missing. Building out your resume will greatly improve your chances.'
+    };
+  };
   
   const areasForImprovement = [
     {
@@ -429,32 +470,87 @@ export function ApplicantDashboard({
         )}
 
         {/* Overall Score Card */}
-        {isLoggedIn && (
-          <Card className="mb-6 md:mb-8 border-[#17960b]/20">
-            <CardContent className="p-4 sm:p-6 md:p-8">
-              <div className="space-y-3 sm:space-y-4">
-                <div className="flex items-start gap-2 sm:gap-3">
-                  <CheckCircle className="w-5 h-5 sm:w-6 sm:h-6 text-[#17960b] mt-1 flex-shrink-0" />
+        {isLoggedIn && (() => {
+          const overall = getOverallLabel(overallScore);
+          const isHigh = overallScore >= 60;
+          const isMid  = overallScore >= 30 && overallScore < 60;
+          return (
+            <Card className="mb-6 md:mb-8 border-[#17960b]/20">
+              <CardContent className="p-4 sm:p-6 md:p-8">
+                {/* Score display */}
+                <div className="flex items-center gap-4 mb-5">
+                  <div className={`text-5xl font-bold ${overall.color}`}>
+                    {overallScore.toFixed(1)}
+                  </div>
                   <div>
-                    <p className="text-gray-900 text-sm sm:text-base">Your resume shows strong potential!</p>
-                    <p className="text-gray-600 text-xs sm:text-sm md:text-base">
-                      You have a solid foundation with excellent education and communication skills.
-                    </p>
+                    <span className={`text-lg font-semibold ${overall.color}`}>
+                      {overall.grade} — {overall.label}
+                    </span>
+                    <p className="text-xs text-gray-400 mt-0.5">Weighted overall score</p>
                   </div>
                 </div>
-                <div className="flex items-start gap-2 sm:gap-3">
-                  <Target className="w-5 h-5 sm:w-6 sm:h-6 text-[#ffca1a] mt-1 flex-shrink-0" />
-                  <div>
-                    <p className="text-gray-900 text-sm sm:text-base">Room for improvement</p>
-                    <p className="text-gray-600 text-xs sm:text-sm md:text-base">
-                      Focus on quantifying achievements and obtaining relevant certifications to boost your score to 90+.
-                    </p>
+        
+                <div className="space-y-3 sm:space-y-4">
+                  <div className="flex items-start gap-2 sm:gap-3">
+                    {isHigh
+                      ? <CheckCircle className="w-5 h-5 sm:w-6 sm:h-6 text-[#17960b] mt-1 flex-shrink-0" />
+                      : <AlertCircle className="w-5 h-5 sm:w-6 sm:h-6 text-orange-500 mt-1 flex-shrink-0" />
+                    }
+                    <div>
+                      <p className="text-gray-900 text-sm sm:text-base font-semibold">{overall.message}</p>
+                      <p className="text-gray-600 text-xs sm:text-sm md:text-base">{overall.sub}</p>
+                    </div>
                   </div>
+        
+                  {/* Weighted breakdown bar */}
+                  <div className="pt-2">
+                    <p className="text-xs text-gray-400 mb-2 font-medium uppercase tracking-wide">Score Breakdown</p>
+                    <div className="space-y-2">
+                      {[
+                        { label: 'Career Stability',    weight: '30%', score: parseFloat(resumeData?.res_stability_score ?? '0'),   cat: 'stability'   },
+                        { label: 'Experience Depth',    weight: '25%', score: parseFloat(resumeData?.res_exp_score ?? '0'),          cat: 'experience'  },
+                        { label: 'Skill Relevance',     weight: '25%', score: parseFloat(resumeData?.res_skills_score ?? '0'),       cat: 'skills'      },
+                        { label: 'Description Quality', weight: '15%', score: parseFloat(resumeData?.res_desc_score ?? '0'),         cat: 'description' },
+                        { label: 'Completeness',        weight: '5%',  score: parseFloat(resumeData?.res_completeness_score ?? '0'), cat: 'completeness'},
+                      ].map(item => {
+                        const { label: itemLabel, grade } = getScoreLabel(item.cat, item.score);
+                        return (
+                          <div key={item.cat} className="flex items-center gap-2">
+                            <span className="text-xs text-gray-500 w-36 shrink-0">{item.label} <span className="text-gray-400">({item.weight})</span></span>
+                            <div className="flex-1 bg-gray-100 rounded-full h-2">
+                              <div
+                                className={`h-2 rounded-full transition-all ${
+                                  item.score >= 60 ? 'bg-[#17960b]' :
+                                  item.score >= 40 ? 'bg-[#ffca1a]' :
+                                  item.score >= 20 ? 'bg-orange-400' : 'bg-red-400'
+                                }`}
+                                style={{ width: `${Math.min(item.score, 100)}%` }}
+                              />
+                            </div>
+                            <span className="text-xs font-semibold text-gray-600 w-6 text-right">{grade}</span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+        
+                  {/* Improvement target */}
+                  {overallScore < 75 && (
+                    <div className="flex items-start gap-2 sm:gap-3 pt-1">
+                      <Target className="w-5 h-5 sm:w-6 sm:h-6 text-[#ffca1a] mt-1 flex-shrink-0" />
+                      <div>
+                        <p className="text-gray-900 text-sm sm:text-base">Room for improvement</p>
+                        <p className="text-gray-600 text-xs sm:text-sm md:text-base">
+                          Focus on the lowest-scoring categories above to push your overall score higher.
+                        </p>
+                      </div>
+                    </div>
+                  )}
                 </div>
-              </div>
-            </CardContent>
-          </Card>
-        )}
+              </CardContent>
+            </Card>
+          );
+        })()}
 
         {/* Resume Analysis Content - Show for logged in users */}
         {isLoggedIn && (
