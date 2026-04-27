@@ -1216,14 +1216,15 @@ const handleDownloadDOCX = async () => {
     <div
       ref={pdfCaptureRef}
       style={{
-        position: 'absolute',
-        left: '-9999px',
+        position: 'fixed',
         top: 0,
+        left: 0,
         width: '794px',
         minHeight: '1123px',
         background: 'white',
+        opacity: 0,               // invisible but still rendered
+        pointerEvents: 'none',    // can't be clicked
         zIndex: -1,
-        pointerEvents: 'none',
       }}
       aria-hidden="true"
     >
