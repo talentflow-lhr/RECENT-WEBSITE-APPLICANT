@@ -123,6 +123,8 @@ interface ResumeBuilderProps {
   onResumeSubmit?: () => void;
 }
 
+const pdfCaptureRef = useRef<HTMLDivElement>(null);
+
 const formatDateToMonthYear = (dateString: string): string => {
   if (!dateString) return '';
   const [year, month] = dateString.split('-');
@@ -656,227 +658,29 @@ export function ResumeBuilder({ onResumeSubmit }: ResumeBuilderProps = {}) {
   }, [account]);
   
   const handleDownloadPDF = async () => {
+    if (!pdfCaptureRef.current) return;
     try {
-      const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+      // Dynamically import html2canvas (add `npm install html2canvas` if needed)
+      const html2canvas = (await import('html2canvas')).default;
   
-      const pageW      = 210;
-      const pageH      = 297;
-      const marginL    = 20;
-      const marginR    = 20;
-      const marginT    = 20;
-      const marginB    = 20;
-      const contentW   = pageW - marginL - marginR;
-      let y            = marginT;
+      const canvas = await html2canvas(pdfCaptureRef.current, {
+        scale: 2,           // 2× for sharper text
+        useCORS: true,
+        logging: false,
+        width: 794,
+        height: 1123,
+        windowWidth: 794,
+      });
   
-      const checkPageBreak = (neededHeight: number) => {
-        if (y + neededHeight > pageH - marginB) {
-          pdf.addPage();
-          y = marginT;
-        }
-      };
+      const imgData = canvas.toDataURL('image/png');
+      const pdf = new jsPDF({
+        orientation: 'portrait',
+        unit: 'mm',
+        format: 'a4',
+      });
   
-      const addText = (
-        text: string,
-        x: number,
-        fontSize: number,
-        options: { bold?: boolean; color?: [number, number, number]; maxWidth?: number; align?: 'left' | 'right' | 'center' } = {}
-      ) => {
-        pdf.setFontSize(fontSize);
-        pdf.setFont('helvetica', options.bold ? 'bold' : 'normal');
-        pdf.setTextColor(...(options.color ?? [74, 85, 101]));
-        const lines = pdf.splitTextToSize(text, options.maxWidth ?? contentW);
-        const lineH = fontSize * 0.4;
-        checkPageBreak(lines.length * lineH);
-        pdf.text(lines, x, y, { align: options.align ?? 'left' });
-        y += lines.length * lineH;
-      };
-  
-      const addSectionHeading = (title: string) => {
-        y += 5;
-        checkPageBreak(10);
-        pdf.setFontSize(11);
-        pdf.setFont('helvetica', 'bold');
-        pdf.setTextColor(16, 24, 40);
-        pdf.text(title.toUpperCase(), marginL, y);
-        y += 1.5;
-        pdf.setDrawColor(16, 24, 40);
-        pdf.setLineWidth(0.5);
-        pdf.line(marginL, y, pageW - marginR, y);
-        y += 5;
-      };
-  
-      // ── Header ──────────────────────────────────────────────────────────────
-      const fullName = `${personalInfo.firstName} ${personalInfo.middleInitial} ${personalInfo.lastName}${personalInfo.suffix ? ` ${personalInfo.suffix}` : ''}`.trim().toUpperCase();
-      pdf.setFontSize(18);
-      pdf.setFont('helvetica', 'bold');
-      pdf.setTextColor(16, 24, 40);
-      pdf.text(fullName, marginL, y);
-      y += 8;
-  
-      const contactLine = [
-        personalInfo.city && personalInfo.province ? `${personalInfo.city}, ${personalInfo.province}` : '',
-        personalInfo.country,
-        personalInfo.email,
-        personalInfo.phone,
-      ].filter(Boolean).join('  |  ');
-  
-      pdf.setFontSize(9);
-      pdf.setFont('helvetica', 'normal');
-      pdf.setTextColor(74, 85, 101);
-      pdf.text(contactLine, marginL, y);
-      y += 3;
-  
-      // ── Work Experience ──────────────────────────────────────────────────────
-      const validExp = workExperiences.filter(e => e.position);
-      if (validExp.length) {
-        addSectionHeading('Work Experience');
-        validExp.forEach((exp) => {
-          checkPageBreak(12);
-  
-          // Position + date on same line
-          pdf.setFontSize(10);
-          pdf.setFont('helvetica', 'bold');
-          pdf.setTextColor(16, 24, 40);
-          pdf.text(exp.position, marginL, y);
-  
-          const dateStr = `${formatDateToMonthYear(exp.startDate)} - ${exp.current ? 'Present' : formatDateToMonthYear(exp.endDate)}`;
-          pdf.setFontSize(9);
-          pdf.setFont('helvetica', 'normal');
-          pdf.setTextColor(74, 85, 101);
-          pdf.text(dateStr, pageW - marginR, y, { align: 'right' });
-          y += 5;
-  
-          // Company line
-          const companyLine = [exp.company, exp.city, exp.stateProvince, exp.country].filter(Boolean).join(', ');
-          pdf.setFontSize(9);
-          pdf.setFont('helvetica', 'normal');
-          pdf.setTextColor(74, 85, 101);
-          const companyLines = pdf.splitTextToSize(companyLine, contentW);
-          checkPageBreak(companyLines.length * 4);
-          pdf.text(companyLines, marginL, y);
-          y += companyLines.length * 4;
-  
-          // Description
-          if (exp.description) {
-            const descLines = exp.description.split('\n').filter(Boolean);
-            descLines.forEach(line => {
-              const wrapped = pdf.splitTextToSize(line, contentW - 4);
-              checkPageBreak(wrapped.length * 4);
-              pdf.setFontSize(9);
-              pdf.setFont('helvetica', 'normal');
-              pdf.setTextColor(74, 85, 101);
-              pdf.text(wrapped, marginL + 2, y);
-              y += wrapped.length * 4;
-            });
-          }
-          y += 4; // spacing between entries
-        });
-      }
-  
-      // ── Certifications ───────────────────────────────────────────────────────
-      const validCerts = certifications.filter(c => c.name);
-      if (validCerts.length) {
-        addSectionHeading('Certifications');
-        validCerts.forEach((cert) => {
-          checkPageBreak(10);
-          pdf.setFontSize(10);
-          pdf.setFont('helvetica', 'bold');
-          pdf.setTextColor(16, 24, 40);
-          pdf.text(cert.name, marginL, y);
-          y += 5;
-  
-          pdf.setFontSize(9);
-          pdf.setFont('helvetica', 'normal');
-          pdf.setTextColor(74, 85, 101);
-          if (cert.organization) { pdf.text(cert.organization, marginL, y); y += 4; }
-          if (cert.dateIssued)   { pdf.text(`Date Issued: ${formatDateToMonthYear(cert.dateIssued)}`, marginL, y); y += 4; }
-          y += 2;
-        });
-      }
-  
-      // ── Education ────────────────────────────────────────────────────────────
-      const validEdu = education.filter(e => e.degree);
-      if (validEdu.length) {
-        addSectionHeading('Education');
-        validEdu.forEach((edu) => {
-          checkPageBreak(12);
-          pdf.setFontSize(10);
-          pdf.setFont('helvetica', 'bold');
-          pdf.setTextColor(16, 24, 40);
-          pdf.text(edu.degree, marginL, y);
-  
-          const dateStr = `${formatDateToMonthYear(edu.startDate)} - ${formatDateToMonthYear(edu.endDate)}`;
-          pdf.setFontSize(9);
-          pdf.setFont('helvetica', 'normal');
-          pdf.setTextColor(74, 85, 101);
-          pdf.text(dateStr, pageW - marginR, y, { align: 'right' });
-          y += 5;
-  
-          const schoolLine = [edu.school, edu.city, edu.stateProvince, edu.country].filter(Boolean).join(', ');
-          const schoolLines = pdf.splitTextToSize(schoolLine, contentW);
-          checkPageBreak(schoolLines.length * 4);
-          pdf.text(schoolLines, marginL, y);
-          y += schoolLines.length * 4;
-  
-          if (edu.achievements) {
-            const achLines = pdf.splitTextToSize(edu.achievements, contentW);
-            checkPageBreak(achLines.length * 4);
-            pdf.text(achLines, marginL, y);
-            y += achLines.length * 4;
-          }
-          y += 4;
-        });
-      }
-  
-      // ── Skills ───────────────────────────────────────────────────────────────
-      const techSkills = skills.filter(s => s.category === 'technical' && s.name);
-      const softSkills = skills.filter(s => s.category === 'soft' && s.name);
-      if (techSkills.length || softSkills.length) {
-        addSectionHeading('Skills');
-  
-        if (techSkills.length) {
-          checkPageBreak(6);
-          pdf.setFontSize(9);
-          pdf.setFont('helvetica', 'bold');
-          pdf.setTextColor(16, 24, 40);
-          pdf.text('Technical Skills:', marginL, y);
-          y += 5;
-  
-          // Two-column layout
-          const colW = contentW / 2;
-          techSkills.forEach((s, i) => {
-            const col = i % 2;
-            const row = Math.floor(i / 2);
-            if (col === 0) checkPageBreak(5);
-            pdf.setFontSize(9);
-            pdf.setFont('helvetica', 'normal');
-            pdf.setTextColor(74, 85, 101);
-            pdf.text(`• ${s.name} - ${s.level}`, marginL + col * colW, y + row * 5);
-          });
-          y += Math.ceil(techSkills.length / 2) * 5 + 3;
-        }
-  
-        if (softSkills.length) {
-          checkPageBreak(6);
-          pdf.setFontSize(9);
-          pdf.setFont('helvetica', 'bold');
-          pdf.setTextColor(16, 24, 40);
-          pdf.text('Soft Skills:', marginL, y);
-          y += 5;
-  
-          const colW = contentW / 2;
-          softSkills.forEach((s, i) => {
-            const col = i % 2;
-            const row = Math.floor(i / 2);
-            if (col === 0) checkPageBreak(5);
-            pdf.setFontSize(9);
-            pdf.setFont('helvetica', 'normal');
-            pdf.setTextColor(74, 85, 101);
-            pdf.text(`• ${s.name} - ${s.level}`, marginL + col * colW, y + row * 5);
-          });
-          y += Math.ceil(softSkills.length / 2) * 5;
-        }
-      }
+      // A4 = 210 × 297 mm — image fills the page exactly
+      pdf.addImage(imgData, 'PNG', 0, 0, 210, 297);
   
       const fileName = `${personalInfo.firstName || 'Resume'}_${personalInfo.lastName || ''}.pdf`.trim();
       pdf.save(fileName);
@@ -1414,6 +1218,29 @@ const handleDownloadDOCX = async () => {
 
   // ─── RETURN: full multi-step form UI ────────────────────────────────────────
   return (
+    <div
+      ref={pdfCaptureRef}
+      style={{
+        position: 'absolute',
+        left: '-9999px',
+        top: 0,
+        width: '794px',
+        minHeight: '1123px',
+        background: 'white',
+        zIndex: -1,
+        pointerEvents: 'none',
+      }}
+      aria-hidden="true"
+    >
+      <ResumePreview
+        personalInfo={personalInfo}
+        workExperiences={workExperiences}
+        certifications={certifications}
+        education={education}
+        skills={skills}
+        previewScale={1}
+      />
+    </div>
     <div className="min-h-screen bg-[#f9fafb] py-4 sm:py-6 md:py-8 px-4 sm:px-6 md:px-8">
       <div className="max-w-7xl mx-auto">
         {/* Step Indicator */}
