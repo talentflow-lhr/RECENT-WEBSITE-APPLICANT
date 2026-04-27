@@ -657,10 +657,10 @@ export function ResumeBuilder({ onResumeSubmit }: ResumeBuilderProps = {}) {
   
   const handleDownloadPDF = async () => {
     try {
-      const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+      const pdf = new jsPDF({ orientation: 'portrait', unit: 'in', format: 'a4' });
   
-      const pageW      = 210;
-      const pageH      = 297;
+      const pageW      = 8.27;
+      const pageH      = 11.69;
       const marginL    = 20;
       const marginR    = 20;
       const marginT    = 20;
