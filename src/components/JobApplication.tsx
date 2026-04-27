@@ -24,14 +24,14 @@ export function JobApplication({
 }: JobApplicationProps) {
   const [useExistingResume, setUseExistingResume] =
     useState(false);
-  const [personalInfo, setPersonalInfo] = useState({
-    fullName: "Juan Dela Cruz",
-    email: "jdc@example.com",
-    phone: "09345234576",
-  });
-  const [resumeFile, setResumeFile] = useState<File | null>(
-    null,
-  );
+  //onst [personalInfo, setPersonalInfo] = useState({
+  //  fullName: "Juan Dela Cruz",
+  //  email: "jdc@example.com",
+  //  phone: "09345234576",
+  // });
+  //const [resumeFile, setResumeFile] = useState<File | null>(
+  //  null,
+  //);
 
   const { account } = useAuth();
 
@@ -84,6 +84,16 @@ export function JobApplication({
     loadApplicantData();
   }, [account?.applicant_id]);
 
+  const getDateId = async (): Promise<number | null> => {
+    const today = new Date().toISOString().split('T')[0];
+    const { data } = await supabase
+      .from('t_date')
+      .select('date_id')
+      .eq('full_date', today)
+      .maybeSingle();
+    return data?.date_id ?? null;
+  };
+  
   const handleSubmit = async () => {
     if (!account?.applicant_id || !jobData?.position_id) {
       alert('Missing application data. Please try again.');
@@ -95,18 +105,21 @@ export function JobApplication({
     }
   
     setSubmitting(true);
-    try {
-      const { error } = await supabase
-        .from('t_applications')
-        .insert({
-          position_id: jobData.position_id,
-          applicant_id: account.applicant_id,
-          resume_id: resumeData.resume_id,
-          application_current_status: 'Pending',
-        });
-  
-      if (error) throw error;
-      setSubmitted(true);
+      try {
+        const dateId = await getDateId();
+      
+        const { error } = await supabase
+          .from('t_applications')
+          .insert({
+            position_id: jobData.position_id,
+            applicant_id: account.applicant_id,
+            resume_id: resumeData.resume_id,
+            application_current_status: 'Pending',
+            applied_date_id: dateId,
+          });
+      
+        if (error) throw error;
+        setSubmitted(true);
     } catch (err: any) {
       alert(`Failed to submit application: ${err.message}`);
     } finally {
@@ -114,13 +127,13 @@ export function JobApplication({
     }
   };
 
-  const handleFileUpload = (
-    e: React.ChangeEvent<HTMLInputElement>,
-  ) => {
-    if (e.target.files && e.target.files[0]) {
-      setResumeFile(e.target.files[0]);
-    }
-  };
+  //const handleFileUpload = (
+  //  e: React.ChangeEvent<HTMLInputElement>,
+  //) => {
+  //  if (e.target.files && e.target.files[0]) {
+  //    setResumeFile(e.target.files[0]);
+  //  }
+  //};
 
   if (submitted) return (
     <div className="min-h-screen bg-[#f9fafb] flex items-center justify-center p-4">
