@@ -123,8 +123,6 @@ interface ResumeBuilderProps {
   onResumeSubmit?: () => void;
 }
 
-const pdfCaptureRef = useRef<HTMLDivElement>(null);
-
 const formatDateToMonthYear = (dateString: string): string => {
   if (!dateString) return '';
   const [year, month] = dateString.split('-');
@@ -495,6 +493,7 @@ export function ResumeBuilder({ onResumeSubmit }: ResumeBuilderProps = {}) {
   ]);
 
   const previewContainerRef = useRef<HTMLDivElement>(null);
+  const pdfCaptureRef = useRef<HTMLDivElement>(null);
   const [previewScale, setPreviewScale] = useState(0.4);
 
   useEffect(() => {
@@ -1218,6 +1217,9 @@ const handleDownloadDOCX = async () => {
 
   // ─── RETURN: full multi-step form UI ────────────────────────────────────────
   return (
+    return (
+  <>
+    {/* Hidden capture target for PDF */}
     <div
       ref={pdfCaptureRef}
       style={{
@@ -1241,6 +1243,7 @@ const handleDownloadDOCX = async () => {
         previewScale={1}
       />
     </div>
+    
     <div className="min-h-screen bg-[#f9fafb] py-4 sm:py-6 md:py-8 px-4 sm:px-6 md:px-8">
       <div className="max-w-7xl mx-auto">
         {/* Step Indicator */}
@@ -1994,5 +1997,6 @@ const handleDownloadDOCX = async () => {
         </div>
       )}
     </div>
+  </>
   );
 }
