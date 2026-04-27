@@ -3,26 +3,46 @@ import { Button } from './ui/button';
 import { Search, MapPin, DollarSign, X, Bookmark, Clock } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import svgPaths from '../imports/svg-3nnvnkmfcx';
-import featuredJobPoster from 'figma:asset/69a79d0864f76398cf7c9e0b7e138a413d134914.png';
-import gulfAsiaPoster from 'figma:asset/853b5c04ffd8a06102642323016ef1525a3c9fc7.png';
 import { useAuth } from './AuthPass';
 import { supabase } from './supabaseClient';
 
 interface Job {
-  id: number;          // position_id
+  id: number;
   jo_id: number;
-  title: string;       // job_title
-  company: string;     // company_name
-  location: string;    // jo_country
-  salary: string;      // job_salary_range
-  vacancies: number;   // job_number_needed
-  filled: number;      // job_filled_count
-  posted: string;      // jo_posted_date
-  deadline: string;    // jo_deadline
-  category: string;    // job_category
-  description: string; // job_description
-  requirements: string[];// job_requirements
-  contractLength: string;// job_contract_length
+  title: string;
+  company: string;
+  location: string;
+  salary: string;
+  vacancies: number;
+  filled: number;
+  posted: string;
+  deadline: string;
+  category: string;
+  description: string;
+  requirements: string[];
+  contractLength: string;
+}
+
+interface FeaturedJobOrder {
+  jo_id: number;
+  company_name: string;
+  jo_country: string;
+  jo_posted_date: string;
+  jo_deadline: string;
+  jo_requirements: string[];
+  jo_highlights: string[];
+  jo_image_url: string | null;
+  jo_phone_number: string;
+  jo_email: string;
+  jo_interview_start_date: string | null;
+  jo_interview_end_date: string | null;
+  is_featured: boolean;
+  placement_fee: number | null;
+  positions: {
+    position_id: number;
+    job_title: string;
+    job_number_needed: number;
+  }[];
 }
 
 interface JobPortalProps {
@@ -41,27 +61,32 @@ export function JobPortal({ onApply, onSaveJob, savedJobIds = [], onNavigateToPr
   const [searchType, setSearchType] = useState<'any' | 'exact'>('any');
   const [isSearching, setIsSearching] = useState(false);
   const [activeFilters, setActiveFilters] = useState<string[]>([]);
-  const [showPosterModal, setShowPosterModal] = useState(false);
-  const [showGulfAsiaPosterModal, setShowGulfAsiaPosterModal] = useState(false);
+  const [selectedFeaturedOrder, setSelectedFeaturedOrder] = useState<FeaturedJobOrder | null>(null);
   const [selectedJob, setSelectedJob] = useState<any>(null);
   const [savedIds, setSavedIds] = useState<number[]>([]);
 
+  // Featured job orders from Supabase
+  const [featuredOrders, setFeaturedOrders] = useState<FeaturedJobOrder[]>([]);
+  const [featuredLoading, setFeaturedLoading] = useState(true);
+
+  // Regular job positions
+  const [jobsData, setJobsData] = useState<Job[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  // ─── Fetch saved jobs ───────────────────────────────────────────────────────
   const fetchSavedJobs = async () => {
     if (!account) return;
     const { data } = await supabase
       .from('t_saved_jobs')
       .select('position_id')
       .eq('applicant_id', account.applicant_id);
-    
-    if (data) {
-      setSavedIds(data.map((d: any) => d.position_id));
-    }
+    if (data) setSavedIds(data.map((d: any) => d.position_id));
   };
-  
+
   const handleToggleSave = async (jobId: number) => {
     if (!account) return;
     const isSaved = savedIds.includes(jobId);
-  
     if (isSaved) {
       await supabase
         .from('t_saved_jobs')
@@ -72,320 +97,88 @@ export function JobPortal({ onApply, onSaveJob, savedJobIds = [], onNavigateToPr
     } else {
       await supabase
         .from('t_saved_jobs')
-        .insert({
-          applicant_id: account.applicant_id,
-          position_id: jobId,
-        });
+        .insert({ applicant_id: account.applicant_id, position_id: jobId });
       setSavedIds(prev => [...prev, jobId]);
     }
   };
-  
+
   useEffect(() => {
     fetchSavedJobs();
   }, [account]);
-  /*const jobsData = [
-    // QCON Jobs - Featured Opportunities
-    {
-      id: 7,
-      title: 'HEAVY EQUIPMENT OPERATOR',
-      company: 'QCON (Qatar Engineering & Construction)',
-      location: 'Doha, Qatar',
-      salary: 'PHP 75,000-85,000',
-      vacancies: 25,
-      posted: '2 days ago',
-      type: 'landbased',
-      placementFee: false,
-      education: 'high-school',
-      experience: true
-    },
-    {
-      id: 8,
-      title: 'TRUCK DRIVER (1,2,3,4,5,15)',
-      company: 'QCON (Qatar Engineering & Construction)',
-      location: 'Doha, Qatar',
-      salary: 'PHP 65,000-75,000',
-      vacancies: 30,
-      posted: '2 days ago',
-      type: 'landbased',
-      placementFee: false,
-      education: 'high-school',
-      experience: true
-    },
-    {
-      id: 9,
-      title: 'FORKLIFT OPERATOR',
-      company: 'QCON (Qatar Engineering & Construction)',
-      location: 'Doha, Qatar',
-      salary: 'PHP 60,000-70,000',
-      vacancies: 20,
-      posted: '2 days ago',
-      type: 'landbased',
-      placementFee: false,
-      education: 'high-school',
-      experience: true
-    },
-    {
-      id: 10,
-      title: 'WELDER (SMAW/GMAW/GTAW)',
-      company: 'QCON (Qatar Engineering & Construction)',
-      location: 'Doha, Qatar',
-      salary: 'PHP 70,000-80,000',
-      vacancies: 35,
-      posted: '2 days ago',
-      type: 'landbased',
-      placementFee: false,
-      education: 'high-school',
-      experience: true
-    },
-    {
-      id: 11,
-      title: 'ELECTRICIAN',
-      company: 'QCON (Qatar Engineering & Construction)',
-      location: 'Doha, Qatar',
-      salary: 'PHP 70,000-80,000',
-      vacancies: 28,
-      posted: '2 days ago',
-      type: 'landbased',
-      placementFee: false,
-      education: 'high-school',
-      experience: true
-    },
-    {
-      id: 12,
-      title: 'PLUMBER',
-      company: 'QCON (Qatar Engineering & Construction)',
-      location: 'Doha, Qatar',
-      salary: 'PHP 65,000-75,000',
-      vacancies: 22,
-      posted: '2 days ago',
-      type: 'landbased',
-      placementFee: false,
-      education: 'high-school',
-      experience: true
-    },
-    {
-      id: 13,
-      title: 'MECHANICAL TECHNICIAN',
-      company: 'QCON (Qatar Engineering & Construction)',
-      location: 'Doha, Qatar',
-      salary: 'PHP 75,000-85,000',
-      vacancies: 30,
-      posted: '2 days ago',
-      type: 'landbased',
-      placementFee: false,
-      education: 'high-school',
-      experience: true
-    },
-    {
-      id: 14,
-      title: 'SCAFFOLDER',
-      company: 'QCON (Qatar Engineering & Construction)',
-      location: 'Doha, Qatar',
-      salary: 'PHP 60,000-70,000',
-      vacancies: 40,
-      posted: '2 days ago',
-      type: 'landbased',
-      placementFee: false,
-      education: 'high-school',
-      experience: true
-    },
-    {
-      id: 15,
-      title: 'PIPE FITTER',
-      company: 'QCON (Qatar Engineering & Construction)',
-      location: 'Doha, Qatar',
-      salary: 'PHP 70,000-80,000',
-      vacancies: 25,
-      posted: '2 days ago',
-      type: 'landbased',
-      placementFee: false,
-      education: 'high-school',
-      experience: true
-    },
-    {
-      id: 16,
-      title: 'RIGGER',
-      company: 'QCON (Qatar Engineering & Construction)',
-      location: 'Doha, Qatar',
-      salary: 'PHP 65,000-75,000',
-      vacancies: 18,
-      posted: '2 days ago',
-      type: 'landbased',
-      placementFee: false,
-      education: 'high-school',
-      experience: true
-    },
-    {
-      id: 17,
-      title: 'HVAC TECHNICIAN',
-      company: 'QCON (Qatar Engineering & Construction)',
-      location: 'Doha, Qatar',
-      salary: 'PHP 70,000-80,000',
-      vacancies: 20,
-      posted: '2 days ago',
-      type: 'landbased',
-      placementFee: false,
-      education: 'high-school',
-      experience: true
-    },
-    {
-      id: 18,
-      title: 'CONSTRUCTION WORKER',
-      company: 'QCON (Qatar Engineering & Construction)',
-      location: 'Doha, Qatar',
-      salary: 'PHP 55,000-65,000',
-      vacancies: 50,
-      posted: '2 days ago',
-      type: 'landbased',
-      placementFee: false,
-      education: 'high-school',
-      experience: true
-    },
-    {
-      id: 19,
-      title: 'INSTRUMENT TECHNICIAN',
-      company: 'QCON (Qatar Engineering & Construction)',
-      location: 'Doha, Qatar',
-      salary: 'PHP 75,000-85,000',
-      vacancies: 15,
-      posted: '2 days ago',
-      type: 'landbased',
-      placementFee: false,
-      education: 'high-school',
-      experience: true
-    },
-    {
-      id: 20,
-      title: 'MASON',
-      company: 'QCON (Qatar Engineering & Construction)',
-      location: 'Doha, Qatar',
-      salary: 'PHP 60,000-70,000',
-      vacancies: 30,
-      posted: '2 days ago',
-      type: 'landbased',
-      placementFee: false,
-      education: 'high-school',
-      experience: true
-    },
-    {
-      id: 21,
-      title: 'PAINTER',
-      company: 'QCON (Qatar Engineering & Construction)',
-      location: 'Doha, Qatar',
-      salary: 'PHP 55,000-65,000',
-      vacancies: 25,
-      posted: '2 days ago',
-      type: 'landbased',
-      placementFee: false,
-      education: 'high-school',
-      experience: true
-    },
-    // Gulf Asia Jobs - Featured Opportunities
-    {
-      id: 22,
-      title: 'PIPE FITTER',
-      company: 'Gulf Asia Contracting Company WLL',
-      location: 'Doha, Qatar',
-      salary: 'Best in Industry',
-      vacancies: 100,
-      posted: '1 day ago',
-      type: 'landbased',
-      placementFee: false,
-      education: 'high-school',
-      experience: true
-    },
-    {
-      id: 23,
-      title: 'PIPE FABRICATOR',
-      company: 'Gulf Asia Contracting Company WLL',
-      location: 'Doha, Qatar',
-      salary: 'Best in Industry',
-      vacancies: 25,
-      posted: '1 day ago',
-      type: 'landbased',
-      placementFee: false,
-      education: 'high-school',
-      experience: true
-    },
-    {
-      id: 24,
-      title: 'HV CABLE TERMINATOR (66KV - PFISTER)',
-      company: 'Gulf Asia Contracting Company WLL',
-      location: 'Doha, Qatar',
-      salary: 'Best in Industry',
-      vacancies: 8,
-      posted: '1 day ago',
-      type: 'landbased',
-      placementFee: false,
-      education: 'high-school',
-      experience: true
-    },
-    {
-      id: 25,
-      title: 'HV CABLE TERMINATOR (33KV - NEXAS)',
-      company: 'Gulf Asia Contracting Company WLL',
-      location: 'Doha, Qatar',
-      salary: 'Best in Industry',
-      vacancies: 12,
-      posted: '1 day ago',
-      type: 'landbased',
-      placementFee: false,
-      education: 'high-school',
-      experience: true
-    },
-    {
-      id: 26,
-      title: 'INDUSTRIAL ELECTRICIAN',
-      company: 'Gulf Asia Contracting Company WLL',
-      location: 'Doha, Qatar',
-      salary: 'Best in Industry',
-      vacancies: 25,
-      posted: '1 day ago',
-      type: 'landbased',
-      placementFee: false,
-      education: 'high-school',
-      experience: true
-    },
-    {
-      id: 27,
-      title: 'INSTRUMENT TECHNICIAN',
-      company: 'Gulf Asia Contracting Company WLL',
-      location: 'Doha, Qatar',
-      salary: 'Best in Industry',
-      vacancies: 25,
-      posted: '1 day ago',
-      type: 'landbased',
-      placementFee: false,
-      education: 'high-school',
-      experience: true
-    },
-    {
-      id: 28,
-      title: 'INSTRUMENT FITTER',
-      company: 'Gulf Asia Contracting Company WLL',
-      location: 'Doha, Qatar',
-      salary: 'Best in Industry',
-      vacancies: 25,
-      posted: '1 day ago',
-      type: 'landbased',
-      placementFee: false,
-      education: 'high-school',
-      experience: true
+
+  // ─── Fetch featured job orders ───────────────────────────────────────────────
+  const fetchFeaturedOrders = async () => {
+    setFeaturedLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from('t_job_orders')
+        .select(`
+          jo_id,
+          jo_country,
+          jo_posted_date,
+          jo_deadline,
+          jo_requirements,
+          jo_highlights,
+          jo_image_url,
+          jo_phone_number,
+          jo_email,
+          is_featured,
+          placement_fee,
+          t_companies (
+            company_name
+          ),
+          t_date!t_job_orders_jo_interview_start_date_id_fkey (
+            full_date
+          ),
+          interview_end:t_date!t_job_orders_jo_interview_end_date_id_fkey (
+            full_date
+          ),
+          t_job_positions (
+            position_id,
+            job_title,
+            job_number_needed
+          )
+        `)
+        .eq('is_featured', true)
+        .eq('is_active', true)
+        .eq('is_posted', true);
+
+      if (error) throw error;
+
+      const mapped: FeaturedJobOrder[] = (data || []).map((order: any) => ({
+        jo_id: order.jo_id,
+        company_name: order.t_companies?.company_name || 'Unknown Company',
+        jo_country: order.jo_country || '',
+        jo_posted_date: order.jo_posted_date || '',
+        jo_deadline: order.jo_deadline || '',
+        jo_requirements: order.jo_requirements || [],
+        jo_highlights: order.jo_highlights || [],
+        jo_image_url: order.jo_image_url || null,
+        jo_phone_number: order.jo_phone_number || '',
+        jo_email: order.jo_email || '',
+        jo_interview_start_date: order.t_date?.full_date || null,
+        jo_interview_end_date: order.interview_end?.full_date || null,
+        is_featured: order.is_featured,
+        placement_fee: order.placement_fee ?? null,
+        positions: (order.t_job_positions || []).map((p: any) => ({
+          position_id: p.position_id,
+          job_title: p.job_title,
+          job_number_needed: p.job_number_needed,
+        })),
+      }));
+
+      setFeaturedOrders(mapped);
+    } catch (err) {
+      console.error('Error fetching featured orders:', err);
+    } finally {
+      setFeaturedLoading(false);
     }
-  ];*/
+  };
 
-  const [jobsData, setJobsData] = useState<Job[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    fetchJobs();
-  }, []);
-
+  // ─── Fetch regular job positions ─────────────────────────────────────────────
   const fetchJobs = async () => {
     setLoading(true);
     setError(null);
-
     try {
       const { data, error } = await supabase
         .from('t_job_positions')
@@ -420,18 +213,14 @@ export function JobPortal({ onApply, onSaveJob, savedJobIds = [], onNavigateToPr
 
       if (error) throw error;
 
-      // ✅ Map Supabase data to your Job shape
       const mapped: Job[] = (data || [])
-        .filter(pos => pos.t_job_orders) // skip positions with no linked order
-        .map(pos => {
+        .filter((pos: any) => pos.t_job_orders)
+        .map((pos: any) => {
           const order = pos.t_job_orders as any;
           const company = order?.t_companies as any;
-
-          // Format posted date
           const postedDate = order?.jo_posted_date
             ? formatPostedDate(order.jo_posted_date)
             : 'Recently posted';
-
           return {
             id: pos.position_id,
             jo_id: pos.jo_id,
@@ -459,13 +248,17 @@ export function JobPortal({ onApply, onSaveJob, savedJobIds = [], onNavigateToPr
     }
   };
 
-  // ✅ Helper to format date as "X days ago"
+  useEffect(() => {
+    fetchFeaturedOrders();
+    fetchJobs();
+  }, []);
+
+  // ─── Helpers ─────────────────────────────────────────────────────────────────
   const formatPostedDate = (dateStr: string): string => {
     const posted = new Date(dateStr);
     const now = new Date();
     const diffMs = now.getTime() - posted.getTime();
     const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
-
     if (diffDays === 0) return 'Today';
     if (diffDays === 1) return '1 day ago';
     if (diffDays < 7) return `${diffDays} days ago`;
@@ -473,11 +266,28 @@ export function JobPortal({ onApply, onSaveJob, savedJobIds = [], onNavigateToPr
     return `${Math.floor(diffDays / 30)} months ago`;
   };
 
-  // Filter jobs based on search criteria
+  const formatDateRange = (start: string | null, end: string | null): string => {
+    if (!start && !end) return 'TBA';
+    const fmt = (d: string) =>
+      new Date(d).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+    if (start && end) return `${fmt(start)} – ${fmt(end)}`;
+    if (start) return `From ${fmt(start)}`;
+    return `Until ${fmt(end!)}`;
+  };
+
+  // Get a public URL for the image stored in the Supabase storage bucket
+  const getFeaturedImageUrl = (rawUrl: string | null): string | null => {
+    if (!rawUrl) return null;
+    // If already a full URL, return as-is
+    if (rawUrl.startsWith('http')) return rawUrl;
+    // Otherwise treat as a storage path and generate a public URL
+    const { data } = supabase.storage.from('job-images').getPublicUrl(rawUrl);
+    return data?.publicUrl ?? null;
+  };
+
+  // ─── Filter logic ─────────────────────────────────────────────────────────────
   const filterJobs = () => {
-        if (!searchQuery && !locationQuery && activeFilters.length === 0) {
-      return jobsData;
-    }
+    if (!searchQuery && !locationQuery && activeFilters.length === 0) return jobsData;
     return jobsData.filter(job => {
       let matchesSearch = true;
       let matchesLocation = true;
@@ -487,39 +297,19 @@ export function JobPortal({ onApply, onSaveJob, savedJobIds = [], onNavigateToPr
         const searchLower = searchQuery.toLowerCase();
         const titleLower = job.title.toLowerCase();
         const companyLower = job.company.toLowerCase();
-
         if (searchType === 'exact') {
           matchesSearch = titleLower.includes(searchLower) || companyLower.includes(searchLower);
         } else {
-          const searchWords = searchLower.split(' ').filter(word => word.length > 0);
-          matchesSearch = searchWords.some(word =>
-            titleLower.includes(word) || companyLower.includes(word)
-          );
+          const searchWords = searchLower.split(' ').filter(w => w.length > 0);
+          matchesSearch = searchWords.some(w => titleLower.includes(w) || companyLower.includes(w));
         }
       }
-
       if (locationQuery) {
-        const locationLower = locationQuery.toLowerCase();
         matchesLocation = job.location.toLowerCase().includes(locationQuery.toLowerCase());
       }
-
       if (activeFilters.length > 0) {
-        matchesFilters = activeFilters.every(filter => {
-          switch (filter) {
-            case 'landbased':
-              return true; // all your jobs are landbased — adjust if needed
-            case 'no-placement-fee':
-              return true; // adjust based on your data if you add this field
-            case 'high-school-graduate':
-              return true; // adjust if you add education requirement field
-            case 'no-work-experience':
-              return true; // adjust if you add experience requirement field
-            default:
-              return true;
-          }
-        });
+        matchesFilters = activeFilters.every(() => true); // extend per field as needed
       }
-
       return matchesSearch && matchesLocation && matchesFilters;
     });
   };
@@ -530,17 +320,11 @@ export function JobPortal({ onApply, onSaveJob, savedJobIds = [], onNavigateToPr
 
   const handleSearch = () => {
     setIsSearching(true);
-    // Scroll to results
-    const resultsSection = document.getElementById('job-results');
-    if (resultsSection) {
-      resultsSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    }
+    document.getElementById('job-results')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   };
 
   const handleKeyPress = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'Enter') {
-      handleSearch();
-    }
+    if (e.key === 'Enter') handleSearch();
   };
 
   const handleClearFilters = () => {
@@ -550,28 +334,160 @@ export function JobPortal({ onApply, onSaveJob, savedJobIds = [], onNavigateToPr
     setActiveFilters([]);
   };
 
-  const handleSaveJob = (jobId: number) => {
-    const job = jobsData.find(j => j.id === jobId);
-    if (job && onSaveJob) {
-      onSaveJob(job);
-    }
-  };
-
   const handleApplyNow = (job: any) => {
-    if (onApply) {
-      onApply({ title: job.title, company: job.company, location: job.location });
-    }
+    if (onApply) onApply({ title: job.title, company: job.company, location: job.location });
   };
 
-  //const filteredJobs = isSearching || searchQuery || locationQuery || activeFilters.length > 0 ? filterJobs() : jobsData;
+  const toggleFilter = (filter: string) => {
+    setActiveFilters(prev =>
+      prev.includes(filter) ? prev.filter(f => f !== filter) : [...prev, filter]
+    );
+  };
 
+  // ─── Featured Banner Card ─────────────────────────────────────────────────────
+  const FeaturedBannerCard = ({ order }: { order: FeaturedJobOrder }) => {
+    const imageUrl = getFeaturedImageUrl(order.jo_image_url);
+    const isNoFee = !order.placement_fee || order.placement_fee === 0;
+
+    return (
+      <div className="mb-6">
+        <div className="bg-gradient-to-r from-[#17960b] to-[#0d5e06] rounded-2xl p-1">
+          <div className="bg-white rounded-xl overflow-hidden">
+            <div className="p-4 sm:p-5">
+              {/* Badges */}
+              <div className="flex items-center gap-2 mb-4">
+                <div className="bg-[#ffca1a] text-[#101828] px-3 py-1 rounded-full text-xs sm:text-sm font-semibold">
+                  FEATURED OPPORTUNITY
+                </div>
+                {isNoFee && (
+                  <div className="bg-red-500 text-white px-3 py-1 rounded-full text-xs sm:text-sm font-semibold animate-pulse">
+                    NO PLACEMENT FEE
+                  </div>
+                )}
+              </div>
+
+              {/* Title */}
+              <h2 className="text-xl sm:text-2xl md:text-3xl font-bold text-[#101828] mb-4">
+                {order.company_name}
+                {order.jo_country ? ` — ${order.jo_country}` : ''}
+              </h2>
+
+              {/* Positions grid */}
+              {order.positions.length > 0 && (
+                <div className="bg-gradient-to-r from-blue-50 to-green-50 rounded-lg p-4 mb-6">
+                  <h3 className="text-lg font-bold text-[#17960b] mb-3">Available Positions:</h3>
+                  <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-x-4 gap-y-1">
+                    {order.positions.map(pos => (
+                      <div key={pos.position_id} className="flex items-start gap-2">
+                        <span className="text-[#17960b] text-lg mt-0.5">•</span>
+                        <span className="text-sm font-medium text-gray-800">
+                          {pos.job_title}
+                          {pos.job_number_needed ? ` (${pos.job_number_needed})` : ''}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Highlights & Requirements */}
+              <div className="grid md:grid-cols-2 gap-6 mb-6">
+                {order.jo_highlights.length > 0 && (
+                  <div>
+                    <h3 className="text-lg font-semibold text-[#17960b] mb-3">Highlights:</h3>
+                    <ul className="space-y-2 text-sm sm:text-base text-gray-700">
+                      {order.jo_highlights.map((h, i) => (
+                        <li key={i} className="flex items-start gap-2">
+                          <span className={`mt-1 ${h.toLowerCase().includes('no placement') ? 'text-red-500 font-bold' : 'text-[#17960b]'}`}>✓</span>
+                          <span className={h.toLowerCase().includes('no placement') ? 'font-semibold' : ''}>{h}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+
+                {order.jo_requirements.length > 0 && (
+                  <div>
+                    <h3 className="text-lg font-semibold text-[#17960b] mb-3">Requirements:</h3>
+                    <ul className="space-y-2 text-sm sm:text-base text-gray-700">
+                      {order.jo_requirements.map((r, i) => (
+                        <li key={i} className="flex items-start gap-2">
+                          <span className="text-[#101828] mt-1">•</span>
+                          <span>{r}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+              </div>
+
+              {/* Interview schedule */}
+              {(order.jo_interview_start_date || order.jo_interview_end_date) && (
+                <div className="bg-gray-50 rounded-lg p-4 mb-6">
+                  <p className="text-sm text-gray-700 mb-1">
+                    <span className="font-semibold text-red-500">Tentative Face-to-Face Interview Schedule:</span>
+                  </p>
+                  <p className="text-sm text-[#101828] font-semibold">
+                    {formatDateRange(order.jo_interview_start_date, order.jo_interview_end_date)}
+                  </p>
+                </div>
+              )}
+
+              {/* Contact + Buttons */}
+              <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
+                <div>
+                  {(order.jo_phone_number || order.jo_email) && (
+                    <>
+                      <p className="text-sm text-gray-600 mb-2">Contact Details:</p>
+                      <div className="space-y-1 text-sm">
+                        {order.jo_phone_number && (
+                          <p className="font-semibold text-[#101828]">{order.jo_phone_number}</p>
+                        )}
+                        {order.jo_email && (
+                          <p className="text-[#17960b]">{order.jo_email}</p>
+                        )}
+                      </div>
+                    </>
+                  )}
+                </div>
+                <div className="flex flex-col sm:flex-row gap-3">
+                  {/* View Full Details — shows poster image if available */}
+                  {imageUrl && (
+                    <button
+                      onClick={() => setSelectedFeaturedOrder(order)}
+                      className="bg-[#ffca1a] hover:bg-[#e6b617] text-[#101828] px-6 py-3 rounded-lg font-semibold transition-colors shadow-md hover:shadow-lg flex items-center justify-center gap-2"
+                    >
+                      <span>View Full Details</span>
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                      </svg>
+                    </button>
+                  )}
+                  <button
+                    onClick={onNavigateToPositions}
+                    className="bg-[#17960b] hover:bg-[#148509] text-white px-6 py-3 rounded-lg font-semibold transition-colors shadow-md hover:shadow-lg flex items-center justify-center gap-2"
+                  >
+                    <span>View All Positions</span>
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                    </svg>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  // ─── Render ───────────────────────────────────────────────────────────────────
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Hero Section */}
       <div className="bg-gradient-to-b from-[#17960b] via-[#158d0a] via-[29.808%] to-[#0d5e06] py-8 sm:py-10 md:py-12 lg:py-16 pb-12 sm:pb-16 md:pb-20 lg:pb-24">
         <div className="max-w-[1236px] mx-auto px-4 sm:px-6 md:px-8">
           <div className="max-w-[768px]">
-            {/* Heading */}
             <h1 className="text-[24px] sm:text-[28px] md:text-[36px] lg:text-[40px] xl:text-[48px] font-bold leading-tight text-white mb-3 sm:mb-4 md:mb-6">
               Hiring the Right People at the Right Place at the Right Time.
             </h1>
@@ -581,7 +497,6 @@ export function JobPortal({ onApply, onSaveJob, savedJobIds = [], onNavigateToPr
 
             {/* Search Box */}
             <div className="bg-white rounded-[10px] shadow-[0px_10px_15px_0px_rgba(0,0,0,0.1),0px_4px_6px_0px_rgba(0,0,0,0.1)] p-4 sm:p-5 md:p-6">
-              {/* Search Input and Button */}
               <div className="flex flex-col gap-3 mb-4 md:mb-5">
                 <div className="relative">
                   <div className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5">
@@ -614,7 +529,7 @@ export function JobPortal({ onApply, onSaveJob, savedJobIds = [], onNavigateToPr
                     className="w-full pl-10 pr-3 py-3 sm:py-2.5 bg-[#f3f3f5] border-0 rounded-lg text-[14px] sm:text-[15px] leading-[normal] text-gray-900 placeholder:text-[#717182] focus:outline-none focus:ring-2 focus:ring-[#ffca1a]"
                   />
                 </div>
-                <button 
+                <button
                   onClick={handleSearch}
                   className="w-full bg-[#ffca1a] hover:bg-[#e6b617] text-[#101828] px-4 py-3 sm:py-2.5 rounded-lg text-[15px] sm:text-[14px] font-semibold sm:font-normal leading-[20px] transition-colors"
                 >
@@ -622,106 +537,44 @@ export function JobPortal({ onApply, onSaveJob, savedJobIds = [], onNavigateToPr
                 </button>
               </div>
 
-              {/* Radio Buttons */}
               <div className="flex gap-4 sm:gap-6 mb-4">
                 <label className="flex items-center gap-2 cursor-pointer">
-                  <input
-                    type="radio"
-                    name="searchType"
-                    value="any"
-                    checked={searchType === 'any'}
-                    onChange={(e) => setSearchType(e.target.value as 'any' | 'exact')}
-                    className="w-[13px] h-[13px]"
-                  />
+                  <input type="radio" name="searchType" value="any" checked={searchType === 'any'} onChange={(e) => setSearchType(e.target.value as 'any' | 'exact')} className="w-[13px] h-[13px]" />
                   <span className="text-[13px] sm:text-[14px] leading-[20px] text-[#364153]">Any of the Word</span>
                 </label>
                 <label className="flex items-center gap-2 cursor-pointer">
-                  <input
-                    type="radio"
-                    name="searchType"
-                    value="exact"
-                    checked={searchType === 'exact'}
-                    onChange={(e) => setSearchType(e.target.value as 'any' | 'exact')}
-                    className="w-[13px] h-[13px]"
-                  />
+                  <input type="radio" name="searchType" value="exact" checked={searchType === 'exact'} onChange={(e) => setSearchType(e.target.value as 'any' | 'exact')} className="w-[13px] h-[13px]" />
                   <span className="text-[13px] sm:text-[14px] leading-[20px] text-[#364153]">Exact Word</span>
                 </label>
               </div>
 
-              {/* Filter Badges */}
               <div className="flex flex-wrap gap-2 sm:gap-2.5">
-                <button
-                  className={`border-[0.8px] rounded-lg px-3 py-2 sm:px-2.5 sm:py-1.5 text-[13px] sm:text-[14px] leading-[20px] flex items-center gap-1.5 sm:gap-2 transition-colors touch-manipulation ${
-                    activeFilters.includes('landbased') 
-                      ? 'bg-[#ffca1a] text-[#101828] border-[#ffca1a]' 
-                      : 'bg-white text-[#364153] border-white/50 hover:bg-gray-50'
-                  }`}
-                  onClick={() => {
-                    if (activeFilters.includes('landbased')) {
-                      setActiveFilters(activeFilters.filter(filter => filter !== 'landbased'));
-                    } else {
-                      setActiveFilters([...activeFilters, 'landbased']);
-                    }
-                  }}
-                >
-                  <div className="w-3 h-3 shrink-0">
-                    <svg className="block size-full" fill="none" preserveAspectRatio="none" viewBox="0 0 12 12">
-                      <g>
-                        <path d={svgPaths.p2e0e03b4} stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" />
-                        <path d={svgPaths.p39c8900} stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" />
-                      </g>
-                    </svg>
-                  </div>
-                  Landbased
-                </button>
-                <button
-                  className={`border-[0.8px] rounded-lg px-3 py-2 sm:px-2.5 sm:py-1.5 text-[13px] sm:text-[14px] leading-[20px] transition-colors touch-manipulation ${
-                    activeFilters.includes('no-placement-fee') 
-                      ? 'bg-[#ffca1a] text-[#101828] border-[#ffca1a]' 
-                      : 'bg-white text-[#364153] border-white/50 hover:bg-gray-50'
-                  }`}
-                  onClick={() => {
-                    if (activeFilters.includes('no-placement-fee')) {
-                      setActiveFilters(activeFilters.filter(filter => filter !== 'no-placement-fee'));
-                    } else {
-                      setActiveFilters([...activeFilters, 'no-placement-fee']);
-                    }
-                  }}
-                >
-                  No Placement Fee
-                </button>
-                <button
-                  className={`border-[0.8px] rounded-lg px-3 py-2 sm:px-2.5 sm:py-1.5 text-[13px] sm:text-[14px] leading-[20px] transition-colors touch-manipulation ${
-                    activeFilters.includes('high-school-graduate') 
-                      ? 'bg-[#ffca1a] text-[#101828] border-[#ffca1a]' 
-                      : 'bg-white text-[#364153] border-white/50 hover:bg-gray-50'
-                  }`}
-                  onClick={() => {
-                    if (activeFilters.includes('high-school-graduate')) {
-                      setActiveFilters(activeFilters.filter(filter => filter !== 'high-school-graduate'));
-                    } else {
-                      setActiveFilters([...activeFilters, 'high-school-graduate']);
-                    }
-                  }}
-                >
-                  High School Graduate
-                </button>
-                <button
-                  className={`border-[0.8px] rounded-lg px-3 py-2 sm:px-2.5 sm:py-1.5 text-[13px] sm:text-[14px] leading-[20px] transition-colors touch-manipulation ${
-                    activeFilters.includes('no-work-experience') 
-                      ? 'bg-[#ffca1a] text-[#101828] border-[#ffca1a]' 
-                      : 'bg-white text-[#364153] border-white/50 hover:bg-gray-50'
-                  }`}
-                  onClick={() => {
-                    if (activeFilters.includes('no-work-experience')) {
-                      setActiveFilters(activeFilters.filter(filter => filter !== 'no-work-experience'));
-                    } else {
-                      setActiveFilters([...activeFilters, 'no-work-experience']);
-                    }
-                  }}
-                >
-                  No Work Experience
-                </button>
+                {(['landbased', 'no-placement-fee', 'high-school-graduate', 'no-work-experience'] as const).map(filter => (
+                  <button
+                    key={filter}
+                    className={`border-[0.8px] rounded-lg px-3 py-2 sm:px-2.5 sm:py-1.5 text-[13px] sm:text-[14px] leading-[20px] flex items-center gap-1.5 sm:gap-2 transition-colors touch-manipulation ${
+                      activeFilters.includes(filter)
+                        ? 'bg-[#ffca1a] text-[#101828] border-[#ffca1a]'
+                        : 'bg-white text-[#364153] border-white/50 hover:bg-gray-50'
+                    }`}
+                    onClick={() => toggleFilter(filter)}
+                  >
+                    {filter === 'landbased' && (
+                      <div className="w-3 h-3 shrink-0">
+                        <svg className="block size-full" fill="none" preserveAspectRatio="none" viewBox="0 0 12 12">
+                          <g>
+                            <path d={svgPaths.p2e0e03b4} stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" />
+                            <path d={svgPaths.p39c8900} stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" />
+                          </g>
+                        </svg>
+                      </div>
+                    )}
+                    {filter === 'landbased' ? 'Landbased' :
+                     filter === 'no-placement-fee' ? 'No Placement Fee' :
+                     filter === 'high-school-graduate' ? 'High School Graduate' :
+                     'No Work Experience'}
+                  </button>
+                ))}
               </div>
             </div>
           </div>
@@ -731,537 +584,168 @@ export function JobPortal({ onApply, onSaveJob, savedJobIds = [], onNavigateToPr
       {/* Job Cards Section */}
       <div className="py-6 sm:py-8 md:py-12 bg-white">
         <div className="max-w-[1236px] mx-auto px-4 sm:px-6 md:px-8">
-          
-          {/* Featured Job Opportunity Banner */}
-           <div className="mb-6">
-            <div className="bg-gradient-to-r from-[#17960b] to-[#0d5e06] rounded-2xl p-1">
-              <div className="bg-white rounded-xl overflow-hidden">
-                <div className="p-4 sm:p-5">
-                  <div className="flex items-center gap-2 mb-4">
-                    <div className="bg-[#ffca1a] text-[#101828] px-3 py-1 rounded-full text-xs sm:text-sm font-semibold">
-                      FEATURED OPPORTUNITY
-                    </div>
-                    <div className="bg-red-500 text-white px-3 py-1 rounded-full text-xs sm:text-sm font-semibold animate-pulse">
-                      NO PLACEMENT FEE
-                    </div>
-                  </div>
-                  
-                  <h2 className="text-xl sm:text-2xl md:text-3xl font-bold text-[#101828] mb-4">
-                    QCON - Great Opportunities in Qatar
-                  </h2>
-                  
-                  <div className="bg-gradient-to-r from-blue-50 to-green-50 rounded-lg p-4 mb-6">
-                    <h3 className="text-lg font-bold text-[#17960b] mb-3">Available Positions:</h3>
-                    <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-x-4 gap-y-1">
-                      <div className="flex items-start gap-2">
-                        <span className="text-[#17960b] text-lg mt-0.5">•</span>
-                        <span className="text-sm font-medium text-gray-800">Heavy Equipment Operator</span>
-                      </div>
-                      <div className="flex items-start gap-2">
-                        <span className="text-[#17960b] text-lg mt-0.5">•</span>
-                        <span className="text-sm font-medium text-gray-800">Truck Driver (1,2,3,4,5,15)</span>
-                      </div>
-                      <div className="flex items-start gap-2">
-                        <span className="text-[#17960b] text-lg mt-0.5">•</span>
-                        <span className="text-sm font-medium text-gray-800">Forklift Operator</span>
-                      </div>
-                      <div className="flex items-start gap-2">
-                        <span className="text-[#17960b] text-lg mt-0.5">•</span>
-                        <span className="text-sm font-medium text-gray-800">Welder (SMAW/GMAW/GTAW)</span>
-                      </div>
-                      <div className="flex items-start gap-2">
-                        <span className="text-[#17960b] text-lg mt-0.5">•</span>
-                        <span className="text-sm font-medium text-gray-800">Electrician</span>
-                      </div>
-                      <div className="flex items-start gap-2">
-                        <span className="text-[#17960b] text-lg mt-0.5">•</span>
-                        <span className="text-sm font-medium text-gray-800">Plumber</span>
-                      </div>
-                      <div className="flex items-start gap-2">
-                        <span className="text-[#17960b] text-lg mt-0.5">•</span>
-                        <span className="text-sm font-medium text-gray-800">Mechanical Technician</span>
-                      </div>
-                      <div className="flex items-start gap-2">
-                        <span className="text-[#17960b] text-lg mt-0.5">•</span>
-                        <span className="text-sm font-medium text-gray-800">Scaffolder</span>
-                      </div>
-                      <div className="flex items-start gap-2">
-                        <span className="text-[#17960b] text-lg mt-0.5">•</span>
-                        <span className="text-sm font-medium text-gray-800">Pipe Fitter</span>
-                      </div>
-                      <div className="flex items-start gap-2">
-                        <span className="text-[#17960b] text-lg mt-0.5">•</span>
-                        <span className="text-sm font-medium text-gray-800">Rigger</span>
-                      </div>
-                      <div className="flex items-start gap-2">
-                        <span className="text-[#17960b] text-lg mt-0.5">•</span>
-                        <span className="text-sm font-medium text-gray-800">HVAC Technician</span>
-                      </div>
-                      <div className="flex items-start gap-2">
-                        <span className="text-[#17960b] text-lg mt-0.5">•</span>
-                        <span className="text-sm font-medium text-gray-800">Construction Worker</span>
-                      </div>
-                      <div className="flex items-start gap-2">
-                        <span className="text-[#17960b] text-lg mt-0.5">•</span>
-                        <span className="text-sm font-medium text-gray-800">Instrument Technician</span>
-                      </div>
-                      <div className="flex items-start gap-2">
-                        <span className="text-[#17960b] text-lg mt-0.5">•</span>
-                        <span className="text-sm font-medium text-gray-800">Mason</span>
-                      </div>
-                      <div className="flex items-start gap-2">
-                        <span className="text-[#17960b] text-lg mt-0.5">•</span>
-                        <span className="text-sm font-medium text-gray-800">Painter</span>
-                      </div>
-                    </div>
-                  </div>
 
-                  <div className="grid md:grid-cols-2 gap-6 mb-6">
-                    <div>
-                      <h3 className="text-lg font-semibold text-[#17960b] mb-3">Highlights:</h3>
-                      <ul className="space-y-2 text-sm sm:text-base text-gray-700">
-                        <li className="flex items-start gap-2">
-                          <span className="text-[#17960b] mt-1">✓</span>
-                          <span>Long term employment</span>
-                        </li>
-                        <li className="flex items-start gap-2">
-                          <span className="text-[#17960b] mt-1">✓</span>
-                          <span>Salary package will be best in the Industry</span>
-                        </li>
-                        <li className="flex items-start gap-2">
-                          <span className="text-red-500 mt-1 font-bold">✓</span>
-                          <span className="font-semibold">NO PLACEMENT FEE</span>
-                        </li>
-                      </ul>
-                    </div>
-                    
-                    <div>
-                      <h3 className="text-lg font-semibold text-[#17960b] mb-3">Requirements:</h3>
-                      <ul className="space-y-2 text-sm sm:text-base text-gray-700">
-                        <li className="flex items-start gap-2">
-                          <span className="text-[#101828] mt-1">•</span>
-                          <span>Must have valid Driver's License (Under 1,2,3,4,5,15)</span>
-                        </li>
-                        <li className="flex items-start gap-2">
-                          <span className="text-[#101828] mt-1">•</span>
-                          <span>Must have 2 years experience in Oil/Gas or Petrochemicals</span>
-                        </li>
-                      </ul>
-                    </div>
-                  </div>
-
-                  <div className="bg-gray-50 rounded-lg p-4 mb-6">
-                    <p className="text-sm text-gray-700 mb-2">
-                      <span className="font-semibold text-red-500">Face to Face Interview Schedule (Tentative):</span>
-                    </p>
-                    <p className="text-sm text-[#101828] font-semibold mb-1">
-                      MANILA - FEB. 28 - MARCH 6, 2026
-                    </p>
-                    <p className="text-sm text-[#101828] font-semibold">
-                      CEBU - MARCH 8-10, 2026
-                    </p>
-                  </div>
-
-                  <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
-                    <div>
-                      <p className="text-sm text-gray-600 mb-2">Contact Details:</p>
-                      <div className="space-y-1 text-sm">
-                        <p className="font-semibold text-[#101828]">CP# 09171499075 / 09658309775</p>
-                        <p className="text-[#17960b]">landbasecv1@gmail.com</p>
-                      </div>
-                    </div>
-                    <div className="flex flex-col sm:flex-row gap-3">
-                      <button
-                        onClick={() => setShowPosterModal(true)}
-                        className="bg-[#ffca1a] hover:bg-[#e6b617] text-[#101828] px-6 py-3 rounded-lg font-semibold transition-colors shadow-md hover:shadow-lg flex items-center justify-center gap-2"
-                        >
-                        <span>View Full Details</span>
-                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                        </svg>
-                      </button>
-                      <button
-                        onClick={onNavigateToPositions}
-                        className="bg-[#17960b] hover:bg-[#148509] text-white px-6 py-3 rounded-lg font-semibold transition-colors shadow-md hover:shadow-lg flex items-center justify-center gap-2"
-                        >
-                        <span>View All Positions</span>
-                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                        </svg>
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              </div>
+          {/* Featured Banners — dynamic from Supabase */}
+          {featuredLoading ? (
+            <div className="flex items-center justify-center py-8 mb-6">
+              <svg className="w-8 h-8 animate-spin text-[#17960b]" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+              </svg>
             </div>
-          </div>
+          ) : (
+            featuredOrders.map(order => (
+              <FeaturedBannerCard key={order.jo_id} order={order} />
+            ))
+          )}
 
-          {/* Gulf Asia Featured Job Opportunity Banner */}
-          <div className="mb-6">
-            <div className="bg-gradient-to-r from-[#17960b] to-[#0d5e06] rounded-2xl p-1">
-              <div className="bg-white rounded-xl overflow-hidden">
-                <div className="p-4 sm:p-5">
-                  <div className="flex items-center gap-2 mb-4">
-                    <div className="bg-[#ffca1a] text-[#101828] px-3 py-1 rounded-full text-xs sm:text-sm font-semibold">
-                      FEATURED OPPORTUNITY
-                    </div>
-                    <div className="bg-red-500 text-white px-3 py-1 rounded-full text-xs sm:text-sm font-semibold animate-pulse">
-                      NO PLACEMENT FEE
-                    </div>
-                  </div>
-                  
-                  <h2 className="text-xl sm:text-2xl md:text-3xl font-bold text-[#101828] mb-4">
-                    Gulf Asia Contracting Company - Mega Project in Qatar
-                  </h2>
-                  
-                  <div className="bg-gradient-to-r from-blue-50 to-green-50 rounded-lg p-4 mb-6">
-                    <h3 className="text-lg font-bold text-[#17960b] mb-3">Available Positions:</h3>
-                    <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-x-4 gap-y-1">
-                      <div className="flex items-start gap-2">
-                        <span className="text-[#17960b] text-lg mt-0.5">•</span>
-                        <span className="text-sm font-medium text-gray-800">Pipe Fitter (100 openings)</span>
-                      </div>
-                      <div className="flex items-start gap-2">
-                        <span className="text-[#17960b] text-lg mt-0.5">•</span>
-                        <span className="text-sm font-medium text-gray-800">Pipe Fabricator (25)</span>
-                      </div>
-                      <div className="flex items-start gap-2">
-                        <span className="text-[#17960b] text-lg mt-0.5">•</span>
-                        <span className="text-sm font-medium text-gray-800">HV Cable Terminator 66KV (8)</span>
-                      </div>
-                      <div className="flex items-start gap-2">
-                        <span className="text-[#17960b] text-lg mt-0.5">•</span>
-                        <span className="text-sm font-medium text-gray-800">HV Cable Terminator 33KV (12)</span>
-                      </div>
-                      <div className="flex items-start gap-2">
-                        <span className="text-[#17960b] text-lg mt-0.5">•</span>
-                        <span className="text-sm font-medium text-gray-800">Industrial Electrician (25)</span>
-                      </div>
-                      <div className="flex items-start gap-2">
-                        <span className="text-[#17960b] text-lg mt-0.5">•</span>
-                        <span className="text-sm font-medium text-gray-800">Instrument Technician (25)</span>
-                      </div>
-                      <div className="flex items-start gap-2">
-                        <span className="text-[#17960b] text-lg mt-0.5">•</span>
-                        <span className="text-sm font-medium text-gray-800">Instrument Fitter (25)</span>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="grid md:grid-cols-2 gap-6 mb-6">
-                    <div>
-                      <h3 className="text-lg font-semibold text-[#17960b] mb-3">Highlights:</h3>
-                      <ul className="space-y-2 text-sm sm:text-base text-gray-700">
-                        <li className="flex items-start gap-2">
-                          <span className="text-[#17960b] mt-1">✓</span>
-                          <span>Long term employment</span>
-                        </li>
-                        <li className="flex items-start gap-2">
-                          <span className="text-[#17960b] mt-1">✓</span>
-                          <span>Salary package will be best in the industry</span>
-                        </li>
-                        <li className="flex items-start gap-2">
-                          <span className="text-red-500 mt-1 font-bold">✓</span>
-                          <span className="font-semibold">NO PLACEMENT FEE</span>
-                        </li>
-                      </ul>
-                    </div>
-                    
-                    <div>
-                      <h3 className="text-lg font-semibold text-[#17960b] mb-3">Requirements:</h3>
-                      <ul className="space-y-2 text-sm sm:text-base text-gray-700">
-                        <li className="flex items-start gap-2">
-                          <span className="text-[#101828] mt-1">•</span>
-                          <span>At least 5 years experience in oil & gas industry</span>
-                        </li>
-                        <li className="flex items-start gap-2">
-                          <span className="text-[#101828] mt-1">•</span>
-                          <span>Petrochemical plant experience required</span>
-                        </li>
-                        <li className="flex items-start gap-2">
-                          <span className="text-[#101828] mt-1">•</span>
-                          <span>Collaborate easily with co-workers</span>
-                        </li>
-                      </ul>
-                    </div>
-                  </div>
-
-                  <div className="bg-gray-50 rounded-lg p-4 mb-6">
-                    <p className="text-sm text-gray-700 mb-2">
-                      <span className="font-semibold text-red-500">Tentative Face-to-Face Interview Schedule:</span>
-                    </p>
-                    <p className="text-sm text-[#101828] font-semibold">
-                      3rd Week of January 2026
-                    </p>
-                  </div>
-
-                  <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
-                    <div>
-                      <p className="text-sm text-gray-600 mb-2">Contact Details:</p>
-                      <div className="space-y-1 text-sm">
-                        <p className="font-semibold text-[#101828]">CP# 09171499075 / 09658309775</p>
-                        <p className="text-[#17960b]">landbasecv1@gmail.com</p>
-                      </div>
-                    </div>
-                    
-                    <div className="flex flex-col sm:flex-row gap-3">
-                      <button
-                        onClick={() => setShowGulfAsiaPosterModal(true)}
-                        className="bg-[#ffca1a] hover:bg-[#e6b617] text-[#101828] px-6 py-3 rounded-lg font-semibold transition-colors shadow-md hover:shadow-lg flex items-center justify-center gap-2"
-                        >
-                        <span>View Full Details</span>
-                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                        </svg>
-                      </button>
-                      <button
-                        onClick={onNavigateToPositions}
-                        className="bg-[#17960b] hover:bg-[#148509] text-white px-6 py-3 rounded-lg font-semibold transition-colors shadow-md hover:shadow-lg flex items-center justify-center gap-2"
-                        >
-                        <span>View All Positions</span>
-                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                        </svg>
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Loading state */}
+          {/* Regular Positions */}
           {loading && (
             <div className="flex items-center justify-center py-16">
               <div className="text-center">
                 <svg className="w-10 h-10 animate-spin text-[#17960b] mx-auto mb-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
                 </svg>
                 <p className="text-gray-600 font-medium">Loading available positions...</p>
               </div>
             </div>
           )}
-          
-          {/* Error state */}
+
           {error && !loading && (
             <div className="text-center py-12">
               <p className="text-red-500 mb-4">{error}</p>
-              <button
-                onClick={fetchJobs}
-                className="bg-[#17960b] text-white px-6 py-2 rounded-lg hover:bg-[#0d5e06] transition-colors"
-              >
+              <button onClick={fetchJobs} className="bg-[#17960b] text-white px-6 py-2 rounded-lg hover:bg-[#0d5e06] transition-colors">
                 Try Again
               </button>
             </div>
           )}
 
-        {!loading && !error && (
-        <>
-          {/* Search Results Header */}
-          {(searchQuery || locationQuery || isSearching || activeFilters.length > 0) && (
-            <div id="job-results" className="mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-              <div>
-                <h2 className="text-lg md:text-xl font-semibold text-gray-900 mb-1">
-                  Search Results
-                </h2>
-                <p className="text-sm md:text-base text-gray-600">
-                  Found {filteredJobs.length} {filteredJobs.length === 1 ? 'job' : 'jobs'}
-                  {searchQuery && ` matching "${searchQuery}"`}
-                  {locationQuery && ` in ${locationQuery}`}
-                </p>
-              </div>
-              <button
-                onClick={handleClearFilters}
-                className="flex items-center gap-2 px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg text-sm transition-colors self-start sm:self-auto"
-              >
-                <X className="w-4 h-4" />
-                Clear Filters
-              </button>
-            </div>
-          )}
-
-          {/* No Results Message */}
-          {filteredJobs.length === 0 && (searchQuery || locationQuery || activeFilters.length > 0) && (
-            <div className="text-center py-12">
-              <div className="w-16 h-16 mx-auto mb-4 bg-gray-100 rounded-full flex items-center justify-center">
-                <Search className="w-8 h-8 text-gray-400" />
-              </div>
-              <h3 className="text-lg font-semibold text-gray-900 mb-2">No Jobs Found</h3>
-              <p className="text-gray-600 mb-6">
-                We couldn't find any jobs matching your search criteria.
-                <br />
-                Try adjusting your filters or search terms.
-              </p>
-              <button
-                onClick={handleClearFilters}
-                className="bg-[#17960b] hover:bg-[#17960b]/90 text-white px-6 py-2 rounded-lg transition-colors"
-              >
-                View All Jobs
-              </button>
-            </div>
-          )}
-
-          {/* Job Cards Grid */}
-          {filteredJobs.length > 0 && (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5 md:gap-6">
-              {filteredJobs.map((job) => (
-                <div
-                  key={job.id}
-                  className="bg-white border-[0.8px] border-[#e5e7eb] rounded-[14px] p-[0.8px] hover:shadow-lg transition-shadow touch-manipulation"
-                >
-                  <div className="p-4 md:p-6">
-                    {/* Job Title */}
-                    <h3 className="text-[16px] font-normal leading-[24px] text-[#101828] mb-2">
-                      {job.title}
-                    </h3>
-
-                    {/* Company */}
-                    <p className="text-[14px] md:text-[16px] font-normal leading-[20px] md:leading-[24px] text-[#4a5565] mb-3 md:mb-4 pb-3 md:pb-4 border-b border-[#f3f4f6]">
-                      {job.company}
+          {!loading && !error && (
+            <>
+              {(searchQuery || locationQuery || isSearching || activeFilters.length > 0) && (
+                <div id="job-results" className="mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                  <div>
+                    <h2 className="text-lg md:text-xl font-semibold text-gray-900 mb-1">Search Results</h2>
+                    <p className="text-sm md:text-base text-gray-600">
+                      Found {filteredJobs.length} {filteredJobs.length === 1 ? 'job' : 'jobs'}
+                      {searchQuery && ` matching "${searchQuery}"`}
+                      {locationQuery && ` in ${locationQuery}`}
                     </p>
-
-                    {/* Salary */}
-                    <div className="flex items-center gap-2 mb-2">
-                      <div className="w-4 h-4 shrink-0">
-                        <svg className="block size-full" fill="none" preserveAspectRatio="none" viewBox="0 0 16 16">
-                          <g>
-                            <path d={svgPaths.p2f7a47f0} stroke="#364153" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.33333" />
-                          </g>
-                        </svg>
-                      </div>
-                      <span className="text-[14px] md:text-[16px] font-normal leading-[20px] md:leading-[24px] text-[#364153]">
-                        {job.salary}
-                      </span>
-                    </div>
-
-                    {/* Location */}
-                    <div className="flex items-center gap-2 mb-3 md:mb-4 pb-3 md:pb-4 border-b border-[#f3f4f6]">
-                      <div className="w-4 h-4 shrink-0">
-                        <svg className="block size-full" fill="none" preserveAspectRatio="none" viewBox="0 0 16 16">
-                          <g>
-                            <path d={svgPaths.p9696100} stroke="#364153" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.33333" />
-                            <path d={svgPaths.p30b23180} stroke="#364153" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.33333" />
-                          </g>
-                        </svg>
-                      </div>
-                      <span className="text-[14px] md:text-[16px] font-normal leading-[20px] md:leading-[24px] text-[#364153]">
-                        {job.location}
-                      </span>
-                    </div>
-
-                    {/* Footer */}
-                    <div className="pt-3 md:pt-4 flex items-center justify-between text-[14px] md:text-[16px] mb-4">
-                      <span className="font-normal leading-[20px] md:leading-[24px] text-[#4a5565]">
-                        {job.vacancies} Vacancies
-                      </span>
-                      <span className="font-normal leading-[20px] md:leading-[24px] text-[#6a7282]">
-                        {job.posted}
-                      </span>
-                    </div>
-
-                    {/* Action Buttons */}
-                    <div className="flex flex-col gap-2">
-                      <button
-                        onClick={() => setSelectedJob(job)}
-                        className="w-full bg-[#ffca1a] hover:bg-[#e6b617] text-[#101828] px-4 py-2.5 rounded-lg text-[14px] font-medium transition-colors"
-                      >
-                        View Full Details
-                      </button>
-                      <div className="flex gap-2">
-                        <button
-                          onClick={() => handleApplyNow(job)}
-                          className="flex-1 bg-[#17960b] hover:bg-[#158d0a] text-white px-4 py-2.5 rounded-lg text-[14px] font-medium transition-colors"
-                        >
-                          Apply Now
-                        </button>
-                        <button
-                          onClick={() => handleToggleSave(job.id)}
-                          className={`px-4 py-2.5 rounded-lg border transition-colors ${
-                            savedIds.includes(job.id)
-                              ? 'bg-[#ffca1a] border-[#ffca1a] text-[#101828]'
-                              : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50'
-                          }`}
-                          title={savedIds.includes(job.id) ? 'Saved' : 'Save Job'}
-                        >
-                          <Bookmark
-                            className={`w-5 h-5 ${
-                              savedIds.includes(job.id) ? 'fill-current' : ''
-                            }`}
-                          />
-                        </button>
-                      </div>
-                    </div>
                   </div>
+                  <button onClick={handleClearFilters} className="flex items-center gap-2 px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg text-sm transition-colors self-start sm:self-auto">
+                    <X className="w-4 h-4" />
+                    Clear Filters
+                  </button>
                 </div>
-              ))}
-            </div>
+              )}
+
+              {filteredJobs.length === 0 && (searchQuery || locationQuery || activeFilters.length > 0) && (
+                <div className="text-center py-12">
+                  <div className="w-16 h-16 mx-auto mb-4 bg-gray-100 rounded-full flex items-center justify-center">
+                    <Search className="w-8 h-8 text-gray-400" />
+                  </div>
+                  <h3 className="text-lg font-semibold text-gray-900 mb-2">No Jobs Found</h3>
+                  <p className="text-gray-600 mb-6">We couldn't find any jobs matching your search criteria.<br />Try adjusting your filters or search terms.</p>
+                  <button onClick={handleClearFilters} className="bg-[#17960b] hover:bg-[#17960b]/90 text-white px-6 py-2 rounded-lg transition-colors">
+                    View All Jobs
+                  </button>
+                </div>
+              )}
+
+              {filteredJobs.length > 0 && (
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5 md:gap-6">
+                  {filteredJobs.map((job) => (
+                    <div key={job.id} className="bg-white border-[0.8px] border-[#e5e7eb] rounded-[14px] p-[0.8px] hover:shadow-lg transition-shadow touch-manipulation">
+                      <div className="p-4 md:p-6">
+                        <h3 className="text-[16px] font-normal leading-[24px] text-[#101828] mb-2">{job.title}</h3>
+                        <p className="text-[14px] md:text-[16px] font-normal leading-[20px] md:leading-[24px] text-[#4a5565] mb-3 md:mb-4 pb-3 md:pb-4 border-b border-[#f3f4f6]">{job.company}</p>
+                        <div className="flex items-center gap-2 mb-2">
+                          <div className="w-4 h-4 shrink-0">
+                            <svg className="block size-full" fill="none" preserveAspectRatio="none" viewBox="0 0 16 16">
+                              <g><path d={svgPaths.p2f7a47f0} stroke="#364153" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.33333" /></g>
+                            </svg>
+                          </div>
+                          <span className="text-[14px] md:text-[16px] font-normal leading-[20px] md:leading-[24px] text-[#364153]">{job.salary}</span>
+                        </div>
+                        <div className="flex items-center gap-2 mb-3 md:mb-4 pb-3 md:pb-4 border-b border-[#f3f4f6]">
+                          <div className="w-4 h-4 shrink-0">
+                            <svg className="block size-full" fill="none" preserveAspectRatio="none" viewBox="0 0 16 16">
+                              <g>
+                                <path d={svgPaths.p9696100} stroke="#364153" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.33333" />
+                                <path d={svgPaths.p30b23180} stroke="#364153" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.33333" />
+                              </g>
+                            </svg>
+                          </div>
+                          <span className="text-[14px] md:text-[16px] font-normal leading-[20px] md:leading-[24px] text-[#364153]">{job.location}</span>
+                        </div>
+                        <div className="pt-3 md:pt-4 flex items-center justify-between text-[14px] md:text-[16px] mb-4">
+                          <span className="font-normal leading-[20px] md:leading-[24px] text-[#4a5565]">{job.vacancies} Vacancies</span>
+                          <span className="font-normal leading-[20px] md:leading-[24px] text-[#6a7282]">{job.posted}</span>
+                        </div>
+                        <div className="flex flex-col gap-2">
+                          <button onClick={() => setSelectedJob(job)} className="w-full bg-[#ffca1a] hover:bg-[#e6b617] text-[#101828] px-4 py-2.5 rounded-lg text-[14px] font-medium transition-colors">
+                            View Full Details
+                          </button>
+                          <div className="flex gap-2">
+                            <button onClick={() => handleApplyNow(job)} className="flex-1 bg-[#17960b] hover:bg-[#158d0a] text-white px-4 py-2.5 rounded-lg text-[14px] font-medium transition-colors">
+                              Apply Now
+                            </button>
+                            <button
+                              onClick={() => handleToggleSave(job.id)}
+                              className={`px-4 py-2.5 rounded-lg border transition-colors ${savedIds.includes(job.id) ? 'bg-[#ffca1a] border-[#ffca1a] text-[#101828]' : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50'}`}
+                              title={savedIds.includes(job.id) ? 'Saved' : 'Save Job'}
+                            >
+                              <Bookmark className={`w-5 h-5 ${savedIds.includes(job.id) ? 'fill-current' : ''}`} />
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </>
           )}
-        </>
-        )}
         </div>
       </div>
-    
-      {/* Poster Modal */}
-      {showPosterModal && (
-        <div 
+
+      {/* Featured Order Poster Modal */}
+      {selectedFeaturedOrder && (
+        <div
           className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 p-4"
-          onClick={() => setShowPosterModal(false)}
+          onClick={() => setSelectedFeaturedOrder(null)}
         >
-          <div 
+          <div
             className="bg-white rounded-lg w-full max-w-5xl max-h-[95vh] overflow-auto"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex justify-between items-center z-10">
-              <h2 className="text-xl font-bold text-gray-900">QCON - Qatar Job Opportunities</h2>
+              <h2 className="text-xl font-bold text-gray-900">
+                {selectedFeaturedOrder.company_name} — Job Opportunities
+              </h2>
               <button
-                onClick={() => setShowPosterModal(false)}
+                onClick={() => setSelectedFeaturedOrder(null)}
                 className="text-gray-500 hover:text-gray-700 hover:bg-gray-100 p-2 rounded-full transition-colors"
               >
                 <X className="w-6 h-6" />
               </button>
             </div>
             <div className="p-6">
-              <img
-                src={featuredJobPoster}
-                alt="QCON Featured Job Poster"
-                className="w-full h-auto rounded-lg shadow-lg"
-              />
+              {getFeaturedImageUrl(selectedFeaturedOrder.jo_image_url) ? (
+                <img
+                  src={getFeaturedImageUrl(selectedFeaturedOrder.jo_image_url)!}
+                  alt={`${selectedFeaturedOrder.company_name} Job Poster`}
+                  className="w-full h-auto rounded-lg shadow-lg"
+                />
+              ) : (
+                <p className="text-gray-500 text-center py-12">No poster image available.</p>
+              )}
             </div>
           </div>
         </div>
       )}
 
-      {/* Gulf Asia Poster Modal */}
-      {showGulfAsiaPosterModal && (
-        <div 
-          className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 p-4"
-          onClick={() => setShowGulfAsiaPosterModal(false)}
-        >
-          <div 
-            className="bg-white rounded-lg w-full max-w-5xl max-h-[95vh] overflow-auto"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex justify-between items-center z-10">
-              <h2 className="text-xl font-bold text-gray-900">Gulf Asia Contracting - Qatar Job Opportunities</h2>
-              <button
-                onClick={() => setShowGulfAsiaPosterModal(false)}
-                className="text-gray-500 hover:text-gray-700 hover:bg-gray-100 p-2 rounded-full transition-colors"
-              >
-                <X className="w-6 h-6" />
-              </button>
-            </div>
-            <div className="p-6">
-              <img
-                src={gulfAsiaPoster}
-                alt="Gulf Asia Contracting Job Poster"
-                className="w-full h-auto rounded-lg shadow-lg"
-              />
-            </div>
-          </div>
-        </div>
-      )}
-      
       {/* Job Details Modal */}
       {selectedJob && (
         <div
@@ -1274,20 +758,12 @@ export function JobPortal({ onApply, onSaveJob, savedJobIds = [], onNavigateToPr
           >
             <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex justify-between items-center z-10">
               <h2 className="text-xl font-bold text-gray-900">{selectedJob.title}</h2>
-              <button
-                onClick={() => setSelectedJob(null)}
-                className="text-gray-500 hover:text-gray-700 hover:bg-gray-100 p-2 rounded-full transition-colors"
-              >
+              <button onClick={() => setSelectedJob(null)} className="text-gray-500 hover:text-gray-700 hover:bg-gray-100 p-2 rounded-full transition-colors">
                 <X className="w-6 h-6" />
               </button>
             </div>
             <div className="p-6">
-              {/* Company */}
-              <p className="text-lg text-gray-600 font-medium mb-4">
-                {selectedJob.company}
-              </p>
-
-              {/* Job Details Grid */}
+              <p className="text-lg text-gray-600 font-medium mb-4">{selectedJob.company}</p>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-6">
                 <div className="flex items-center gap-2 text-gray-700">
                   <MapPin className="w-5 h-5 text-[#17960b]" />
@@ -1308,46 +784,35 @@ export function JobPortal({ onApply, onSaveJob, savedJobIds = [], onNavigateToPr
                   <span className="text-sm font-medium">Posted {selectedJob.posted}</span>
                 </div>
               </div>
-
-              {/* Job Type Badge */}
-              {!selectedJob.placementFee && (
-                <div className="mb-6">
-                  <span className="inline-block bg-red-500 text-white px-3 py-1 rounded-full text-sm font-semibold">
-                    NO PLACEMENT FEE
-                  </span>
-                </div>
-              )}
-
-              {/* Job Description */}
               {selectedJob.description && (
                 <div className="mb-6">
-                  <h3 className="text-lg font-bold text-gray-900 mb-3">
-                    Job Description
-                  </h3>
-                  <p className="text-gray-700 leading-relaxed">
-                    {selectedJob.description}
-                  </p>
+                  <h3 className="text-lg font-bold text-gray-900 mb-3">Job Description</h3>
+                  <p className="text-gray-700 leading-relaxed">{selectedJob.description}</p>
                 </div>
               )}
-
-              {/* Action Buttons */}
+              {selectedJob.requirements?.length > 0 && (
+                <div className="mb-6">
+                  <h3 className="text-lg font-bold text-gray-900 mb-3">Requirements</h3>
+                  <ul className="space-y-2">
+                    {selectedJob.requirements.map((req: string, i: number) => (
+                      <li key={i} className="flex items-start gap-2 text-gray-700 text-sm">
+                        <span className="text-[#17960b] mt-1">•</span>
+                        <span>{req}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
               <div className="flex flex-col sm:flex-row gap-3">
                 <button
                   onClick={() => handleToggleSave(selectedJob.id)}
-                  className={`flex-1 flex items-center justify-center gap-2 px-6 py-3 rounded-lg border font-semibold transition-colors ${
-                    savedIds.includes(selectedJob.id)
-                      ? 'bg-[#ffca1a] border-[#ffca1a] text-[#101828]'
-                      : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50'
-                  }`}
+                  className={`flex-1 flex items-center justify-center gap-2 px-6 py-3 rounded-lg border font-semibold transition-colors ${savedIds.includes(selectedJob.id) ? 'bg-[#ffca1a] border-[#ffca1a] text-[#101828]' : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50'}`}
                 >
                   <Bookmark className={`w-5 h-5 ${savedIds.includes(selectedJob.id) ? 'fill-current' : ''}`} />
                   {savedIds.includes(selectedJob.id) ? 'Saved' : 'Save Job'}
                 </button>
                 <button
-                  onClick={() => {
-                    handleApplyNow(selectedJob);
-                    setSelectedJob(null);
-                  }}
+                  onClick={() => { handleApplyNow(selectedJob); setSelectedJob(null); }}
                   className="flex-1 bg-[#17960b] hover:bg-[#158d0a] text-white px-6 py-3 rounded-lg font-semibold transition-colors"
                 >
                   Apply Now
