@@ -765,119 +765,155 @@ export function ResumeBuilder({ onResumeSubmit }: ResumeBuilderProps = {}) {
   };
 
 
-const handleDownloadDOCX = async () => {
-  try {
-    const makeHeading = (text: string) =>
-      new Paragraph({
-        text,
-        heading: HeadingLevel.HEADING_2,
-        border: { bottom: { style: BorderStyle.SINGLE, size: 6, color: '101828' } },
-        spacing: { after: 120 },
-      }); 
-
-    const makeParagraph = (text: string, bold = false, size = 20) =>
-      new Paragraph({
-        children: [new TextRun({ text, bold, size })],
-        spacing: { after: 60 },
-      });
-
-    const sections: Paragraph[] = [];
-
-    // Header
-    sections.push(
-      new Paragraph({
-        children: [
-          new TextRun({
-            text: `${personalInfo.firstName} ${personalInfo.middleInitial} ${personalInfo.lastName}${personalInfo.suffix ? ` ${personalInfo.suffix}` : ''}`.trim(),
-            bold: true,
-            size: 32,
-            allCaps: true,
-          }),
-        ],
-        spacing: { after: 80 },
-      }),
-      makeParagraph(
-        `${personalInfo.city} ${personalInfo.province}, ${personalInfo.country} | ${personalInfo.email} | ${personalInfo.phone}`
-      ),
-    );
-
-    // Work Experience
-    if (workExperiences.some(e => e.position)) {
-      sections.push(makeHeading('WORK EXPERIENCE'));
-      workExperiences.filter(e => e.position).forEach((exp) => {
-        sections.push(
-          new Paragraph({
-            children: [new TextRun({ text: exp.position, bold: true, size: 22 })],
-            spacing: { after: 40 },
-          }),
-          makeParagraph(`${exp.company}, ${exp.city}, ${exp.stateProvince}`),
-          makeParagraph(
-            `${formatDateToMonthYear(exp.startDate)} - ${exp.current ? 'Present' : formatDateToMonthYear(exp.endDate)}`
-          ),
-        );
-        if (exp.description) {
-          exp.description.split('\n').filter(Boolean).forEach((line) => {
-            sections.push(makeParagraph(line));
-          });
+  const handleDownloadDOCX = async () => {
+    try {
+      const makeHeading = (text: string) =>
+        new Paragraph({
+          text,
+          heading: HeadingLevel.HEADING_2,
+          border: { bottom: { style: BorderStyle.SINGLE, size: 6, color: '101828' } },
+          spacing: { before: 240, after: 120 },
+        });
+  
+      const makeParagraph = (text: string, bold = false, size = 20) =>
+        new Paragraph({
+          children: [new TextRun({ text, bold, size, color: '4a5565' })],
+          spacing: { after: 60 },
+        });
+  
+      const sections: Paragraph[] = [];
+  
+      // Header
+      sections.push(
+        new Paragraph({
+          children: [
+            new TextRun({
+              text: `${personalInfo.firstName} ${personalInfo.middleInitial} ${personalInfo.lastName}${personalInfo.suffix ? ` ${personalInfo.suffix}` : ''}`.trim(),
+              bold: true,
+              size: 36,
+              allCaps: true,
+              color: '101828',
+            }),
+          ],
+          spacing: { after: 60 },
+        }),
+        new Paragraph({
+          children: [
+            new TextRun({
+              text: [
+                personalInfo.city && personalInfo.province ? `${personalInfo.city}, ${personalInfo.province}` : personalInfo.city || personalInfo.province,
+                personalInfo.country,
+                personalInfo.email,
+                personalInfo.phone,
+              ].filter(Boolean).join(' | '),
+              size: 18,
+              color: '4a5565',
+            }),
+          ],
+          spacing: { after: 80 },
+        }),
+      );
+  
+      // Work Experience
+      if (workExperiences.some(e => e.position)) {
+        sections.push(makeHeading('WORK EXPERIENCE'));
+        workExperiences.filter(e => e.position).forEach((exp) => {
+          sections.push(
+            new Paragraph({
+              children: [
+                new TextRun({ text: exp.position, bold: true, size: 22, color: '101828' }),
+                new TextRun({ text: `\t${formatDateToMonthYear(exp.startDate)} – ${exp.current ? 'Present' : formatDateToMonthYear(exp.endDate)}`, size: 18, color: '4a5565' }),
+              ],
+              tabStops: [{ type: 'right', position: 9026 }],
+              spacing: { after: 40 },
+            }),
+            makeParagraph([exp.company, exp.city, exp.stateProvince].filter(Boolean).join(', ')),
+          );
+          if (exp.description) {
+            exp.description.split('\n').filter(Boolean).forEach((line) => {
+              sections.push(makeParagraph(line));
+            });
+          }
+          sections.push(new Paragraph({ text: '', spacing: { after: 80 } }));
+        });
+      }
+  
+      // Certifications
+      if (certifications.some(c => c.name)) {
+        sections.push(makeHeading('CERTIFICATIONS'));
+        certifications.filter(c => c.name).forEach((cert) => {
+          sections.push(
+            new Paragraph({ children: [new TextRun({ text: cert.name, bold: true, size: 22, color: '101828' })], spacing: { after: 40 } }),
+            ...(cert.organization ? [makeParagraph(cert.organization)] : []),
+            ...(cert.dateIssued   ? [makeParagraph(`Date Issued: ${formatDateToMonthYear(cert.dateIssued)}`)] : []),
+            new Paragraph({ text: '', spacing: { after: 80 } }),
+          );
+        });
+      }
+  
+      // Education
+      if (education.some(e => e.degree)) {
+        sections.push(makeHeading('EDUCATION'));
+        education.filter(e => e.degree).forEach((edu) => {
+          sections.push(
+            new Paragraph({
+              children: [
+                new TextRun({ text: edu.degree, bold: true, size: 22, color: '101828' }),
+                new TextRun({ text: `\t${formatDateToMonthYear(edu.startDate)} – ${formatDateToMonthYear(edu.endDate)}`, size: 18, color: '4a5565' }),
+              ],
+              tabStops: [{ type: 'right', position: 9026 }],
+              spacing: { after: 40 },
+            }),
+            makeParagraph([edu.school, edu.city, edu.stateProvince].filter(Boolean).join(', ')),
+            ...(edu.achievements ? [makeParagraph(edu.achievements)] : []),
+            new Paragraph({ text: '', spacing: { after: 80 } }),
+          );
+        });
+      }
+  
+      // Skills
+      if (skills.some(s => s.name)) {
+        sections.push(makeHeading('SKILLS'));
+        const technical = skills.filter(s => s.category === 'technical' && s.name);
+        const soft      = skills.filter(s => s.category === 'soft' && s.name);
+        if (technical.length) {
+          sections.push(new Paragraph({ children: [new TextRun({ text: 'Technical Skills:', bold: true, size: 20, color: '101828' })], spacing: { after: 40 } }));
+          technical.forEach(s => sections.push(makeParagraph(`• ${s.name}${s.level ? ` - ${s.level}` : ''}`)));
         }
-        sections.push(new Paragraph({ text: '', spacing: { after: 80 } }));
-      });
-    }
-
-    // Certifications
-    if (certifications.some(c => c.name)) {
-      sections.push(makeHeading('CERTIFICATIONS'));
-      certifications.filter(c => c.name).forEach((cert) => {
-        sections.push(
-          new Paragraph({ children: [new TextRun({ text: cert.name, bold: true, size: 22 })], spacing: { after: 40 } }),
-          makeParagraph(cert.organization),
-          cert.dateIssued ? makeParagraph(`Date Issued: ${formatDateToMonthYear(cert.dateIssued)}`) : new Paragraph({}),
-          new Paragraph({ text: '', spacing: { after: 80 } }),
-        );
-      });
-    }
-
-    // Education
-    if (education.some(e => e.degree)) {
-      sections.push(makeHeading('EDUCATION'));
-      education.filter(e => e.degree).forEach((edu) => {
-        sections.push(
-          new Paragraph({ children: [new TextRun({ text: edu.degree, bold: true, size: 22 })], spacing: { after: 40 } }),
-          makeParagraph(`${edu.school}, ${edu.city}, ${edu.stateProvince}`),
-          makeParagraph(`${formatDateToMonthYear(edu.startDate)} - ${formatDateToMonthYear(edu.endDate)}`),
-          edu.achievements ? makeParagraph(edu.achievements) : new Paragraph({}),
-          new Paragraph({ text: '', spacing: { after: 80 } }),
-        );
-      });
-    }
-
-    // Skills
-    if (skills.some(s => s.name)) {
-      sections.push(makeHeading('SKILLS'));
-      const technical = skills.filter(s => s.category === 'technical' && s.name);
-      const soft      = skills.filter(s => s.category === 'soft' && s.name);
-      if (technical.length) {
-        sections.push(makeParagraph('Technical Skills:', true));
-        technical.forEach(s => sections.push(makeParagraph(`• ${s.name} - ${s.level}`)));
+        if (soft.length) {
+          sections.push(new Paragraph({ children: [new TextRun({ text: 'Soft Skills:', bold: true, size: 20, color: '101828' })], spacing: { before: 120, after: 40 } }));
+          soft.forEach(s => sections.push(makeParagraph(`• ${s.name}${s.level ? ` - ${s.level}` : ''}`)));
+        }
       }
-      if (soft.length) {
-        sections.push(makeParagraph('Soft Skills:', true));
-        soft.forEach(s => sections.push(makeParagraph(`• ${s.name} - ${s.level}`)));
-      }
+  
+      const doc = new Document({
+        sections: [{
+          properties: {
+            page: {
+              size: {
+                width:  11906, // A4 width in twips  (210mm)
+                height: 16838, // A4 height in twips (297mm)
+              },
+              margin: {
+                top:    1020, // 18mm
+                bottom: 1020,
+                left:   1134, // 20mm
+                right:  1134,
+              },
+            },
+          },
+          children: sections,
+        }],
+      });
+  
+      const blob = await Packer.toBlob(doc);
+      const fileName = `${personalInfo.firstName || 'Resume'}_${personalInfo.lastName || ''}.docx`.trim();
+      saveAs(blob, fileName);
+    } catch (err) {
+      console.error('DOCX generation failed:', err);
+      alert('Failed to generate Word document.');
     }
-
-    const doc = new Document({
-      sections: [{ children: sections }],
-    });
-
-    const blob = await Packer.toBlob(doc);
-    const fileName = `${personalInfo.firstName || 'Resume'}_${personalInfo.lastName || ''}.docx`.trim();
-    saveAs(blob, fileName);
-  } catch (err) {
-    console.error('DOCX generation failed:', err);
-    alert('Failed to generate Word document.');
-  }
-};
+  };
   
   const handleNext = () => {
     if (currentStep < 5) setCurrentStep(currentStep + 1);
@@ -1889,10 +1925,10 @@ const handleDownloadDOCX = async () => {
                             <FileText className="w-4 h-4 text-[#17960b]" />
                             Download as PDF
                           </button>
-                          {/*<button onClick={handleDownloadDOCX} className="w-full text-left px-4 py-2.5 hover:bg-gray-50 text-sm text-[#364153] transition-colors flex items-center gap-3">
+                          <button onClick={handleDownloadDOCX} className="w-full text-left px-4 py-2.5 hover:bg-gray-50 text-sm text-[#364153] transition-colors flex items-center gap-3">
                             <FileText className="w-4 h-4 text-[#17960b]" />
                             Download as DOC
-                          </button> */}
+                          </button>
                         </div>
                       </>
                     )}
