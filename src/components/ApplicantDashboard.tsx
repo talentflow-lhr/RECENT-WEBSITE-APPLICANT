@@ -60,7 +60,7 @@ export function ApplicantDashboard({
 }: ApplicantDashboardProps) {
   const { account } = useAuth();
   const applicantName = "John";
-  const overallScore = 78;
+  //const overallScore = 78;
   const applicationStatus = "Under Review";
 
   const [resumeData, setResumeData] = useState<any>(null);
@@ -217,7 +217,9 @@ export function ApplicantDashboard({
       },
     };
   
-    const found = rubric[category]?.ranges.find(([min, max]) => score >= min && score <= max);
+    const found = rubric[category]?.ranges.find(([min, max]) => 
+      score >= min && (max === 100 ? score <= max : score <= max)
+    );
     return found ? { grade: found[2], label: found[3] } : { grade: 'D', label: 'Needs Improvement' };
   };
 
@@ -473,7 +475,7 @@ export function ApplicantDashboard({
         {isLoggedIn && (() => {
           const overall = getOverallLabel(overallScore);
           const isHigh = overallScore >= 60;
-          const isMid  = overallScore >= 30 && overallScore < 60;
+          //const isMid  = overallScore >= 30 && overallScore < 60;
           return (
             <Card className="mb-6 md:mb-8 border-[#17960b]/20">
               <CardContent className="p-4 sm:p-6 md:p-8">
