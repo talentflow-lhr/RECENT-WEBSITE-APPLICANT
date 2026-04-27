@@ -156,7 +156,15 @@ export function ApplicantDashboard({
   const getScoreColor = (score: number) => {
     if (score >= 80) return 'text-[#17960b]';
     if (score >= 60) return 'text-[#ffca1a]';
+    if (score >= 40) return 'text-orange-500';
     return 'text-red-500';
+  };
+
+  const getScoreBorderColor = (score: number) => {
+    if (score >= 80) return 'border-[#17960b]';
+    if (score >= 60) return 'border-[#ffca1a]';
+    if (score >=40) return 'border-orange-500';
+    return 'border-red-500';
   };
 
   const getScoreGrade = (score: number) => {
@@ -415,7 +423,7 @@ export function ApplicantDashboard({
                       <div className="flex items-start justify-between mb-3">
                         <div>
                           <h3 className="text-gray-900 mb-1">{skill.name}</h3>
-                          <Badge className={getScoreColor(skill.score)}>
+                          <Badge className={`${getScoreColor(skill.score)} !bg-transparent border ${getScoreBorderColor(skill.score)}`}>
                             {skill.status}
                           </Badge>
                         </div>
