@@ -1217,7 +1217,6 @@ const handleDownloadDOCX = async () => {
 
   // ─── RETURN: full multi-step form UI ────────────────────────────────────────
   return (
-    return (
   <>
     {/* Hidden capture target for PDF */}
     <div
