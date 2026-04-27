@@ -278,9 +278,19 @@ export function JobPortal({ onApply, onSaveJob, savedJobIds = [], onNavigateToPr
   // Get a public URL for the image stored in the Supabase storage bucket
   const getFeaturedFileUrl = (rawUrl: string | null): { url: string; isPdf: boolean } | null => {
     if (!rawUrl) return null;
-    const url = rawUrl.startsWith('http')
-      ? rawUrl
-      : supabase.storage.from('job-images').getPublicUrl(rawUrl).data?.publicUrl ?? null;
+    
+    console.log('jo_image_url raw value:', rawUrl); // 👈 check this in console
+  
+    let url: string;
+    if (rawUrl.startsWith('http')) {
+      url = rawUrl; // already a full URL
+    } else {
+      // treat as storage path
+      const { data } = supabase.storage.from('job-images').getPublicUrl(rawUrl);
+      console.log('generated public url:', data?.publicUrl); // 👈 check this too
+      url = data?.publicUrl ?? '';
+    }
+  
     if (!url) return null;
     const isPdf = rawUrl.toLowerCase().endsWith('.pdf');
     return { url, isPdf };
