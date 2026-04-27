@@ -755,7 +755,7 @@ export function ResumeBuilder({ onResumeSubmit }: ResumeBuilderProps = {}) {
     document.head.appendChild(printStyle);
 
     const originalTitle = document.title;
-    document.title = `${personalInfo.firstName || 'Resume'}_${personalInfo.lastName || ''}`.trim();
+    document.title = `Talentflow_Resume | landbaseph.com`.trim();
 
     window.print();
   
