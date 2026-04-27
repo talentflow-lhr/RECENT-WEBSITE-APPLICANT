@@ -716,10 +716,9 @@ export function ResumeBuilder({ onResumeSubmit }: ResumeBuilderProps = {}) {
     `;
   
     const headingStyle = `font-size:16px;font-weight:600;color:#101828;text-transform:uppercase;border-bottom:2px solid #101828;padding-bottom:6px;margin:0 0 12px;letter-spacing:0.05em;`;
-  
-    // Returns just the inner div — the iframe wrapper adds the full HTML document
+
     return `
-      <div style="padding:64px;background:#ffffff;width:794px;box-sizing:border-box;">
+      <div style="padding:48px 64px;background:#ffffff;width:794px;min-height:1123px;box-sizing:border-box;">
         <div style="margin-bottom:24px;">
           <h1 style="font-size:22px;font-weight:600;color:#101828;text-transform:uppercase;letter-spacing:0.05em;margin:0 0 6px;">
             ${personalInfo.firstName} ${personalInfo.middleInitial} ${personalInfo.lastName}${personalInfo.suffix ? ` ${personalInfo.suffix}` : ''}
@@ -728,10 +727,10 @@ export function ResumeBuilder({ onResumeSubmit }: ResumeBuilderProps = {}) {
             ${personalInfo.city} ${personalInfo.province}, ${personalInfo.country} | ${personalInfo.email} | ${personalInfo.phone}
           </p>
         </div>
-        ${expHTML ? `<div style="margin-bottom:24px;"><h2 style="${headingStyle}">Work Experience</h2>${expHTML}</div>` : ''}
-        ${certHTML ? `<div style="margin-bottom:24px;"><h2 style="${headingStyle}">Certifications</h2>${certHTML}</div>` : ''}
-        ${eduHTML ? `<div style="margin-bottom:24px;"><h2 style="${headingStyle}">Education</h2>${eduHTML}</div>` : ''}
-        <div style="margin-bottom:24px;"><h2 style="${headingStyle}">Skills</h2>${skillsHTML}</div>
+        ${expHTML ? `<div style="margin-bottom:28px;"><h2 style="${headingStyle}">Work Experience</h2>${expHTML}</div>` : ''}
+        ${certHTML ? `<div style="margin-bottom:28px;"><h2 style="${headingStyle}">Certifications</h2>${certHTML}</div>` : ''}
+        ${eduHTML ? `<div style="margin-bottom:28px;"><h2 style="${headingStyle}">Education</h2>${eduHTML}</div>` : ''}
+        <div style="margin-bottom:28px;"><h2 style="${headingStyle}">Skills</h2>${skillsHTML}</div>
       </div>
     `;
   };
@@ -745,7 +744,6 @@ export function ResumeBuilder({ onResumeSubmit }: ResumeBuilderProps = {}) {
       const iframeDoc = iframe.contentDocument || iframe.contentWindow?.document;
       if (!iframeDoc) throw new Error('Could not access iframe document');
   
-      // Build a fully self-contained HTML document — no parent CSS (no oklch) leaks in
       iframeDoc.open();
       iframeDoc.write(`<!DOCTYPE html>
   <html>
@@ -762,7 +760,6 @@ export function ResumeBuilder({ onResumeSubmit }: ResumeBuilderProps = {}) {
   </html>`);
       iframeDoc.close();
   
-      // Wait for iframe to render
       await new Promise(resolve => setTimeout(resolve, 600));
   
       const targetEl = iframeDoc.body.firstElementChild as HTMLElement;
@@ -779,20 +776,42 @@ export function ResumeBuilder({ onResumeSubmit }: ResumeBuilderProps = {}) {
       document.body.removeChild(iframe);
   
       const imgData = canvas.toDataURL('image/png');
-      const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
   
-      const pdfWidth  = pdf.internal.pageSize.getWidth();
-      const pdfHeight = pdf.internal.pageSize.getHeight();
-      const ratio     = pdfWidth / canvas.width;
-      const scaledH   = canvas.height * ratio;
+      // A4 dimensions in mm
+      const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+      const pdfWidth  = 210;   // A4 width in mm
+      const pdfHeight = 297;   // A4 height in mm
+      const marginMm  = 10;    // page break margin in mm
+  
+      // Scale canvas pixels to A4 mm
+      const ratio    = pdfWidth / canvas.width;
+      const scaledH  = canvas.height * ratio;
+  
+      // Usable height per page with top/bottom margin buffer
+      const pageContentH = pdfHeight - (marginMm * 2);
   
       let yOffset = 0;
       let remaining = scaledH;
+      let isFirstPage = true;
+  
       while (remaining > 0) {
-        if (yOffset > 0) pdf.addPage();
-        pdf.addImage(imgData, 'PNG', 0, -yOffset, pdfWidth, scaledH);
-        yOffset += pdfHeight;
-        remaining -= pdfHeight;
+        if (!isFirstPage) pdf.addPage();
+  
+        const topMargin  = isFirstPage ? 0 : marginMm;
+        const sliceH     = Math.min(pageContentH, remaining);
+  
+        pdf.addImage(
+          imgData,
+          'PNG',
+          0,                          // x
+          topMargin - yOffset,        // y (shifts image up as we paginate)
+          pdfWidth,
+          scaledH
+        );
+  
+        yOffset   += sliceH;
+        remaining -= sliceH;
+        isFirstPage = false;
       }
   
       const fileName = `${personalInfo.firstName || 'Resume'}_${personalInfo.lastName || ''}.pdf`.trim();
