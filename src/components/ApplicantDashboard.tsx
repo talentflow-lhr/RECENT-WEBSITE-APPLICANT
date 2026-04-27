@@ -65,6 +65,8 @@ export function ApplicantDashboard({
 
   const [resumeData, setResumeData] = useState<any>(null);
   const [loadingSkills, setLoadingSkills] = useState(true);
+  const [aiImprovements, setAiImprovements] = useState<any[]>([]);
+  const [loadingImprovements, setLoadingImprovements] = useState(false);
 
   const fetchLatest = async () => {
     const { data } = await supabase
@@ -84,6 +86,27 @@ export function ApplicantDashboard({
       .limit(1)
       .maybeSingle();
     return data;
+  };
+
+  const fetchImprovements = async () => {
+    if (!account?.applicant_id) return;
+    setLoadingImprovements(true);
+    try {
+      const res = await fetch(
+        'https://onssghljexptdladoekw.supabase.co/functions/v1/targeted_resume_comments',
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ applicant_id: account.applicant_id }),
+        }
+      );
+      const data = await res.json();
+      if (data.improvements) setAiImprovements(data.improvements);
+    } catch (err) {
+      console.error('Failed to fetch improvements:', err);
+    } finally {
+      setLoadingImprovements(false);
+    }
   };
 
   useEffect(() => {
@@ -110,49 +133,12 @@ export function ApplicantDashboard({
 
       setResumeData(data);
       setLoadingSkills(false);
+      fetchImprovements();
     }
 
     loadResumeScores();
   }, [account?.applicant_id]);
 
-  const recommendedCompanies: CompanyRecommendation[] = [
-    {
-      name: "Global Tech Solutions",
-      matchScore: 92,
-      industry: "Technology",
-      openPositions: 12,
-      salaryRange: "PHP 45,000-65,000",
-      location: "Singapore",
-      reason: "Your technical skills and education align perfectly with their requirements"
-    },
-    {
-      name: "Healthcare International",
-      matchScore: 88,
-      industry: "Healthcare",
-      openPositions: 8,
-      salaryRange: "PHP 50,000-70,000",
-      location: "Dubai, UAE",
-      reason: "Strong match based on your communication skills and certifications"
-    },
-    {
-      name: "Hospitality Excellence Group",
-      matchScore: 85,
-      industry: "Hospitality",
-      openPositions: 15,
-      salaryRange: "PHP 42,000-58,000",
-      location: "Doha, Qatar",
-      reason: "Your customer service experience matches their current needs"
-    },
-    {
-      name: "Premier Global Recruitment",
-      matchScore: 82,
-      industry: "Food & Beverage",
-      openPositions: 20,
-      salaryRange: "PHP 48,000-62,000",
-      location: "Croatia",
-      reason: "Multiple positions available that match your skill set"
-    }
-  ];
 
   const getScoreColor = (score: number) => {
     if (score >= 80) return 'text-[#17960b]';
@@ -598,25 +584,39 @@ export function ApplicantDashboard({
                 <AlertCircle className="w-6 h-6 text-[#ffca1a]" />
                 <h2 className="text-gray-900">Areas for Improvement</h2>
               </div>
-
+            
               <Card className="border-gray-200">
                 <CardContent className="p-6">
-                  <div className="space-y-4">
-                    {areasForImprovement.map((area, index) => (
-                      <div
-                        key={index}
-                        className="flex flex-col sm:flex-row sm:items-start gap-4 pb-4 border-b border-gray-200 last:border-0 last:pb-0"
-                      >
-                        <Badge className={`${getImpactColor(area.impact)} shrink-0`}>
-                          {area.impact} Impact
-                        </Badge>
-                        <div className="flex-1">
-                          <h3 className="text-gray-900 mb-2">{area.area}</h3>
-                          <p className="text-gray-600">{area.suggestion}</p>
+                  {loadingImprovements ? (
+                    <div className="flex items-center justify-center py-8">
+                      <svg className="w-8 h-8 animate-spin text-[#17960b]" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                      </svg>
+                      <span className="ml-3 text-gray-500 text-sm">Analyzing your resume...</span>
+                    </div>
+                  ) : aiImprovements.length > 0 ? (
+                    <div className="space-y-4">
+                      {aiImprovements.map((area, index) => (
+                        <div
+                          key={index}
+                          className="flex flex-col sm:flex-row sm:items-start gap-4 pb-4 border-b border-gray-200 last:border-0 last:pb-0"
+                        >
+                          <Badge className={`${getImpactColor(area.impact)} shrink-0`}>
+                            {area.impact} Impact
+                          </Badge>
+                          <div className="flex-1">
+                            <h3 className="text-gray-900 mb-2">{area.title}</h3>
+                            <p className="text-gray-600">{area.detail}</p>
+                          </div>
                         </div>
-                      </div>
-                    ))}
-                  </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-gray-500 text-sm text-center py-6">
+                      No improvement suggestions available at the moment.
+                    </p>
+                  )}
                 </CardContent>
               </Card>
             </div>
