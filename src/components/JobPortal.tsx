@@ -292,7 +292,7 @@ export function JobPortal({ onApply, onSaveJob, savedJobIds = [], onNavigateToPr
     }
   
     if (!url) return null;
-    const isPdf = rawUrl.toLowerCase().endsWith('.pdf');
+    const isPdf = rawUrl.toLowerCase().split('?')[0].endsWith('.pdf');
     return { url, isPdf };
   };
 
