@@ -2,11 +2,15 @@ import { useState } from "react";
 import svgPaths from "../imports/svg-65zdysylli";
 import imgImageLandbase from "../imports/Landbase-removebg-preview.png";
 import { Download, Upload, CheckCircle2, ArrowLeft } from "lucide-react";
+import { useAuth } from "./AuthPass";
+import { supabase } from "./supabaseClient";
+import { useEffect } from "react";
 
 interface JobData {
   title: string;
   company: string;
   location: string;
+  position_id?: number;
 }
 
 interface JobApplicationProps {
@@ -29,15 +33,84 @@ export function JobApplication({
     null,
   );
 
-  const handleSubmit = () => {
-    if (useExistingResume) {
-      alert(
-        "Application submitted using your saved resume!",
-      );
-    } else {
-      alert(
-        "Application submitted with new resume!",
-      );
+  const { account } = useAuth();
+
+  const [personalInfo, setPersonalInfo] = useState({
+    fullName: '',
+    email: '',
+    phone: '',
+  });
+  const [resumeData, setResumeData] = useState<any>(null);
+  const [submitting, setSubmitting] = useState(false);
+  const [submitted, setSubmitted] = useState(false);
+  
+  useEffect(() => {
+    if (!account?.applicant_id) return;
+  
+    const loadApplicantData = async () => {
+      // Load applicant profile
+      const { data: applicant } = await supabase
+        .from('t_applicant')
+        .select('app_first_name, app_middle_name, app_last_name, app_email, app_present_tele_mobile')
+        .eq('applicant_id', account.applicant_id)
+        .maybeSingle();
+  
+      if (applicant) {
+        const fullName = [
+          applicant.app_first_name,
+          applicant.app_middle_name,
+          applicant.app_last_name,
+        ].filter(Boolean).join(' ');
+  
+        setPersonalInfo({
+          fullName,
+          email: applicant.app_email || '',
+          phone: applicant.app_present_tele_mobile || '',
+        });
+      }
+  
+      // Load latest resume
+      const { data: resume } = await supabase
+        .from('t_resume')
+        .select('resume_id, res_last_updated, res_pdf_link')
+        .eq('applicant_id', account.applicant_id)
+        .order('res_last_updated', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+  
+      if (resume) setResumeData(resume);
+    };
+  
+    loadApplicantData();
+  }, [account?.applicant_id]);
+
+  const handleSubmit = async () => {
+    if (!account?.applicant_id || !jobData?.position_id) {
+      alert('Missing application data. Please try again.');
+      return;
+    }
+    if (!useExistingResume || !resumeData?.resume_id) {
+      alert('Please check "Use My Saved Resume" to submit your application.');
+      return;
+    }
+  
+    setSubmitting(true);
+    try {
+      const { error } = await supabase
+        .from('t_applications')
+        .insert({
+          position_id: jobData.position_id,
+          applicant_id: account.applicant_id,
+          resume_id: resumeData.resume_id,
+          application_current_status: 'Pending',
+        });
+  
+      if (error) throw error;
+      setSubmitted(true);
+    } catch (err: any) {
+      alert(`Failed to submit application: ${err.message}`);
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -48,6 +121,19 @@ export function JobApplication({
       setResumeFile(e.target.files[0]);
     }
   };
+
+  if (submitted) return (
+    <div className="min-h-screen bg-[#f9fafb] flex items-center justify-center p-4">
+      <div className="bg-white rounded-xl shadow p-8 max-w-md w-full text-center">
+        <CheckCircle2 className="w-16 h-16 text-[#17960b] mx-auto mb-4" />
+        <h2 className="text-xl font-bold text-[#101828] mb-2">Application Submitted!</h2>
+        <p className="text-gray-600 mb-6">Your application for <strong>{jobData?.title}</strong> has been received.</p>
+        <button onClick={onBack} className="bg-[#17960b] text-white px-6 py-2 rounded-lg hover:bg-[#148509] transition-colors">
+          Back to Jobs
+        </button>
+      </div>
+    </div>
+  );
 
   return (
     <div className="min-h-screen bg-[#f9fafb] pt-4 sm:pt-6 md:pt-8 px-4 sm:px-6 md:px-8 pb-8">
@@ -173,13 +259,20 @@ export function JobApplication({
                       Submit your resume that you built in the
                       Resume Builder
                     </p>
-                    {useExistingResume && (
+                    {useExistingResume && resumeData && (
                       <div className="mt-3 bg-white rounded-lg p-3 border border-[#e5e7eb]">
                         <p className="text-[13px] text-[#17960b] font-medium">
-                          ✓ Resume saved on: February 8, 2026
+                          ✓ Resume saved on: {new Date(resumeData.res_last_updated).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
                         </p>
                         <p className="text-[12px] text-[#6a7282] mt-1">
-                          Naomi_Cuerdo_Resume.pdf
+                          {personalInfo.fullName.replace(/\s+/g, '_')}_Resume.pdf
+                        </p>
+                      </div>
+                    )}
+                    {useExistingResume && !resumeData && (
+                      <div className="mt-3 bg-red-50 rounded-lg p-3 border border-red-200">
+                        <p className="text-[13px] text-red-500 font-medium">
+                          No saved resume found. Please build your resume first.
                         </p>
                       </div>
                     )}
@@ -191,9 +284,10 @@ export function JobApplication({
             {/* Submit Button */}
             <button
               onClick={handleSubmit}
-              className="w-full bg-[#17960b] hover:bg-[#148509] text-white px-8 py-3 rounded-lg text-[16px] font-medium transition-colors"
+              disabled={submitting}
+              className="w-full bg-[#17960b] hover:bg-[#148509] disabled:opacity-60 text-white px-8 py-3 rounded-lg text-[16px] font-medium transition-colors"
             >
-              Submit Application
+              {submitting ? 'Submitting...' : 'Submit Application'}
             </button>
 
             {/* Footer */}
