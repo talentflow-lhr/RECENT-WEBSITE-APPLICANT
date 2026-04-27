@@ -663,7 +663,7 @@ export function ResumeBuilder({ onResumeSubmit }: ResumeBuilderProps = {}) {
     const expHTML = workExperiences.filter(e => e.position).map(exp => `
       <div style="margin-bottom:16px;">
         <div style="display:flex;justify-content:space-between;align-items:flex-start;">
-          <div>
+          <div style="flex:1;">
             <p style="font-weight:600;font-size:15px;color:#101828;margin:0 0 2px;">${exp.position}</p>
             <p style="font-size:13px;color:#4a5565;margin:0;">${exp.company}, ${exp.city}, ${exp.stateProvince}</p>
           </div>
@@ -686,7 +686,7 @@ export function ResumeBuilder({ onResumeSubmit }: ResumeBuilderProps = {}) {
     const eduHTML = education.filter(e => e.degree).map(edu => `
       <div style="margin-bottom:16px;">
         <div style="display:flex;justify-content:space-between;align-items:flex-start;">
-          <div>
+          <div style="flex:1;">
             <p style="font-weight:600;font-size:15px;color:#101828;margin:0 0 2px;">${edu.degree}</p>
             <p style="font-size:13px;color:#4a5565;margin:0;">${edu.school}, ${edu.city}, ${edu.stateProvince}</p>
           </div>
@@ -715,10 +715,9 @@ export function ResumeBuilder({ onResumeSubmit }: ResumeBuilderProps = {}) {
       ` : ''}
     `;
   
-    const sectionStyle = `margin-bottom:24px;`;
-    const headingStyle = `font-size:16px;font-weight:600;color:#101828;text-transform:uppercase;
-      border-bottom:2px solid #101828;padding-bottom:6px;margin:0 0 12px;letter-spacing:0.05em;`;
+    const headingStyle = `font-size:16px;font-weight:600;color:#101828;text-transform:uppercase;border-bottom:2px solid #101828;padding-bottom:6px;margin:0 0 12px;letter-spacing:0.05em;`;
   
+    // Returns just the inner div — the iframe wrapper adds the full HTML document
     return `
       <div style="padding:64px;background:#ffffff;width:794px;box-sizing:border-box;">
         <div style="margin-bottom:24px;">
@@ -729,63 +728,80 @@ export function ResumeBuilder({ onResumeSubmit }: ResumeBuilderProps = {}) {
             ${personalInfo.city} ${personalInfo.province}, ${personalInfo.country} | ${personalInfo.email} | ${personalInfo.phone}
           </p>
         </div>
-        ${expHTML ? `<div style="${sectionStyle}"><h2 style="${headingStyle}">Work Experience</h2>${expHTML}</div>` : ''}
-        ${certHTML ? `<div style="${sectionStyle}"><h2 style="${headingStyle}">Certifications</h2>${certHTML}</div>` : ''}
-        ${eduHTML ? `<div style="${sectionStyle}"><h2 style="${headingStyle}">Education</h2>${eduHTML}</div>` : ''}
-        <div style="${sectionStyle}"><h2 style="${headingStyle}">Skills</h2>${skillsHTML}</div>
+        ${expHTML ? `<div style="margin-bottom:24px;"><h2 style="${headingStyle}">Work Experience</h2>${expHTML}</div>` : ''}
+        ${certHTML ? `<div style="margin-bottom:24px;"><h2 style="${headingStyle}">Certifications</h2>${certHTML}</div>` : ''}
+        ${eduHTML ? `<div style="margin-bottom:24px;"><h2 style="${headingStyle}">Education</h2>${eduHTML}</div>` : ''}
+        <div style="margin-bottom:24px;"><h2 style="${headingStyle}">Skills</h2>${skillsHTML}</div>
       </div>
     `;
   };
   
   const handleDownloadPDF = async () => {
-  try {
-    // Create an off-screen container with safe colors (no oklch)
-    const container = document.createElement('div');
-    container.style.cssText = `
-      position: fixed;
-      top: -9999px;
-      left: -9999px;
-      width: 794px;
-      background: white;
-      font-family: ui-sans-serif, system-ui, sans-serif;
-    `;
-
-    container.innerHTML = buildResumeHTML();
-    document.body.appendChild(container);
-
-    const canvas = await html2canvas(container, {
-      scale: 2,
-      useCORS: true,
-      backgroundColor: '#ffffff',
-      logging: false,
-    });
-
-    document.body.removeChild(container);
-
-    const imgData = canvas.toDataURL('image/png');
-    const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
-
-    const pdfWidth  = pdf.internal.pageSize.getWidth();
-    const pdfHeight = pdf.internal.pageSize.getHeight();
-    const ratio     = pdfWidth / canvas.width;
-    const scaledHeight = canvas.height * ratio;
-
-    let yOffset = 0;
-    let remaining = scaledHeight;
-    while (remaining > 0) {
-      if (yOffset > 0) pdf.addPage();
-      pdf.addImage(imgData, 'PNG', 0, -(yOffset), pdfWidth, scaledHeight);
-      yOffset += pdfHeight;
-      remaining -= pdfHeight;
+    try {
+      const iframe = document.createElement('iframe');
+      iframe.style.cssText = 'position:fixed;top:-9999px;left:-9999px;width:794px;height:1123px;border:none;visibility:hidden;';
+      document.body.appendChild(iframe);
+  
+      const iframeDoc = iframe.contentDocument || iframe.contentWindow?.document;
+      if (!iframeDoc) throw new Error('Could not access iframe document');
+  
+      // Build a fully self-contained HTML document — no parent CSS (no oklch) leaks in
+      iframeDoc.open();
+      iframeDoc.write(`<!DOCTYPE html>
+  <html>
+  <head>
+  <meta charset="utf-8"/>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { background: #ffffff; font-family: ui-sans-serif, system-ui, -apple-system, sans-serif; }
+  </style>
+  </head>
+  <body>
+  ${buildResumeHTML()}
+  </body>
+  </html>`);
+      iframeDoc.close();
+  
+      // Wait for iframe to render
+      await new Promise(resolve => setTimeout(resolve, 600));
+  
+      const targetEl = iframeDoc.body.firstElementChild as HTMLElement;
+      if (!targetEl) throw new Error('No content in iframe');
+  
+      const canvas = await html2canvas(targetEl, {
+        scale: 2,
+        useCORS: true,
+        backgroundColor: '#ffffff',
+        logging: false,
+        windowWidth: 794,
+      });
+  
+      document.body.removeChild(iframe);
+  
+      const imgData = canvas.toDataURL('image/png');
+      const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+  
+      const pdfWidth  = pdf.internal.pageSize.getWidth();
+      const pdfHeight = pdf.internal.pageSize.getHeight();
+      const ratio     = pdfWidth / canvas.width;
+      const scaledH   = canvas.height * ratio;
+  
+      let yOffset = 0;
+      let remaining = scaledH;
+      while (remaining > 0) {
+        if (yOffset > 0) pdf.addPage();
+        pdf.addImage(imgData, 'PNG', 0, -yOffset, pdfWidth, scaledH);
+        yOffset += pdfHeight;
+        remaining -= pdfHeight;
+      }
+  
+      const fileName = `${personalInfo.firstName || 'Resume'}_${personalInfo.lastName || ''}.pdf`.trim();
+      pdf.save(fileName);
+    } catch (err) {
+      console.error('PDF generation failed:', err);
+      alert('Failed to generate PDF.');
     }
-
-    const fileName = `${personalInfo.firstName || 'Resume'}_${personalInfo.lastName || ''}.pdf`.trim();
-    pdf.save(fileName);
-  } catch (err) {
-    console.error('PDF generation failed:', err);
-    alert('Failed to generate PDF.');
-  }
-};
+  };
 
 
 const handleDownloadDOCX = async () => {
