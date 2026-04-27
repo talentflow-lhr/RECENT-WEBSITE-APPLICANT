@@ -1,12 +1,12 @@
 import { useState, useRef, useEffect } from 'react';
 import svgPaths from '../imports/svg-65zdysylli';
 import imgImageLandbase from '../imports/Landbase-removebg-preview.png';
-import html2canvas from 'html2canvas';
+import { Download, Plus, Trash2, Eye, EyeOff, Upload, X, FileText, Check, ChevronDown, Star, Briefcase, MapPin, ArrowRight, Calendar } from 'lucide-react';
+import jsPDF from 'jspdf';
 import { Document, Packer, Paragraph, TextRun, HeadingLevel, AlignmentType, BorderStyle } from 'docx';
 import { saveAs } from 'file-saver';
 import { supabase } from "./supabaseClient";
 import { useAuth } from "./AuthPass";
-
 
 import * as pdfjsLib from 'pdfjs-dist';
 import workerSrc from 'pdfjs-dist/build/pdf.worker.mjs?url';
@@ -2026,10 +2026,9 @@ const handleDownloadDOCX = async () => {
                 ref={previewContainerRef}
                 className="bg-gray-200 rounded-b-lg shadow-sm"
                 style={{ height: 'calc(100vh - 12rem)', overflowY: 'auto' }}
-                >
+              >
                 <div className="flex justify-center py-4">
-                  <div
-                    ref={resumePreviewRef}
+                  <div   
                     style={{
                       width: '210mm',
                       minHeight: '297mm',
@@ -2039,14 +2038,14 @@ const handleDownloadDOCX = async () => {
                       transformOrigin: 'top center',
                       marginBottom: `${(previewScale - 1) * 297}mm`,
                     }}
-                    >
-                  <ResumePreview
-                    personalInfo={personalInfo}
-                    workExperiences={workExperiences}
-                    certifications={certifications}
-                    education={education}
-                    skills={skills}
-                    previewScale={1}
+                  >
+                    <ResumePreview
+                      personalInfo={personalInfo}
+                      workExperiences={workExperiences}
+                      certifications={certifications}
+                      education={education}
+                      skills={skills}
+                      previewScale={1}
                     />
                   </div>
                 </div>
