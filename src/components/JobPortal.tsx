@@ -276,13 +276,14 @@ export function JobPortal({ onApply, onSaveJob, savedJobIds = [], onNavigateToPr
   };
 
   // Get a public URL for the image stored in the Supabase storage bucket
-  const getFeaturedImageUrl = (rawUrl: string | null): string | null => {
+  const getFeaturedFileUrl = (rawUrl: string | null): { url: string; isPdf: boolean } | null => {
     if (!rawUrl) return null;
-    // If already a full URL, return as-is
-    if (rawUrl.startsWith('http')) return rawUrl;
-    // Otherwise treat as a storage path and generate a public URL
-    const { data } = supabase.storage.from('job-images').getPublicUrl(rawUrl);
-    return data?.publicUrl ?? null;
+    const url = rawUrl.startsWith('http')
+      ? rawUrl
+      : supabase.storage.from('job-images').getPublicUrl(rawUrl).data?.publicUrl ?? null;
+    if (!url) return null;
+    const isPdf = rawUrl.toLowerCase().endsWith('.pdf');
+    return { url, isPdf };
   };
 
   // ─── Filter logic ─────────────────────────────────────────────────────────────
@@ -346,7 +347,7 @@ export function JobPortal({ onApply, onSaveJob, savedJobIds = [], onNavigateToPr
 
   // ─── Featured Banner Card ─────────────────────────────────────────────────────
   const FeaturedBannerCard = ({ order }: { order: FeaturedJobOrder }) => {
-    const imageUrl = getFeaturedImageUrl(order.jo_image_url);
+    //const imageUrl = getFeaturedImageUrl(order.jo_image_url);
     const isNoFee = !order.placement_fee || order.placement_fee === 0;
 
     return (
@@ -452,7 +453,7 @@ export function JobPortal({ onApply, onSaveJob, savedJobIds = [], onNavigateToPr
                 </div>
                 <div className="flex flex-col sm:flex-row gap-3">
                   {/* View Full Details — shows poster image if available */}
-                  {imageUrl && (
+                  {getFeaturedFileUrl(order.jo_image_url) && (
                     <button
                       onClick={() => setSelectedFeaturedOrder(order)}
                       className="bg-[#ffca1a] hover:bg-[#e6b617] text-[#101828] px-6 py-3 rounded-lg font-semibold transition-colors shadow-md hover:shadow-lg flex items-center justify-center gap-2"
@@ -732,15 +733,25 @@ export function JobPortal({ onApply, onSaveJob, savedJobIds = [], onNavigateToPr
               </button>
             </div>
             <div className="p-6">
-              {getFeaturedImageUrl(selectedFeaturedOrder.jo_image_url) ? (
-                <img
-                  src={getFeaturedImageUrl(selectedFeaturedOrder.jo_image_url)!}
-                  alt={`${selectedFeaturedOrder.company_name} Job Poster`}
-                  className="w-full h-auto rounded-lg shadow-lg"
-                />
-              ) : (
-                <p className="text-gray-500 text-center py-12">No poster image available.</p>
-              )}
+              {(() => {
+                const file = getFeaturedFileUrl(selectedFeaturedOrder.jo_image_url);
+                if (!file) return <p className="text-gray-500 text-center py-12">No file available.</p>;
+                if (file.isPdf) return (
+                  <iframe
+                    src={file.url}
+                    className="w-full rounded-lg shadow-lg"
+                    style={{ height: '80vh' }}
+                    title={`${selectedFeaturedOrder.company_name} Job Poster`}
+                  />
+                );
+                return (
+                  <img
+                    src={file.url}
+                    alt={`${selectedFeaturedOrder.company_name} Job Poster`}
+                    className="w-full h-auto rounded-lg shadow-lg"
+                  />
+                );
+              })()}
             </div>
           </div>
         </div>
