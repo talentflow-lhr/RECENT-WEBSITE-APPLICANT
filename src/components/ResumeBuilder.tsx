@@ -661,11 +661,22 @@ export function ResumeBuilder({ onResumeSubmit }: ResumeBuilderProps = {}) {
     try {
       const { toPng } = await import('html-to-image');
   
+      // Temporarily reveal for capture
+      pdfCaptureRef.current.style.opacity = '1';
+      pdfCaptureRef.current.style.zIndex = '9999';
+  
+      // Small delay to let the browser finish painting
+      await new Promise((resolve) => setTimeout(resolve, 100));
+  
       const imgData = await toPng(pdfCaptureRef.current, {
         width: 794,
         height: 1123,
         pixelRatio: 2,
       });
+  
+      // Hide again immediately after capture
+      pdfCaptureRef.current.style.opacity = '0';
+      pdfCaptureRef.current.style.zIndex = '-1';
   
       const pdf = new jsPDF({
         orientation: 'portrait',
@@ -678,6 +689,11 @@ export function ResumeBuilder({ onResumeSubmit }: ResumeBuilderProps = {}) {
       const fileName = `${personalInfo.firstName || 'Resume'}_${personalInfo.lastName || ''}.pdf`.trim();
       pdf.save(fileName);
     } catch (err) {
+      // Make sure it gets hidden even if capture fails
+      if (pdfCaptureRef.current) {
+        pdfCaptureRef.current.style.opacity = '0';
+        pdfCaptureRef.current.style.zIndex = '-1';
+      }
       console.error('PDF generation failed:', err);
       alert('Failed to generate PDF.');
     }
