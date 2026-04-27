@@ -658,42 +658,59 @@ export function ResumeBuilder({ onResumeSubmit }: ResumeBuilderProps = {}) {
   
   const handleDownloadPDF = async () => {
     if (!pdfCaptureRef.current) return;
+    const el = pdfCaptureRef.current;
     try {
       const { toPng } = await import('html-to-image');
   
-      // Temporarily reveal for capture
-      pdfCaptureRef.current.style.opacity = '1';
-      pdfCaptureRef.current.style.zIndex = '9999';
+      // Reveal for capture
+      el.style.opacity = '1';
+      el.style.zIndex = '9999';
+      await new Promise((r) => setTimeout(r, 150));
   
-      // Small delay to let the browser finish painting
-      await new Promise((resolve) => setTimeout(resolve, 100));
+      // Capture full height at 1:1 — no pixelRatio, no fixed height
+      const imgData = await toPng(el, { width: 794 });
   
-      const imgData = await toPng(pdfCaptureRef.current, {
-        width: 794,
-        height: 1123,
-        pixelRatio: 2,
-      });
+      el.style.opacity = '0';
+      el.style.zIndex = '-1';
   
-      // Hide again immediately after capture
-      pdfCaptureRef.current.style.opacity = '0';
-      pdfCaptureRef.current.style.zIndex = '-1';
+      // Get actual pixel dimensions of the captured image
+      const img = new Image();
+      await new Promise<void>((r) => { img.onload = () => r(); img.src = imgData; });
   
-      const pdf = new jsPDF({
-        orientation: 'portrait',
-        unit: 'mm',
-        format: 'a4',
-      });
+      const A4_W = 210; // mm
+      const A4_H = 297; // mm
   
-      pdf.addImage(imgData, 'PNG', 0, 0, 210, 297);
+      // 794px maps to 210mm, so scale everything from that
+      const mmPerPx   = A4_W / img.width;         // mm per captured pixel
+      const totalHmm  = img.height * mmPerPx;      // total content height in mm
+      const pageHpx   = Math.round(A4_H / mmPerPx); // how many px fit in one A4 page
+      const numPages  = Math.ceil(img.height / pageHpx);
+  
+      const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+  
+      for (let i = 0; i < numPages; i++) {
+        if (i > 0) pdf.addPage('a4', 'portrait');
+  
+        // Slice one page's worth of pixels
+        const sliceCanvas = document.createElement('canvas');
+        sliceCanvas.width  = img.width;
+        sliceCanvas.height = pageHpx;
+        const ctx = sliceCanvas.getContext('2d')!;
+        ctx.fillStyle = 'white';
+        ctx.fillRect(0, 0, sliceCanvas.width, sliceCanvas.height);
+  
+        const srcY = i * pageHpx;
+        const srcH = Math.min(pageHpx, img.height - srcY);
+        ctx.drawImage(img, 0, srcY, img.width, srcH, 0, 0, img.width, srcH);
+  
+        pdf.addImage(sliceCanvas.toDataURL('image/png'), 'PNG', 0, 0, A4_W, A4_H);
+      }
   
       const fileName = `${personalInfo.firstName || 'Resume'}_${personalInfo.lastName || ''}.pdf`.trim();
       pdf.save(fileName);
     } catch (err) {
-      // Make sure it gets hidden even if capture fails
-      if (pdfCaptureRef.current) {
-        pdfCaptureRef.current.style.opacity = '0';
-        pdfCaptureRef.current.style.zIndex = '-1';
-      }
+      el.style.opacity = '0';
+      el.style.zIndex = '-1';
       console.error('PDF generation failed:', err);
       alert('Failed to generate PDF.');
     }
