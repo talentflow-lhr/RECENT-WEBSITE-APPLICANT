@@ -11,6 +11,7 @@ interface JobData {
   company: string;
   location: string;
   position_id?: number;
+  job_fit_score?: number;
 }
 
 interface JobApplicationProps {
@@ -114,7 +115,21 @@ export function JobApplication({
     setSubmitting(true);
       try {
         const dateId = await getDateId();
-      
+
+        const { data: existingApplication } = await supabase
+          .from('t_applications')
+          .select('application_id')
+          .eq('position_id', jobData.position_id)
+          .eq('applicant_id', account.applicant_id)
+          .maybeSingle();
+        
+        if (existingApplication) {
+          alert('You have already applied for this position.');
+          setSubmitting(false);
+          return;
+        }
+        
+        // Fetch resume overall score
         const { data: latestResume } = await supabase
           .from('t_resume')
           .select('res_complete_score')
@@ -122,6 +137,32 @@ export function JobApplication({
           .order('res_last_updated', { ascending: false })
           .limit(1)
           .maybeSingle();
+        
+        // Get job fit score — use existing if from JobsForYou, else call rapid-api
+        let jobFitScore: number | null = jobData.job_fit_score ?? null;
+        
+        if (jobFitScore === null || jobFitScore === undefined) {
+          try {
+            const res = await fetch(
+              'https://onssghljexptdladoekw.supabase.co/functions/v1/rapid-api',
+              {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                  'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+                },
+                body: JSON.stringify({
+                  applicant_id: account.applicant_id,
+                  position_id: jobData.position_id,
+                }),
+              }
+            );
+            const result = await res.json();
+            jobFitScore = result.score ?? null;
+          } catch (err) {
+            console.warn('Could not compute job fit score:', err);
+          }
+        }
         
         const { error } = await supabase
           .from('t_applications')
@@ -134,6 +175,7 @@ export function JobApplication({
             resume_score: latestResume?.res_complete_score
               ? parseFloat(latestResume.res_complete_score)
               : null,
+            job_fit_score: jobFitScore,
           });
       
         if (error) throw error;
