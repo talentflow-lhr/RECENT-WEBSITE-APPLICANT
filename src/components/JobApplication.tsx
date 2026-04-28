@@ -3,7 +3,7 @@ import svgPaths from "../imports/svg-65zdysylli";
 import imgImageLandbase from "../imports/Landbase-removebg-preview.png";
 import { Download, Upload, CheckCircle2, ArrowLeft } from "lucide-react";
 import { useAuth } from "./AuthPass";
-import { supabase, SUPABASE_ANON_KEY } from './supabaseClient';
+import { supabase } from './supabaseClient';
 import { useEffect } from "react";
 
 interface JobData {
@@ -149,7 +149,7 @@ export function JobApplication({
                 method: 'POST',
                 headers: {
                   'Content-Type': 'application/json',
-                  'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+                  'Authorization': `Bearer sb_publishable_F8gFU_y97mT9aGZ-DYs_1Q_IW-Gr9vh`,
                 },
                 body: JSON.stringify({
                   applicant_id: account.applicant_id,
