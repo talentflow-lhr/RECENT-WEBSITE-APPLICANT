@@ -140,16 +140,20 @@ export function JobApplication({
         
         // Get job fit score — use existing if from JobsForYou, else call rapid-api
         let jobFitScore: number | null = jobData.job_fit_score ?? null;
-        
+
         if (jobFitScore === null || jobFitScore === undefined) {
           try {
+            const anonKey = 'paste-your-exact-key-from-supabaseClient-here';
+            console.log('key length:', anonKey.length);
+            console.log('key starts with:', anonKey.substring(0, 20));
+        
             const res = await fetch(
               'https://onssghljexptdladoekw.supabase.co/functions/v1/rapid-api',
               {
                 method: 'POST',
                 headers: {
                   'Content-Type': 'application/json',
-                  'Authorization': `Bearer sb_publishable_F8gFU_y97mT9aGZ-DYs_1Q_IW-Gr9vh`,
+                  'Authorization': `Bearer ${anonKey}`,
                 },
                 body: JSON.stringify({
                   applicant_id: account.applicant_id,
@@ -157,7 +161,9 @@ export function JobApplication({
                 }),
               }
             );
+            console.log('rapid-api status:', res.status);
             const result = await res.json();
+            console.log('rapid-api result:', result);
             jobFitScore = result.score ?? null;
           } catch (err) {
             console.warn('Could not compute job fit score:', err);
