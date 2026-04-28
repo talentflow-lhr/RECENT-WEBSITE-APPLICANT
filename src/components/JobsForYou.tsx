@@ -418,7 +418,7 @@ export function JobsForYou({ onApply, onSaveJob, savedJobIds = [], onNavigateToR
                               View Full Details
                             </Button>
                             <div className="flex gap-3">
-                              <<Button
+                              <Button
                                 disabled={appliedIds.includes(job.position_id)}
                                 className={`flex-1 font-semibold ${
                                   appliedIds.includes(job.position_id)
