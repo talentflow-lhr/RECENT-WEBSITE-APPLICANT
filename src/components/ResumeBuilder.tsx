@@ -765,7 +765,7 @@ export function ResumeBuilder({ onResumeSubmit }: ResumeBuilderProps = {}) {
   };
 
 
-  const handleDownloadDOCX = async () => {
+  const generateResumeDOCX = async () => {
     try {
       const makeHeading = (text: string) =>
         new Paragraph({
@@ -774,15 +774,15 @@ export function ResumeBuilder({ onResumeSubmit }: ResumeBuilderProps = {}) {
           border: { bottom: { style: BorderStyle.SINGLE, size: 6, color: '101828' } },
           spacing: { before: 240, after: 120 },
         });
-  
+
       const makeParagraph = (text: string, bold = false, size = 20) =>
         new Paragraph({
           children: [new TextRun({ text, bold, size, color: '4a5565' })],
           spacing: { after: 60 },
         });
-  
+
       const sections: Paragraph[] = [];
-  
+
       // Header
       sections.push(
         new Paragraph({
@@ -813,7 +813,7 @@ export function ResumeBuilder({ onResumeSubmit }: ResumeBuilderProps = {}) {
           spacing: { after: 80 },
         }),
       );
-  
+
       // Work Experience
       if (workExperiences.some(e => e.position)) {
         sections.push(makeHeading('WORK EXPERIENCE'));
@@ -837,7 +837,7 @@ export function ResumeBuilder({ onResumeSubmit }: ResumeBuilderProps = {}) {
           sections.push(new Paragraph({ text: '', spacing: { after: 80 } }));
         });
       }
-  
+
       // Certifications
       if (certifications.some(c => c.name)) {
         sections.push(makeHeading('CERTIFICATIONS'));
@@ -850,7 +850,7 @@ export function ResumeBuilder({ onResumeSubmit }: ResumeBuilderProps = {}) {
           );
         });
       }
-  
+
       // Education
       if (education.some(e => e.degree)) {
         sections.push(makeHeading('EDUCATION'));
@@ -870,7 +870,7 @@ export function ResumeBuilder({ onResumeSubmit }: ResumeBuilderProps = {}) {
           );
         });
       }
-  
+
       // Skills
       if (skills.some(s => s.name)) {
         sections.push(makeHeading('SKILLS'));
@@ -885,7 +885,7 @@ export function ResumeBuilder({ onResumeSubmit }: ResumeBuilderProps = {}) {
           soft.forEach(s => sections.push(makeParagraph(`• ${s.name}${s.level ? ` - ${s.level}` : ''}`)));
         }
       }
-  
+
       const doc = new Document({
         sections: [{
           properties: {
@@ -905,14 +905,21 @@ export function ResumeBuilder({ onResumeSubmit }: ResumeBuilderProps = {}) {
           children: sections,
         }],
       });
-  
+
       const blob = await Packer.toBlob(doc);
       const fileName = `${personalInfo.firstName || 'Resume'}_${personalInfo.lastName || ''}.docx`.trim();
-      saveAs(blob, fileName);
+
+      return [blob, fileName];
+
     } catch (err) {
       console.error('DOCX generation failed:', err);
       alert('Failed to generate Word document.');
     }
+  };
+
+  const handleDownloadDOCX = async () => {
+    const [blob, fileName] = await generateResumeDOCX();
+    saveAs(blob, fileName);
   };
   
   const handleNext = () => {
@@ -930,6 +937,18 @@ export function ResumeBuilder({ onResumeSubmit }: ResumeBuilderProps = {}) {
       .upload(filePath, file, { upsert: true });
     if (error) throw error;
     const { data } = supabase.storage.from('certificates').getPublicUrl(filePath);
+    return data.publicUrl;
+  };
+
+  const uploadResume = async()=> {
+    const [blob, fileName] = await generateResumeDOCX();
+
+    const filePath = `resumes/${fileName}`
+    const { error } = await supabase.storage
+      .from('resumes_pdf')
+      .upload(filePath, blob, { upsert: true });
+    if (error) throw error;
+    const { data } = supabase.storage.from('resumes_pdf').getPublicUrl(filePath);
     return data.publicUrl;
   };
 
@@ -989,7 +1008,9 @@ export function ResumeBuilder({ onResumeSubmit }: ResumeBuilderProps = {}) {
       const [dob_year, dob_month, dob_day] = personalInfo.dateOfBirth
         ? personalInfo.dateOfBirth.split('-').map(Number)
         : [null, null, null];
-  
+
+      const resumeURL = await uploadResume()
+
       const { data: existingResume } = await supabase
         .from('t_resume')
         .select('resume_id')
@@ -1026,6 +1047,7 @@ export function ResumeBuilder({ onResumeSubmit }: ResumeBuilderProps = {}) {
           p_dob_month:        dob_month,
           p_dob_day:          dob_day,
           p_highest_edu:      highestEducation,
+          p_res_link:         resumeURL,
           p_education:        sanitizedEducation,
           p_work_experiences: sanitizedWorkExperiences,
           p_skills:           skills,
@@ -1054,6 +1076,7 @@ export function ResumeBuilder({ onResumeSubmit }: ResumeBuilderProps = {}) {
           p_dob_month:        dob_month,
           p_dob_day:          dob_day,
           p_highest_edu:      highestEducation,
+          p_res_link:         resumeURL,
           p_education:        sanitizedEducation,
           p_work_experiences: sanitizedWorkExperiences,
           p_skills:           skills,
