@@ -22,6 +22,7 @@ interface JobData {
   company: string;
   location: string;
   position_id: number;
+  job_fit_score?: number;
 }
 
 interface SavedJobData {
