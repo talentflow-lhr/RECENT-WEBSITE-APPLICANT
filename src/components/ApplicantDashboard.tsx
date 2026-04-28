@@ -272,14 +272,8 @@ export function ApplicantDashboard({
     },
   ] : [];
 
-  const overallScore = resumeData ? (
-    parseFloat(resumeData.res_stability_score ?? '0') * 0.30 +
-    parseFloat(resumeData.res_exp_score ?? '0')        * 0.25 +
-    parseFloat(resumeData.res_skills_score ?? '0')     * 0.25 +
-    parseFloat(resumeData.res_desc_score ?? '0')       * 0.15 +
-    parseFloat(resumeData.res_completeness_score ?? '0') * 0.05
-  ) : 0;
-
+  const overallScore = resumeData ? parseFloat(resumeData.res_complete_score ?? '0') : 0;
+  
   const getOverallLabel = (score: number): { grade: string; label: string; color: string; message: string; sub: string } => {
     if (score >= 75) return {
       grade: 'A+', label: 'Excellent',
