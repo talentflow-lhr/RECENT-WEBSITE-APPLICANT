@@ -3,7 +3,7 @@ import svgPaths from "../imports/svg-65zdysylli";
 import imgImageLandbase from "../imports/Landbase-removebg-preview.png";
 import { Download, Upload, CheckCircle2, ArrowLeft } from "lucide-react";
 import { useAuth } from "./AuthPass";
-import { supabase } from "./supabaseClient";
+import { supabase, SUPABASE_ANON_KEY } from './supabaseClient';
 import { useEffect } from "react";
 
 interface JobData {
@@ -143,18 +143,22 @@ export function JobApplication({
         
         if (jobFitScore === null || jobFitScore === undefined) {
           try {
-            const { data: result, error: fnError } = await supabase.functions.invoke(
-              'rapid-api',
+            const res = await fetch(
+              'https://onssghljexptdladoekw.supabase.co/functions/v1/rapid-api',
               {
-                body: {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                  'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+                },
+                body: JSON.stringify({
                   applicant_id: account.applicant_id,
                   position_id: jobData.position_id,
-                },
+                }),
               }
             );
-            if (!fnError && result?.score !== undefined) {
-              jobFitScore = result.score;
-            }
+            const result = await res.json();
+            jobFitScore = result.score ?? null;
           } catch (err) {
             console.warn('Could not compute job fit score:', err);
           }
