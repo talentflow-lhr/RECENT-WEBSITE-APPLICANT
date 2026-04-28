@@ -21,6 +21,7 @@ interface JobData {
   title: string;
   company: string;
   location: string;
+  position_id: number;
 }
 
 interface SavedJobData {
