@@ -1,5 +1,8 @@
 import { useState } from 'react';
 import { Building2, Calendar, MapPin, DollarSign, CheckCircle, Clock, XCircle, AlertCircle, FileText, Mail, Phone, ThumbsUp, ThumbsDown, X, Video } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { useAuth } from './AuthPass';
+import { supabase } from './supabaseClient';
 
 export function ApplicationProgress() {
   const [selectedApplication, setSelectedApplication] = useState<number | null>(null);
@@ -7,7 +10,7 @@ export function ApplicationProgress() {
   const [rejectionReason, setRejectionReason] = useState('');
   const [showOfferDetails, setShowOfferDetails] = useState(false);
   const [showViewApplicationModal, setShowViewApplicationModal] = useState(false);
-  const [applications, setApplications] = useState([
+  /*const [applications, setApplications] = useState([
     {
       id: 1,
       company: 'Tech Solutions Inc.',
@@ -94,8 +97,148 @@ export function ApplicationProgress() {
       contactPerson: 'Naomi Cuerdo',
       contactPhone: '09345234576',
     },
-  ]);
+  ]);*/
 
+  const [applications, setApplications] = useState<any[]>([]);
+  const [loadingApplications, setLoadingApplications] = useState(true);
+  const { account } = useAuth();
+  
+  const fetchApplications = async () => {
+    if (!account?.applicant_id) return;
+    setLoadingApplications(true);
+    try {
+      const { data, error } = await supabase
+        .from('t_applications')
+        .select(`
+          application_id,
+          application_current_status,
+          application_interview_schedule,
+          application_meeting_link,
+          application_rejected_reason,
+          application_decline_reason,
+          is_link_sent,
+          t_job_positions (
+            job_title,
+            job_salary_range,
+            job_contract_length,
+            t_job_orders (
+              jo_country,
+              t_companies (
+                company_name,
+                company_contact,
+                company_email
+              )
+            )
+          ),
+          t_date (
+            full_date
+          )
+        `)
+        .eq('applicant_id', account.applicant_id)
+        .order('application_id', { ascending: false });
+  
+      if (error) throw error;
+  
+      const mapped = (data || []).map((app: any) => {
+        const position = app.t_job_positions;
+        const order = position?.t_job_orders;
+        const company = order?.t_companies;
+        const status = app.application_current_status ?? 'Pending';
+  
+        const statusTypeMap: Record<string, string> = {
+          'Pending':     'review',
+          'Reviewing':   'review',
+          'Interview':   'interview',
+          'Offer':       'offer',
+          'Accepted':    'accepted',
+          'Rejected':    'rejected',
+          'Withdrawn':   'rejected',
+          'Declined':    'rejected',
+        };
+  
+        const statusType = statusTypeMap[status] ?? 'review';
+  
+        // Build timeline based on status
+        const timeline = buildTimeline(status, app);
+  
+        return {
+          id: app.application_id,
+          company: company?.company_name ?? 'Unknown Company',
+          position: position?.job_title ?? 'Unknown Position',
+          appliedDate: app.t_date?.full_date
+            ? new Date(app.t_date.full_date).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })
+            : 'Unknown Date',
+          status,
+          statusType,
+          location: order?.jo_country ?? 'Location TBD',
+          country: order?.jo_country ?? '',
+          salary: position?.job_salary_range ?? 'Competitive',
+          offerReceived: status === 'Offer',
+          offerDecision: status === 'Accepted' ? 'accepted' : status === 'Declined' ? 'rejected' : null,
+          rejectionReason: app.application_decline_reason ?? null,
+          timeline,
+          contactPerson: company?.company_contact ?? '',
+          contactPhone: '',
+          contactEmail: company?.company_email ?? '',
+          meetingLink: app.application_meeting_link ?? null,
+          interviewSchedule: app.application_interview_schedule ?? null,
+          rejectedReason: app.application_rejected_reason ?? null,
+        };
+      });
+  
+      setApplications(mapped);
+    } catch (err) {
+      console.error('Error fetching applications:', err);
+    } finally {
+      setLoadingApplications(false);
+    }
+  };
+  
+  const buildTimeline = (status: string, app: any) => {
+    const stages = [
+      { stage: 'Application Submitted', key: 'submitted' },
+      { stage: 'Resume Reviewed',       key: 'reviewing' },
+      { stage: 'Interview Scheduled',   key: 'interview' },
+      { stage: 'Offer Received',        key: 'offer' },
+    ];
+  
+    const reachedIndex: Record<string, number> = {
+      'Pending':   0,
+      'Reviewing': 1,
+      'Interview': 2,
+      'Offer':     3,
+      'Accepted':  3,
+      'Rejected':  1,
+      'Declined':  3,
+    };
+  
+    const reached = reachedIndex[status] ?? 0;
+    const isRejected = status === 'Rejected';
+  
+    return stages.map((s, i) => {
+      const completed = i <= reached;
+      const isInterview = s.key === 'interview' && status === 'Interview';
+  
+      return {
+        stage: s.stage,
+        date: i === 0 && app.t_date?.full_date
+          ? new Date(app.t_date.full_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+          : completed ? '—' : 'Pending',
+        completed: isRejected && i === 1 ? true : completed,
+        rejected: isRejected && i === 1,
+        upcoming: isInterview,
+        time: isInterview && app.application_interview_schedule
+          ? new Date(app.application_interview_schedule).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })
+          : undefined,
+        meetingLink: isInterview ? app.application_meeting_link : undefined,
+      };
+    });
+  };
+  
+  useEffect(() => {
+    fetchApplications();
+  }, [account?.applicant_id]);
+  
   const getStatusColor = (statusType: string) => {
     switch (statusType) {
       case 'accepted':
@@ -134,36 +277,57 @@ export function ApplicationProgress() {
         setShowViewApplicationModal(true);
   };
 
-  const handleWithdrawApplication = () => {
+  const handleWithdrawApplication = async () => {
     const app = applications.find((a) => a.id === selectedApplication);
-    if (app) {
-      const confirmWithdraw = confirm(`Are you sure you want to withdraw your application for ${app.position} at ${app.company}?\n\nThis action cannot be undone.`);
-      
-      if (confirmWithdraw) {
-        setApplications(applications.filter((a) => a.id !== selectedApplication));
-        setSelectedApplication(null);
-        alert('Application withdrawn successfully.');
+    if (!app) return;
+    const confirmWithdraw = confirm(`Are you sure you want to withdraw your application for ${app.position} at ${app.company}?\n\nThis action cannot be undone.`);
+    if (confirmWithdraw) {
+      const { error } = await supabase
+        .from('t_applications')
+        .delete()
+        .eq('application_id', selectedApplication);
+      if (error) {
+        alert('Failed to withdraw application. Please try again.');
+        return;
       }
+      setApplications(applications.filter((a) => a.id !== selectedApplication));
+      setSelectedApplication(null);
+      alert('Application withdrawn successfully.');
     }
   };
 
-  const handleAcceptOffer = () => {
+  const handleAcceptOffer = async () => {
     const app = applications.find((a) => a.id === selectedApplication);
-    if (app && app.offerReceived) {
-      setApplications(applications.map((a) => a.id === selectedApplication ? { ...a, offerDecision: 'accepted' } : a));
-      setSelectedApplication(null);
-      alert('Offer accepted successfully.');
-    }
+    if (!app || !app.offerReceived) return;
+    const { error } = await supabase
+      .from('t_applications')
+      .update({ application_current_status: 'Accepted' })
+      .eq('application_id', selectedApplication);
+    if (error) { alert('Failed to accept offer.'); return; }
+    setApplications(applications.map((a) =>
+      a.id === selectedApplication ? { ...a, offerDecision: 'accepted', status: 'Accepted' } : a
+    ));
+    setSelectedApplication(null);
+    alert('Offer accepted successfully.');
   };
 
-  const handleRejectOffer = () => {
+  const handleRejectOffer = async () => {
     const app = applications.find((a) => a.id === selectedApplication);
-    if (app && app.offerReceived) {
-      setApplications(applications.map((a) => a.id === selectedApplication ? { ...a, offerDecision: 'rejected', rejectionReason } : a));
-      setSelectedApplication(null);
-      alert('Offer rejected successfully.');
-      setShowRejectModal(false);
-    }
+    if (!app || !app.offerReceived) return;
+    const { error } = await supabase
+      .from('t_applications')
+      .update({
+        application_current_status: 'Declined',
+        application_decline_reason: rejectionReason,
+      })
+      .eq('application_id', selectedApplication);
+    if (error) { alert('Failed to reject offer.'); return; }
+    setApplications(applications.map((a) =>
+      a.id === selectedApplication ? { ...a, offerDecision: 'rejected', rejectionReason, status: 'Declined' } : a
+    ));
+    setSelectedApplication(null);
+    setShowRejectModal(false);
+    alert('Offer declined successfully.');
   };
 
   const handleOpenRejectModal = () => {
@@ -173,6 +337,18 @@ export function ApplicationProgress() {
     }
   };
 
+  if (loadingApplications) return (
+    <div className="p-8 flex items-center justify-center min-h-[400px]">
+      <div className="text-center">
+        <svg className="w-10 h-10 animate-spin text-[#17960b] mx-auto mb-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+        </svg>
+        <p className="text-gray-600 font-medium">Loading your applications...</p>
+      </div>
+    </div>
+  );
+  
   return (
     <div className="p-8">
       <div className="mb-8">
@@ -183,6 +359,13 @@ export function ApplicationProgress() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Applications List */}
         <div className="lg:col-span-1 space-y-4">
+          {applications.length === 0 && !loadingApplications && (
+            <div className="text-center py-12">
+              <FileText className="w-12 h-12 text-gray-300 mx-auto mb-3" />
+              <p className="text-gray-500 font-medium">No applications yet</p>
+              <p className="text-gray-400 text-sm mt-1">Start applying to jobs to track them here</p>
+            </div>
+          )}
           {applications.map((app) => (
             <div
               key={app.id}
