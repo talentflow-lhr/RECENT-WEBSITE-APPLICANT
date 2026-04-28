@@ -64,6 +64,7 @@ export function JobPortal({ onApply, onSaveJob, savedJobIds = [], onNavigateToPr
   const [selectedFeaturedOrder, setSelectedFeaturedOrder] = useState<FeaturedJobOrder | null>(null);
   const [selectedJob, setSelectedJob] = useState<any>(null);
   const [savedIds, setSavedIds] = useState<number[]>([]);
+  const [appliedIds, setAppliedIds] = useState<number[]>([]);
 
   const [jobOrders, setJobOrders] = useState<any[]>([]);
   const [jobOrdersLoading, setJobOrdersLoading] = useState(true);
@@ -147,6 +148,15 @@ export function JobPortal({ onApply, onSaveJob, savedJobIds = [], onNavigateToPr
     if (data) setSavedIds(data.map((d: any) => d.position_id));
   };
 
+  const fetchAppliedJobs = async () => {
+    if (!account) return;
+    const { data } = await supabase
+      .from('t_applications')
+      .select('position_id')
+      .eq('applicant_id', account.applicant_id);
+    if (data) setAppliedIds(data.map((d: any) => d.position_id));
+  };
+
   const handleToggleSave = async (jobId: number) => {
     if (!account) return;
     const isSaved = savedIds.includes(jobId);
@@ -167,6 +177,7 @@ export function JobPortal({ onApply, onSaveJob, savedJobIds = [], onNavigateToPr
 
   useEffect(() => {
     fetchSavedJobs();
+    fetchAppliedJobs(); 
   }, [account]);
 
   // ─── Fetch featured job orders ───────────────────────────────────────────────
@@ -871,8 +882,16 @@ export function JobPortal({ onApply, onSaveJob, savedJobIds = [], onNavigateToPr
                             View Full Details
                           </button>
                           <div className="flex gap-2">
-                            <button onClick={() => handleApplyNow(job)} className="flex-1 bg-[#17960b] hover:bg-[#158d0a] text-white px-4 py-2.5 rounded-lg text-[14px] font-medium transition-colors">
-                              Apply Now
+                            <button
+                              onClick={() => !appliedIds.includes(job.id) && handleApplyNow(job)}
+                              disabled={appliedIds.includes(job.id)}
+                              className={`flex-1 px-4 py-2.5 rounded-lg text-[14px] font-medium transition-colors ${
+                                appliedIds.includes(job.id)
+                                  ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                                  : 'bg-[#17960b] hover:bg-[#158d0a] text-white'
+                              }`}
+                            >
+                              {appliedIds.includes(job.id) ? 'Already Applied' : 'Apply Now'}
                             </button>
                             <button
                               onClick={() => handleToggleSave(job.id)}
@@ -1005,10 +1024,20 @@ export function JobPortal({ onApply, onSaveJob, savedJobIds = [], onNavigateToPr
                   {savedIds.includes(selectedJob.id) ? 'Saved' : 'Save Job'}
                 </button>
                 <button
-                  onClick={() => { handleApplyNow(selectedJob); setSelectedJob(null); }}
-                  className="flex-1 bg-[#17960b] hover:bg-[#158d0a] text-white px-6 py-3 rounded-lg font-semibold transition-colors"
+                  onClick={() => {
+                    if (!appliedIds.includes(selectedJob.id)) {
+                      handleApplyNow(selectedJob);
+                      setSelectedJob(null);
+                    }
+                  }}
+                  disabled={appliedIds.includes(selectedJob.id)}
+                  className={`flex-1 px-6 py-3 rounded-lg font-semibold transition-colors ${
+                    appliedIds.includes(selectedJob.id)
+                      ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                      : 'bg-[#17960b] hover:bg-[#158d0a] text-white'
+                  }`}
                 >
-                  Apply Now
+                  {appliedIds.includes(selectedJob.id) ? 'Already Applied' : 'Apply Now'}
                 </button>
               </div>
             </div>
