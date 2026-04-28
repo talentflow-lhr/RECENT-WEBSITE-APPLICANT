@@ -45,6 +45,7 @@ function AppContent() {
   const [selectedJob, setSelectedJob] = useState<JobData | undefined>(undefined);
   const [savedJobs, setSavedJobs] = useState<SavedJobData[]>([]);
   const [hasResume, setHasResume] = useState(false);
+  const [resumeVersion, setResumeVersion] = useState(0);
   // Track if user has created/uploaded a resume
   const [selectedJobOrder, setSelectedJobOrder] = useState<any>(null);
 
@@ -119,10 +120,14 @@ function AppContent() {
       case 'jobsforyou':
          return <JobsForYou onApply={handleApplyToJob} onSaveJob={handleSaveJob} savedJobIds={savedJobs.map(job => parseInt(job.id))} onNavigateToResume={() => setCurrentPage('resume')} onNavigateToPositions={handleViewPositions} />;
       case 'resume':
-        return <ResumeBuilder onResumeSubmit={() => setHasResume(true)} />;
+        return <ResumeBuilder onResumeSubmit={() => {
+          setHasResume(true);
+          setResumeVersion(v => v + 1); // 👈 add this
+        }} />;
       case 'dashboard':
         return hasResume ? (
           <ApplicantDashboard
+            key={resumeVersion}
             isLoggedIn={isLoggedIn}
             onBackToHome={() => setCurrentPage('jobs')}
             onNavigateToResumeBuilder={() => setCurrentPage('resume')}
