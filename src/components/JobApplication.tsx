@@ -95,6 +95,13 @@ export function JobApplication({
   };
   
   const handleSubmit = async () => {
+    console.log('Debug apply:', {
+      applicant_id: account?.applicant_id,
+      position_id: jobData?.position_id,
+      jobData,
+      account,
+    });
+    
     if (!account?.applicant_id || !jobData?.position_id) {
       alert('Missing application data. Please try again.');
       return;
