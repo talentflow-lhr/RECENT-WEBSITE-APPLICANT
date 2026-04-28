@@ -115,6 +115,14 @@ export function JobApplication({
       try {
         const dateId = await getDateId();
       
+        const { data: latestResume } = await supabase
+          .from('t_resume')
+          .select('res_complete_score')
+          .eq('applicant_id', account.applicant_id)
+          .order('res_last_updated', { ascending: false })
+          .limit(1)
+          .maybeSingle();
+        
         const { error } = await supabase
           .from('t_applications')
           .insert({
@@ -123,6 +131,9 @@ export function JobApplication({
             resume_id: resumeData.resume_id,
             application_current_status: 'Pending',
             applied_date_id: dateId,
+            resume_score: latestResume?.res_complete_score
+              ? parseFloat(latestResume.res_complete_score)
+              : null,
           });
       
         if (error) throw error;
