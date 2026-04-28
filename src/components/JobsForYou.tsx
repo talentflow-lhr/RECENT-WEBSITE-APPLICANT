@@ -42,7 +42,7 @@ interface JobData {
 }
 
 interface JobsForYouProps {
-  onApply?: (job: { title: string; company: string; location: string }) => void;
+  onApply?: (job: { title: string; company: string; location: string; position_id?: number }) => void;
   onSaveJob?: (job: any) => void;
   savedJobIds?: number[];
   onNavigateToResume?: () => void;
@@ -413,6 +413,7 @@ export function JobsForYou({ onApply, onSaveJob, savedJobIds = [], onNavigateToR
                                   title: job.job_title,
                                   company: job.company_name,
                                   location: job.location,
+                                  position_id: job.position_id,
                                 })}
                               >
                                 Apply Now
@@ -592,6 +593,7 @@ export function JobsForYou({ onApply, onSaveJob, savedJobIds = [], onNavigateToR
                       title: selectedJob.job_title,
                       company: selectedJob.company_name,
                       location: selectedJob.location,
+                      position_id: selectedJob.position_id, // 👈
                     });
                     setSelectedJob(null);
                   }}
