@@ -143,6 +143,7 @@ export function JobApplication({
         
         if (jobFitScore === null || jobFitScore === undefined) {
           try {
+            console.log('anon key:', import.meta.env.VITE_SUPABASE_ANON_KEY);
             const res = await fetch(
               'https://onssghljexptdladoekw.supabase.co/functions/v1/rapid-api',
               {
