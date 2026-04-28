@@ -410,7 +410,12 @@ export function JobPortal({ onApply, onSaveJob, savedJobIds = [], onNavigateToPr
   };
 
   const handleApplyNow = (job: any) => {
-    if (onApply) onApply({ title: job.title, company: job.company, location: job.location });
+    if (onApply) onApply({ 
+      title: job.title, 
+      company: job.company, 
+      location: job.location,
+      position_id: job.id, 
+    });
   };
 
   const toggleFilter = (filter: string) => {
