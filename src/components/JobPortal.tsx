@@ -46,7 +46,7 @@ interface FeaturedJobOrder {
 }
 
 interface JobPortalProps {
-  onApply?: (job: { title: string; company: string; location: string }) => void;
+  onApply?: (job: { title: string; company: string; location: string; position_id?: number; job_fit_score?: number }) => void;
   onSaveJob?: (job: any) => void;
   savedJobIds?: number[];
   onNavigateToProfile?: () => void;
