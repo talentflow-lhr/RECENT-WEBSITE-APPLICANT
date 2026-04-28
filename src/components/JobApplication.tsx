@@ -143,23 +143,18 @@ export function JobApplication({
         
         if (jobFitScore === null || jobFitScore === undefined) {
           try {
-            console.log('anon key:', import.meta.env.VITE_SUPABASE_ANON_KEY);
-            const res = await fetch(
-              'https://onssghljexptdladoekw.supabase.co/functions/v1/rapid-api',
+            const { data: result, error: fnError } = await supabase.functions.invoke(
+              'rapid-api',
               {
-                method: 'POST',
-                headers: {
-                  'Content-Type': 'application/json',
-                  'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
-                },
-                body: JSON.stringify({
+                body: {
                   applicant_id: account.applicant_id,
                   position_id: jobData.position_id,
-                }),
+                },
               }
             );
-            const result = await res.json();
-            jobFitScore = result.score ?? null;
+            if (!fnError && result?.score !== undefined) {
+              jobFitScore = result.score;
+            }
           } catch (err) {
             console.warn('Could not compute job fit score:', err);
           }
