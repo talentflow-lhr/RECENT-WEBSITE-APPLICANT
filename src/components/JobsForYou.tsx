@@ -56,6 +56,7 @@ export function JobsForYou({ onApply, onSaveJob, savedJobIds = [], onNavigateToR
   const [error, setError] = useState<string | null>(null);
   const [hasResume, setHasResume] = useState<boolean | null>(null); // null = still checking
   const [savedIds, setSavedIds] = useState<number[]>([]);
+  const [appliedIds, setAppliedIds] = useState<number[]>([]);
 
   const fetchSavedJobs = async () => {
     const { data } = await supabase
@@ -67,11 +68,21 @@ export function JobsForYou({ onApply, onSaveJob, savedJobIds = [], onNavigateToR
       setSavedIds(data.map(d => d.position_id));
     }
   };
+
+  const fetchAppliedJobs = async () => {
+    if (!account) return;
+    const { data } = await supabase
+      .from('t_applications')
+      .select('position_id')
+      .eq('applicant_id', account.applicant_id);
+    if (data) setAppliedIds(data.map((d: any) => d.position_id));
+  };
   
   useEffect(() => {
     if (!account) return;
     checkResumeAndFetch();
     fetchSavedJobs();
+    fetchAppliedJobs();
   }, [account]);
 
   const checkResumeAndFetch = async () => {
@@ -407,16 +418,25 @@ export function JobsForYou({ onApply, onSaveJob, savedJobIds = [], onNavigateToR
                               View Full Details
                             </Button>
                             <div className="flex gap-3">
-                              <Button
-                                className="flex-1 bg-[#17960b] hover:bg-[#17960b]/90 text-white font-semibold"
-                                onClick={() => onApply?.({
-                                  title: job.job_title,
-                                  company: job.company_name,
-                                  location: job.location,
-                                  position_id: job.position_id,
-                                })}
+                              <<Button
+                                disabled={appliedIds.includes(job.position_id)}
+                                className={`flex-1 font-semibold ${
+                                  appliedIds.includes(job.position_id)
+                                    ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                                    : 'bg-[#17960b] hover:bg-[#17960b]/90 text-white'
+                                }`}
+                                onClick={() => {
+                                  if (!appliedIds.includes(job.position_id)) {
+                                    onApply?.({
+                                      title: job.job_title,
+                                      company: job.company_name,
+                                      location: job.location,
+                                      position_id: job.position_id,
+                                    });
+                                  }
+                                }}
                               >
-                                Apply Now
+                                {appliedIds.includes(job.position_id) ? 'Already Applied' : 'Apply Now'}
                               </Button>
                               <Button
                                 variant="outline"
@@ -587,18 +607,25 @@ export function JobsForYou({ onApply, onSaveJob, savedJobIds = [], onNavigateToR
                   {savedIds.includes(selectedJob.position_id) ? 'Saved' : 'Save Job'}
                 </Button>
                 <Button
-                  className="flex-1 bg-[#17960b] hover:bg-[#17960b]/90 text-white font-semibold"
+                  disabled={appliedIds.includes(selectedJob.position_id)}
+                  className={`flex-1 font-semibold ${
+                    appliedIds.includes(selectedJob.position_id)
+                      ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                      : 'bg-[#17960b] hover:bg-[#17960b]/90 text-white'
+                  }`}
                   onClick={() => {
-                    onApply?.({
-                      title: selectedJob.job_title,
-                      company: selectedJob.company_name,
-                      location: selectedJob.location,
-                      position_id: selectedJob.position_id, // 👈
-                    });
-                    setSelectedJob(null);
+                    if (!appliedIds.includes(selectedJob.position_id)) {
+                      onApply?.({
+                        title: selectedJob.job_title,
+                        company: selectedJob.company_name,
+                        location: selectedJob.location,
+                        position_id: selectedJob.position_id,
+                      });
+                      setSelectedJob(null);
+                    }
                   }}
                 >
-                  Apply Now
+                  {appliedIds.includes(selectedJob.position_id) ? 'Already Applied' : 'Apply Now'}
                 </Button>
               </div>
             </div>
