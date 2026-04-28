@@ -139,7 +139,9 @@ export function JobApplication({
           .maybeSingle();
         
         // Get job fit score — use existing if from JobsForYou, else call rapid-api
-        let jobFitScore: number | null = jobData.job_fit_score ?? null;
+        let jobFitScore: number | null = jobData.job_fit_score != null
+          ? Math.round(jobData.job_fit_score * 100 * 100) / 100
+          : null;
 
         if (jobFitScore === null || jobFitScore === undefined) {
           try {
@@ -164,7 +166,7 @@ export function JobApplication({
             console.log('rapid-api status:', res.status);
             const result = await res.json();
             console.log('rapid-api result:', result);
-            jobFitScore = result.score ?? null;
+            jobFitScore = result.score != null ? Math.round(result.score * 100 * 100) / 100 : null;
           } catch (err) {
             console.warn('Could not compute job fit score:', err);
           }
