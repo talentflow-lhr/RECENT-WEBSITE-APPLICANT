@@ -121,8 +121,13 @@ export function ApplicantDashboard({
 
       let data = await fetchLatest();
 
-      if (!data?.res_complete_score || data.res_complete_score === '0') {
-        while (!data?.res_complete_score || data.res_complete_score === '0') {
+      const isScored = (d: any) =>
+        d?.res_complete_score &&
+        d.res_complete_score !== '0' &&
+        parseFloat(d.res_stability_score ?? '0') > 0;
+      
+      if (!isScored(data)) {
+        while (!isScored(data)) {
           await new Promise(resolve => setTimeout(resolve, 5000));
           data = await fetchLatest();
         }
