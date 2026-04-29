@@ -208,11 +208,6 @@ export function ApplicantDashboard({
     return found ? { grade: found[2], label: found[3] } : { grade: 'D', label: 'Needs Improvement' };
   };
   
-    const found = rubric[category]?.ranges.find(([min, max]) => 
-      score >= min && (max === 100 ? score <= max : score <= max)
-    );
-    return found ? { grade: found[2], label: found[3] } : { grade: 'D', label: 'Needs Improvement' };
-  };
 
   const getStatusColor = (status: string) => {
     switch (status) {
