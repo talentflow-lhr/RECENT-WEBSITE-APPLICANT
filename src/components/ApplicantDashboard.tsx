@@ -144,18 +144,24 @@ export function ApplicantDashboard({
   }, [account?.applicant_id]);
 
 
-  const getScoreColor = (score: number) => {
-    if (score >= 80) return 'text-[#17960b]';
-    if (score >= 60) return 'text-[#ffca1a]';
-    if (score >= 40) return 'text-orange-500';
-    return 'text-red-500';
+  const getScoreColor = (_score: number, grade?: string) => {
+    switch (grade) {
+      case 'A+': return 'text-[#17960b]';
+      case 'A':  return 'text-[#17960b]';
+      case 'B+': return 'text-[#ffca1a]';
+      case 'B':  return 'text-orange-500';
+      default:   return 'text-red-500';
+    }
   };
-
-  const getScoreBorderColor = (score: number) => {
-    if (score >= 80) return 'border-[#17960b]';
-    if (score >= 60) return 'border-[#ffca1a]';
-    if (score >=40) return 'border-orange-500';
-    return 'border-red-500';
+  
+  const getScoreBorderColor = (_score: number, grade?: string) => {
+    switch (grade) {
+      case 'A+': return 'border-[#17960b]';
+      case 'A':  return 'border-[#17960b]';
+      case 'B+': return 'border-[#ffca1a]';
+      case 'B':  return 'border-orange-500';
+      default:   return 'border-red-500';
+    }
   };
 
   const getScoreLabel = (category: string, score: number): { grade: string; label: string } => {
@@ -506,9 +512,9 @@ export function ApplicantDashboard({
                             <div className="flex-1 bg-gray-100 rounded-full h-2">
                               <div
                                 className={`h-2 rounded-full transition-all ${
-                                  item.score >= 60 ? 'bg-[#17960b]' :
-                                  item.score >= 40 ? 'bg-[#ffca1a]' :
-                                  item.score >= 20 ? 'bg-orange-400' : 'bg-red-400'
+                                  ['A+', 'A'].includes(grade) ? 'bg-[#17960b]' :
+                                  grade === 'B+' ? 'bg-[#ffca1a]' :
+                                  grade === 'B'  ? 'bg-orange-400' : 'bg-red-400'
                                 }`}
                                 style={{ width: `${Math.min(item.score, 100)}%` }}
                               />
@@ -555,7 +561,7 @@ export function ApplicantDashboard({
                       <div className="flex items-start justify-between mb-3">
                         <div>
                           <h3 className="text-gray-900 mb-1">{skill.name}</h3>
-                          <Badge className={`${getScoreColor(skill.score)} !bg-transparent border ${getScoreBorderColor(skill.score)}`}>
+                          <Badge className={`${getScoreColor(skill.score, skill.status)} !bg-transparent border ${getScoreBorderColor(skill.score, skill.status)}`}>
                             {skill.status}
                           </Badge>
                         </div>
