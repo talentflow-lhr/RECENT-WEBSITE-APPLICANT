@@ -496,6 +496,7 @@ export function ApplicantDashboard({
                         { label: 'Completeness',        weight: '5%',  score: parseFloat(resumeData?.res_completeness_score ?? '0'), cat: 'completeness'},
                       ].map(item => {
                         const { label: itemLabel, grade } = getScoreLabel(item.cat, item.score);
+                        console.log(item.cat, 'score:', item.score, 'grade:', grade);
                         return (
                           <div key={item.cat} className="flex items-center gap-2">
                             <span className="text-xs text-gray-500 w-36 shrink-0">{item.label} <span className="text-gray-400">({item.weight})</span></span>
