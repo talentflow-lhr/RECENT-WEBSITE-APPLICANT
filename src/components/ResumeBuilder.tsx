@@ -1082,34 +1082,17 @@ export function ResumeBuilder({ onResumeSubmit }: ResumeBuilderProps = {}) {
         console.log('Created resume_id:', data);
       }
       try {
-        await fetch(
-          'https://onssghljexptdladoekw.supabase.co/functions/v1/score-resume',
-          {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
-            },
-            body: JSON.stringify({ applicant_id: account.applicant_id }),
-          }
-        );
+        await supabase.functions.invoke('utils_resume-model', {
+          body: { applicant_id: account.applicant_id },
+        });
       } catch (err) {
         console.warn('Scoring failed silently:', err);
       }
 
-      // 2. Then trigger improvement comments
       try {
-        await fetch(
-          'https://onssghljexptdladoekw.supabase.co/functions/v1/targeted_resume_comments',
-          {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
-            },
-            body: JSON.stringify({ applicant_id: account.applicant_id }),
-          }
-        );
+        await supabase.functions.invoke('targeted_resume_comments', {
+          body: { applicant_id: account.applicant_id },
+        });
       } catch (err) {
         console.warn('Regrading failed silently:', err);
       }
