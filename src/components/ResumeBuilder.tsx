@@ -1113,13 +1113,6 @@ export function ResumeBuilder({ onResumeSubmit }: ResumeBuilderProps = {}) {
       } catch (err) {
         console.warn('Regrading failed silently:', err);
       }
-      // Also clear the complete score so dashboard re-polls
-      await supabase
-        .from('t_resume')
-        .update({ res_complete_score: null })
-        .eq('applicant_id', account.applicant_id)
-        .order('res_last_updated', { ascending: false })
-        .limit(1);
 
       alert('Submitted successfully!');
       if (onResumeSubmit) onResumeSubmit();
