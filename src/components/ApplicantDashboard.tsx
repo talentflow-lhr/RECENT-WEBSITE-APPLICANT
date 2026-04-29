@@ -147,7 +147,7 @@ export function ApplicantDashboard({
   const getScoreColor = (_score: number, grade?: string) => {
     switch (grade) {
       case 'A+': return 'text-[#17960b]';
-      case 'A':  return 'text-[#17960b]';
+      case 'A':  return 'text-[#4caf50]';
       case 'B+': return 'text-[#ffca1a]';
       case 'B':  return 'text-orange-500';
       default:   return 'text-red-500';
@@ -157,7 +157,7 @@ export function ApplicantDashboard({
   const getScoreBorderColor = (_score: number, grade?: string) => {
     switch (grade) {
       case 'A+': return 'border-[#17960b]';
-      case 'A':  return 'border-[#17960b]';
+      case 'A':  return 'border-[#4caf50]';
       case 'B+': return 'border-[#ffca1a]';
       case 'B':  return 'border-orange-500';
       default:   return 'border-red-500';
@@ -165,53 +165,48 @@ export function ApplicantDashboard({
   };
 
   const getScoreLabel = (category: string, score: number): { grade: string; label: string } => {
-    const rubric: Record<string, { ranges: [number, number, string, string][] }> = {
-      experience: {
-        ranges: [
-          [65, 100, 'A+', 'Excellent'],
-          [58, 64,  'A',  'Very Good'],
-          [50, 57,  'B+', 'Good'],
-          [1,  49,  'B',  'Fair'],
-          [-Infinity, 0, 'D', 'Needs Improvement'],
-        ]
-      },
-      skills: {
-        ranges: [
-          [63, 100, 'A+', 'Excellent'],
-          [49, 62,  'A',  'Very Good'],
-          [35, 48,  'B+', 'Good'],
-          [6,  34,  'B',  'Fair'],
-          [-Infinity, 5, 'D', 'Needs Improvement'],
-        ]
-      },
-      description: {
-        ranges: [
-          [67, 100, 'A+', 'Excellent'],
-          [59, 66,  'A',  'Very Good'],
-          [47, 58,  'B+', 'Good'],
-          [6,  46,  'B',  'Fair'],
-          [-Infinity, 5, 'D', 'Needs Improvement'],
-        ]
-      },
-      completeness: {
-        ranges: [
-          [92, 100, 'A+', 'Excellent'],
-          [86, 91,  'A',  'Very Good'],
-          [81, 85,  'B+', 'Good'],
-          [29, 80,  'B',  'Fair'],
-          [-Infinity, 28, 'D', 'Needs Improvement'],
-        ]
-      },
-      stability: {
-        ranges: [
-          [45, 100, 'A+', 'Excellent'],
-          [30, 44,  'A',  'Very Good'],
-          [15, 29,  'B+', 'Good'],
-          [1,  14,  'B',  'Fair'],
-          [-Infinity, 0, 'D', 'Needs Improvement'],
-        ]
-      },
+    const rubric: Record<string, [number, number, string, string][]> = {
+      stability: [
+        [45,  100, 'A+', 'Excellent'],
+        [30,  44,  'A',  'Very Good'],
+        [15,  29,  'B+', 'Good'],
+        [1,   14,  'B',  'Fair'],
+        [-Infinity, 0, 'D', 'Needs Improvement'],
+      ],
+      experience: [
+        [65,  100, 'A+', 'Excellent'],
+        [58,  64,  'A',  'Very Good'],
+        [50,  57,  'B+', 'Good'],
+        [1,   49,  'B',  'Fair'],
+        [-Infinity, 0, 'D', 'Needs Improvement'],
+      ],
+      skills: [
+        [63,  100, 'A+', 'Excellent'],
+        [49,  62,  'A',  'Very Good'],
+        [35,  48,  'B+', 'Good'],
+        [6,   34,  'B',  'Fair'],
+        [-Infinity, 5, 'D', 'Needs Improvement'],
+      ],
+      description: [
+        [67,  100, 'A+', 'Excellent'],
+        [59,  66,  'A',  'Very Good'],
+        [47,  58,  'B+', 'Good'],
+        [6,   46,  'B',  'Fair'],
+        [-Infinity, 5, 'D', 'Needs Improvement'],
+      ],
+      completeness: [
+        [92,  100, 'A+', 'Excellent'],
+        [86,  91,  'A',  'Very Good'],
+        [81,  85,  'B+', 'Good'],
+        [29,  80,  'B',  'Fair'],
+        [-Infinity, 28, 'D', 'Needs Improvement'],
+      ],
     };
+  
+    const ranges = rubric[category] ?? [];
+    const found = ranges.find(([min, max]) => score >= min && score <= max);
+    return found ? { grade: found[2], label: found[3] } : { grade: 'D', label: 'Needs Improvement' };
+  };
   
     const found = rubric[category]?.ranges.find(([min, max]) => 
       score >= min && (max === 100 ? score <= max : score <= max)
@@ -289,7 +284,7 @@ export function ApplicantDashboard({
     };
     if (score >= 60) return {
       grade: 'A', label: 'Very Good',
-      color: 'text-[#17960b]',
+      color: 'text-[#4caf50]',
       message: 'Your resume shows strong potential!',
       sub: 'You have a solid foundation. Minor improvements in a few areas will make you highly competitive.'
     };
@@ -512,7 +507,8 @@ export function ApplicantDashboard({
                             <div className="flex-1 bg-gray-100 rounded-full h-2">
                               <div
                                 className={`h-2 rounded-full transition-all ${
-                                  ['A+', 'A'].includes(grade) ? 'bg-[#17960b]' :
+                                  grade === 'A+' ? 'bg-[#17960b]' :
+                                  grade === 'A'  ? 'bg-[#4caf50]' :
                                   grade === 'B+' ? 'bg-[#ffca1a]' :
                                   grade === 'B'  ? 'bg-orange-400' : 'bg-red-400'
                                 }`}
