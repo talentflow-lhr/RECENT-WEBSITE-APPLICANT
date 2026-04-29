@@ -165,47 +165,49 @@ export function ApplicantDashboard({
   };
 
   const getScoreLabel = (category: string, score: number): { grade: string; label: string } => {
-    const rubric: Record<string, [number, number, string, string][]> = {
+    const rubric: Record<string, [number, string, string][]> = {
       stability: [
-        [45,  100, 'A+', 'Excellent'],
-        [30,  44,  'A',  'Very Good'],
-        [15,  29,  'B+', 'Good'],
-        [1,   14,  'B',  'Fair'],
-        [-Infinity, 0, 'D', 'Needs Improvement'],
+        [45,  'A+', 'Excellent'],
+        [30,  'A',  'Very Good'],
+        [15,  'B+', 'Good'],
+        [1,   'B',  'Fair'],
+        [-Infinity, 'D', 'Needs Improvement'], // covers 0 and negative
       ],
       experience: [
-        [65,  100, 'A+', 'Excellent'],
-        [58,  64,  'A',  'Very Good'],
-        [50,  57,  'B+', 'Good'],
-        [1,   49,  'B',  'Fair'],
-        [-Infinity, 0, 'D', 'Needs Improvement'],
+        [65,  'A+', 'Excellent'],
+        [58,  'A',  'Very Good'],
+        [50,  'B+', 'Good'],
+        [1,   'B',  'Fair'],
+        [0,   'D',  'Needs Improvement'], // exactly 0
       ],
       skills: [
-        [63,  100, 'A+', 'Excellent'],
-        [49,  62,  'A',  'Very Good'],
-        [35,  48,  'B+', 'Good'],
-        [6,   34,  'B',  'Fair'],
-        [-Infinity, 5, 'D', 'Needs Improvement'],
+        [63,  'A+', 'Excellent'],
+        [49,  'A',  'Very Good'],
+        [35,  'B+', 'Good'],
+        [6,   'B',  'Fair'],
+        [0,   'D',  'Needs Improvement'], // 0-5
       ],
       description: [
-        [67,  100, 'A+', 'Excellent'],
-        [59,  66,  'A',  'Very Good'],
-        [47,  58,  'B+', 'Good'],
-        [6,   46,  'B',  'Fair'],
-        [-Infinity, 5, 'D', 'Needs Improvement'],
+        [67,  'A+', 'Excellent'],
+        [59,  'A',  'Very Good'],
+        [47,  'B+', 'Good'],
+        [6,   'B',  'Fair'],
+        [0,   'D',  'Needs Improvement'], // 0-5
       ],
       completeness: [
-        [92,  100, 'A+', 'Excellent'],
-        [86,  91,  'A',  'Very Good'],
-        [81,  85,  'B+', 'Good'],
-        [29,  80,  'B',  'Fair'],
-        [-Infinity, 28, 'D', 'Needs Improvement'],
+        [92,  'A+', 'Excellent'],
+        [86,  'A',  'Very Good'],
+        [81,  'B+', 'Good'],
+        [29,  'B',  'Fair'],
+        [0,   'D',  'Needs Improvement'], // 0-28
       ],
     };
   
     const ranges = rubric[category] ?? [];
-    const found = ranges.find(([min, max]) => score >= min && score <= max);
-    return found ? { grade: found[2], label: found[3] } : { grade: 'D', label: 'Needs Improvement' };
+    const found = ranges.find(([min]) => score >= min);
+    return found
+      ? { grade: found[1] as string, label: found[2] as string }
+      : { grade: 'D', label: 'Needs Improvement' };
   };
   
 
