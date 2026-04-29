@@ -501,7 +501,7 @@ export function ApplicantDashboard({
                         console.log(item.cat, 'score:', item.score, 'grade:', grade);
                         return (
                           <div key={item.cat} className="flex items-center gap-2">
-                            <span className="text-xs text-gray-500 w-36 shrink-0">{item.label} <span className="text-gray-400">({item.weight})</span></span>
+                            <span className="text-xs text-gray-500 w-36 shrink-0">{item.label}</span>
                             <div className="flex-1 bg-gray-100 rounded-full h-2">
                               <div
                                 className={`h-2 rounded-full transition-all ${
