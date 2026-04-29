@@ -512,9 +512,9 @@ export function ApplicantDashboard({
                             <div className="flex-1 bg-gray-100 rounded-full h-2">
                               <div
                                 className={`h-2 rounded-full transition-all ${
-                                  item.score >= 60 ? 'bg-[#17960b]' :
-                                  item.score >= 40 ? 'bg-[#ffca1a]' :
-                                  item.score >= 20 ? 'bg-orange-400' : 'bg-red-400'
+                                  ['A+', 'A'].includes(grade) ? 'bg-[#17960b]' :
+                                  grade === 'B+' ? 'bg-[#ffca1a]' :
+                                  grade === 'B'  ? 'bg-orange-400' : 'bg-red-400'
                                 }`}
                                 style={{ width: `${Math.min(item.score, 100)}%` }}
                               />
