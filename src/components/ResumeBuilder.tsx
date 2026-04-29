@@ -1063,15 +1063,6 @@ export function ResumeBuilder({ onResumeSubmit }: ResumeBuilderProps = {}) {
       } else {
         const { data, error } = await supabase.rpc('submit_resume', {
           p_applicant_id:     account.applicant_id,
-          p_first_name:       personalInfo.firstName,
-          p_middle_initial:   personalInfo.middleInitial,
-          p_last_name:        personalInfo.lastName,
-          p_suffix:           personalInfo.suffix,
-          p_email:            personalInfo.email,
-          p_phone:            personalInfo.phone,
-          p_city:             personalInfo.city,
-          p_province:         personalInfo.province,
-          p_country:          personalInfo.country,
           p_dob_year:         dob_year,
           p_dob_month:        dob_month,
           p_dob_day:          dob_day,
