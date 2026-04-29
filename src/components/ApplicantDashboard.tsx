@@ -121,16 +121,9 @@ export function ApplicantDashboard({
 
       let data = await fetchLatest();
 
-      if (!data?.res_complete_score) {
-        await supabase
-          .from('t_resume')
-          .update({ res_complete_score: '0' })
-          .eq('applicant_id', account.applicant_id)
-          .order('res_last_updated', { ascending: false })
-          .limit(1);
-
-        while (!data?.res_complete_score) {
-          await new Promise(resolve => setTimeout(resolve, 10000));
+      if (!data?.res_complete_score || data.res_complete_score === '0') {
+        while (!data?.res_complete_score || data.res_complete_score === '0') {
+          await new Promise(resolve => setTimeout(resolve, 5000));
           data = await fetchLatest();
         }
       }
