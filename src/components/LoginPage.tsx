@@ -643,11 +643,11 @@ export function LoginPage({ onLogin }: LoginPageProps) {
               {!isLogin && (
                 <p className="text-xs text-gray-500 text-center mt-4">
                   By signing up, you agree to our{' '}
-                  <a href="#" className="text-[#17960b] hover:underline">
+                  <a href="https://drive.google.com/file/d/1WrOVm9p1ZjBZ4mMO7IAmE1X_HcKqVA-d/view?usp=sharing" className="text-[#17960b] hover:underline">
                     Terms of Service
                   </a>{' '}
                   and{' '}
-                  <a href="#" className="text-[#17960b] hover:underline">
+                  <a href="https://drive.google.com/file/d/1-_aAIvo6w-AI9pOy2FurfLJ53BP0kADY/view?usp=sharing" className="text-[#17960b] hover:underline">
                     Privacy Policy
                   </a>
                 </p>
