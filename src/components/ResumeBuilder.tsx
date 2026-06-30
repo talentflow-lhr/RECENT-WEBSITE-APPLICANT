@@ -69,11 +69,30 @@ interface PersonalInfo {
   lastName: string;
   suffix: string;
   dateOfBirth: string;
+  gender: string;
+  nationality: string;
   city: string;
   province: string;
   country: string;
   email: string;
   phone: string;
+  emergencyName: string;       // start ng add UI only — not persisted
+  emergencyRelationship: string;
+  emergencyPhone: string;
+  provCity: string;
+  provProvince: string;
+  provCountry: string;
+  provContactPerson: string;
+  provMobile: string;
+  passportNumber: string;
+  passportPlace: string;
+  passportIssueDate: string;
+  passportExpiryDate: string;
+  maritalStatus: string;
+  height: string; 
+  weight: string; 
+  presentContactPerson: string;
+  passportPicLink: string;
 }
 
 interface WorkExperience {
@@ -285,6 +304,49 @@ const ResumePreview = ({ personalInfo, workExperiences, certifications, educatio
           </div>
         </div>
 
+        {/* Personal Details */}
+        <div className="mb-6">
+          <h2 className="text-lg font-semibold text-[#101828] uppercase mb-3 pb-1.5 border-b-2 border-[#101828]">
+            Personal Details
+          </h2>
+          <div className="text-sm space-y-1">
+            <div className="grid grid-cols-2 gap-x-8">
+              <div className="flex">
+                <span className="font-medium text-[#101828] w-32 shrink-0">Date of Birth:</span>
+                <span className="text-[#4a5565]">{personalInfo.dateOfBirth || '—'}</span>
+              </div>
+              <div className="flex">
+                <span className="font-medium text-[#101828] w-32 shrink-0">Gender:</span>
+                <span className="text-[#4a5565] capitalize">{personalInfo.gender ? personalInfo.gender.replace(/-/g, ' ') : '—'}</span>
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-x-8">
+              <div className="flex">
+                <span className="font-medium text-[#101828] w-32 shrink-0">Nationality:</span>
+                <span className="text-[#4a5565]">{personalInfo.nationality || '—'}</span>
+              </div>
+            </div>
+            <div className="flex">
+              <span className="font-medium text-[#101828] w-32 shrink-0">Emergency:</span>
+              <span className="text-[#4a5565]">
+                {personalInfo.emergencyName
+                  ? `${personalInfo.emergencyName}${personalInfo.emergencyRelationship ? ` (${personalInfo.emergencyRelationship})` : ''}${personalInfo.emergencyPhone ? ` — ${personalInfo.emergencyPhone}` : ''}`
+                  : '—'}
+              </span>
+            </div>
+            <div className="grid grid-cols-2 gap-x-8">
+              <div className="flex">
+                <span className="font-medium text-[#101828] w-32 shrink-0">Passport No.:</span>
+                <span className="text-[#4a5565]">{personalInfo.passportNumber || '—'}</span>
+              </div>
+              <div className="flex">
+                <span className="font-medium text-[#101828] w-32 shrink-0">Passport Expiry:</span>
+                <span className="text-[#4a5565]">{personalInfo.passportExpiryDate ? formatDateToMonthYear(personalInfo.passportExpiryDate) : '—'}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
         {/* Work Experiences */}
         <div className="mb-6">
           <h2 className="text-lg font-semibold text-[#101828] uppercase mb-3 pb-1.5 border-b-2 border-[#101828]">
@@ -446,14 +508,36 @@ export function ResumeBuilder({ onResumeSubmit }: ResumeBuilderProps = {}) {
     lastName: '',
     suffix: '',
     dateOfBirth: '',
+    gender: '',
+    nationality: '',
     city: '',
     province: '',
     country: '',
     email: '',
     phone: '',
+     maritalStatus: '',
+    height: '',
+    weight: '',
+    presentContactPerson: '',
+    emergencyName:'', // start ng new changes
+    emergencyRelationship: '', 
+    provContactPerson: '',
+    emergencyPhone: '',
+    provCity: '',
+    provProvince: '',
+    provCountry: '',
+    provMobile: '',
+    passportNumber: '',
+    passportPlace: '', 
+    passportIssueDate: '',
+    passportExpiryDate: '',
+    passportPicLink: '',
   });
 
-  const [workExperiences, setWorkExperiences] = useState<WorkExperience[]>([
+  //added
+ const [sameAsPresent, setSameAsPresent] = useState(false);
+ const [passportUploaded, setPassportUploaded] = useState(false);
+ const [workExperiences, setWorkExperiences] = useState<WorkExperience[]>([
     {
       position: '',
       company: '',
@@ -541,14 +625,35 @@ export function ResumeBuilder({ onResumeSubmit }: ResumeBuilderProps = {}) {
             lastName:      applicant.app_last_name      ?? '',
             suffix:        applicant.app_suffix         ?? '',
             dateOfBirth,
+            gender:        applicant.app_gender        ?? '',
+            nationality:   applicant.app_nationality   ?? '',
             city:          applicant.app_present_address_city     ?? '',
             province:      applicant.app_present_address_province ?? '',
             country:       applicant.app_present_address_country  ?? '',
             email:         applicant.app_email          ?? '',
             phone:         applicant.app_present_tele_mobile      ?? '',
+            // added
+            emergencyName:         '', // not stored
+            emergencyRelationship: applicant.app_emergency_relationship ?? '',
+            emergencyPhone:        applicant.app_emergency_contact_number ?? '',
+            provCity:              applicant.app_province_address_city ?? '',
+            provProvince:          applicant.app_province_address_province ?? '',
+            provCountry:           applicant.app_province_address_country ?? '',
+            provContactPerson:     applicant.app_province_contact_person ?? '',
+            provMobile:            applicant.app_province_tele_mobile ?? '',
+            maritalStatus:         applicant.app_marital_status ?? '',
+            height:                applicant.app_height != null ? String(applicant.app_height) : '',
+            weight:                applicant.app_weight != null ? String(applicant.app_weight) : '',
+            presentContactPerson:  applicant.app_present_contact_person ?? '',
+            passportNumber:        applicant.app_passport_number ?? '',
+            passportPlace:         applicant.app_passport_place ?? '',
+            passportIssueDate:     applicant.app_passport_issue_date ?? '',
+            passportExpiryDate:    applicant.app_passport_expiry_date ?? '',
+            passportPicLink:       applicant.app_passport_pic_link ?? '',
           });
+          if (applicant.app_passport_pic_link) setPassportUploaded(true);
         }
-  
+        
         // 2. Fetch latest resume
         const { data: resume } = await supabase
           .from('t_resume')
@@ -651,7 +756,7 @@ export function ResumeBuilder({ onResumeSubmit }: ResumeBuilderProps = {}) {
         console.error('Failed to fetch existing resume:', err);
       }
     };
-  
+      
     fetchExistingResume();
   }, [account]);
   
@@ -918,8 +1023,11 @@ export function ResumeBuilder({ onResumeSubmit }: ResumeBuilderProps = {}) {
   };
 
   const handleDownloadDOCX = async () => {
+    try {
     const [blob, fileName] = await generateResumeDOCX();
     saveAs(blob, fileName);
+  } catch {
+    }
   };
   
   const handleNext = () => {
@@ -1024,18 +1132,35 @@ export function ResumeBuilder({ onResumeSubmit }: ResumeBuilderProps = {}) {
       await supabase
         .from('t_applicant')
         .update({
-          app_first_name:              personalInfo.firstName,
-          app_middle_name:             personalInfo.middleInitial,
-          app_last_name:               personalInfo.lastName,
-          app_suffix:                  personalInfo.suffix,
-          app_email:                   personalInfo.email,
-          app_present_tele_mobile:     personalInfo.phone,
-          app_present_address_city:    personalInfo.city,
+          app_first_name: personalInfo.firstName,
+          app_middle_name: personalInfo.middleInitial,
+          app_last_name: personalInfo.lastName,
+          app_suffix: personalInfo.suffix,
+          app_gender: personalInfo.gender,
+          app_nationality: personalInfo.nationality,
+          app_marital_status: personalInfo.maritalStatus,
+          app_height: personalInfo.height ? Number(personalInfo.height) : null,
+          app_weight: personalInfo.weight ? Number(personalInfo.weight) : null,
+          app_email: personalInfo.email,
+          app_present_tele_mobile: personalInfo.phone,
+          app_present_address_city: personalInfo.city,
           app_present_address_province: personalInfo.province,
           app_present_address_country: personalInfo.country,
-          app_dob_day:                 dob_day,
-          app_dob_month:               dob_month,
-          app_dob_year:                dob_year,
+          app_present_contact_person: personalInfo.presentContactPerson,
+          app_emergency_contact_number: personalInfo.emergencyPhone,
+          app_emergency_relationship: personalInfo.emergencyRelationship,
+          app_province_address_city: personalInfo.provCity,
+          app_province_address_province: personalInfo.provProvince,
+          app_province_address_country: personalInfo.provCountry,
+          app_province_contact_person: personalInfo.provContactPerson,
+          app_province_tele_mobile: personalInfo.provMobile,
+          app_passport_number: personalInfo.passportNumber,
+          app_passport_place: personalInfo.passportPlace,
+          app_passport_issue_date: personalInfo.passportIssueDate || null,
+          app_passport_expiry_date: personalInfo.passportExpiryDate || null,
+          app_dob_day: dob_day,
+          app_dob_month: dob_month,
+          app_dob_year: dob_year,
         })
         .eq('applicant_id', account.applicant_id);
   
@@ -1250,18 +1375,21 @@ export function ResumeBuilder({ onResumeSubmit }: ResumeBuilderProps = {}) {
   const handleUploadResumeFieldsPopulation = (resumeJSON: Record<string, unknown>) => {
     const p = resumeJSON.personal_info as Record<string, string> | undefined;
     if (p) {
-      setPersonalInfo({
-        firstName:     p.first_name      ?? '',
-        middleInitial: p.middle_initial  ?? '',
-        lastName:      p.last_name       ?? '',
-        suffix:        p.suffix          ?? '',
-        dateOfBirth:   p.date_of_birth   ?? '',
-        city:          p.city            ?? '',
-        province:      p.province        ?? '',
-        country:       p.country         ?? '',
-        email:         p.email           ?? '',
-        phone:         p.phone           ?? '',
-      });
+      setPersonalInfo(prev => ({
+        ...prev,
+        firstName:     p.first_name      ?? prev.firstName,
+        middleInitial: p.middle_initial  ?? prev.middleInitial,
+        lastName:      p.last_name       ?? prev.lastName,
+        suffix:        p.suffix          ?? prev.suffix,
+        dateOfBirth:   p.date_of_birth   ?? prev.dateOfBirth,
+        gender:        p.gender          ?? prev.gender,
+        nationality:   p.nationality     ?? prev.nationality,
+        city:          p.city            ?? prev.city,
+        province:      p.province        ?? prev.province,
+        country:       p.country         ?? prev.country,
+        email:         p.email           ?? prev.email,
+        phone:         p.phone           ?? prev.phone,
+      }));
     }
 
     const experiences = resumeJSON.experiences as Record<string, unknown>[] | undefined;
@@ -1429,155 +1557,317 @@ export function ResumeBuilder({ onResumeSubmit }: ResumeBuilderProps = {}) {
             <div className="bg-white rounded-lg shadow-sm p-4 sm:p-6 md:p-8">
               <div className="mb-6">
 
-                {/* Step 1: Personal Information */}
+                {/* Step 1: Personal Information - major change*/}
                 {currentStep === 1 && (
+      <>
+        {/* Upload Resume Button */}
+        <div className="mb-6">
+          <button
+            onClick={() => setShowUploadModal(true)}
+            className="w-full bg-gradient-to-r from-[#ffca1a] to-[#ffd84d] hover:from-[#e6b617] hover:to-[#e6c43f] text-[#101828] px-4 py-3 sm:py-3.5 rounded-lg font-semibold flex items-center justify-center gap-2 shadow-md hover:shadow-lg transition-all duration-200"
+            >
+            <Upload className="w-5 h-5" />
+            Upload Resume
+          </button>
+          <p className="text-xs sm:text-sm text-center text-[#4a5565] mt-2">
+            Or fill in the form below to create a new resume
+          </p>
+        </div>
+        
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept=".pdf,.jpg,.jpeg,.png,.webp"
+          onChange={handleFileUpload}
+          className="hidden"
+          />
+        <div className="mb-6 sm:mb-8">
+          <p className="text-lg sm:text-xl font-semibold text-[#101828] mb-2">Fill In Your Personal Information</p>
+          <p className="text-sm sm:text-base text-[#4a5565]">Help recruiters to get in touch with you.</p>
+        </div>
+        
+        <div className="space-y-6">
+          {/* Basic Information */}
+          <div className="bg-white border border-gray-200 rounded-lg p-5">
+            <h3 className="text-sm font-semibold text-[#101828] mb-4 flex items-center gap-2">
+              <span className="w-5 h-5 rounded-full bg-[#17960b] flex items-center justify-center text-white text-xs">1</span>
+              Basic Information
+            </h3>
+            <div className="space-y-4">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div className="sm:col-span-2">
+                  <label className="block text-sm font-medium text-[#364153] mb-2">First Name</label>
+                  <input type="text" value={personalInfo.firstName} onChange={(e) => setPersonalInfo({ ...personalInfo, firstName: e.target.value })} className="w-full bg-[#f3f3f5] rounded-lg px-3 py-2.5 text-sm text-gray-900 border-0 outline-none focus:ring-2 focus:ring-[#17960b]" placeholder="Juan" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-[#364153] mb-2">Middle Initial</label>
+                  <input type="text" value={personalInfo.middleInitial} onChange={(e) => setPersonalInfo({ ...personalInfo, middleInitial: e.target.value })} className="w-full bg-[#f3f3f5] rounded-lg px-3 py-2.5 text-sm text-gray-900 border-0 outline-none focus:ring-2 focus:ring-[#17960b]" placeholder="A" maxLength={1} />
+                </div>
+              </div>
+              
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div className="sm:col-span-2">
+                  <label className="block text-sm font-medium text-[#364153] mb-2">Last Name</label>
+                  <input type="text" value={personalInfo.lastName} onChange={(e) => setPersonalInfo({ ...personalInfo, lastName: e.target.value })} className="w-full bg-[#f3f3f5] rounded-lg px-3 py-2.5 text-sm text-gray-900 border-0 outline-none focus:ring-2 focus:ring-[#17960b]" placeholder="Dela Cruz" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-[#364153] mb-2">Suffix</label>
+                  <input type="text" value={personalInfo.suffix} onChange={(e) => setPersonalInfo({ ...personalInfo, suffix: e.target.value })} className="w-full bg-[#f3f3f5] rounded-lg px-3 py-2.5 text-sm text-gray-900 border-0 outline-none focus:ring-2 focus:ring-[#17960b]" placeholder="Jr" />
+                </div>
+              </div>
+              
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-[#364153] mb-2">Gender</label>
+                  <select value={personalInfo.gender} onChange={(e) => setPersonalInfo({ ...personalInfo, gender: e.target.value })} className="w-full bg-[#f3f3f5] rounded-lg px-3 py-2.5 text-sm text-gray-900 border-0 outline-none focus:ring-2 focus:ring-[#17960b]">
+                    <option value="">Select gender</option>
+                    <option value="male">Male</option>
+                    <option value="female">Female</option>
+                    <option value="non-binary">Non-binary</option>
+                    <option value="prefer-not-to-say">Prefer not to say</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-[#364153] mb-2">Nationality</label>
+                  <input type="text" value={personalInfo.nationality} onChange={(e) => setPersonalInfo({ ...personalInfo, nationality: e.target.value })} className="w-full bg-[#f3f3f5] rounded-lg px-3 py-2.5 text-sm text-gray-900 border-0 outline-none focus:ring-2 focus:ring-[#17960b]" placeholder="e.g. Filipino" />
+                </div>
+              </div>
+              
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-[#364153] mb-2">Marital Status</label>
+                  <select value={personalInfo.maritalStatus} onChange={(e) => setPersonalInfo({ ...personalInfo, maritalStatus: e.target.value })} className="w-full bg-[#f3f3f5] rounded-lg px-3 py-2.5 text-sm text-gray-900 border-0 outline-none focus:ring-2 focus:ring-[#17960b]">
+                    <option value="">Select status</option>
+                    <option value="single">Single</option>
+                    <option value="married">Married</option>
+                    <option value="widowed">Widowed</option>
+                    <option value="separated">Separated</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-[#364153] mb-2">Height (cm)</label>
+                  <input type="number" value={personalInfo.height} onChange={(e) => setPersonalInfo({ ...personalInfo, height: e.target.value })} className="w-full bg-[#f3f3f5] rounded-lg px-3 py-2.5 text-sm text-gray-900 border-0 outline-none focus:ring-2 focus:ring-[#17960b]" placeholder="170" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-[#364153] mb-2">Weight (kg)</label>
+                  <input type="number" value={personalInfo.weight} onChange={(e) => setPersonalInfo({ ...personalInfo, weight: e.target.value })} className="w-full bg-[#f3f3f5] rounded-lg px-3 py-2.5 text-sm text-gray-900 border-0 outline-none focus:ring-2 focus:ring-[#17960b]" placeholder="65" />
+                </div>
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-[#364153] mb-2">Date of Birth</label>
+                <div className="relative">
+                  <input type="date" value={personalInfo.dateOfBirth} onChange={(e) => setPersonalInfo({ ...personalInfo, dateOfBirth: e.target.value })} className="w-full bg-[#f3f3f5] rounded-lg pl-10 pr-3 py-2.5 text-sm text-gray-900 border-0 outline-none focus:ring-2 focus:ring-[#17960b]" />
+                  <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-500 pointer-events-none" />
+                </div>
+              </div>
+              
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-[#364153] mb-2">Email Address</label>
+                  <input type="email" value={personalInfo.email} onChange={(e) => setPersonalInfo({ ...personalInfo, email: e.target.value })} className="w-full bg-[#f3f3f5] rounded-lg px-3 py-2.5 text-sm text-gray-900 border-0 outline-none focus:ring-2 focus:ring-[#17960b]" placeholder="naomi@example.com" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-[#364153] mb-2">Phone Number</label>
+                  <input type="tel" value={personalInfo.phone} onChange={(e) => setPersonalInfo({ ...personalInfo, phone: e.target.value })} className="w-full bg-[#f3f3f5] rounded-lg px-3 py-2.5 text-sm text-gray-900 border-0 outline-none focus:ring-2 focus:ring-[#17960b]" placeholder="+63 9345234576" />
+                </div>
+              </div>
+            </div>
+          </div>
+
+      {/* Present Address */}
+        <div className="bg-white border border-gray-200 rounded-lg p-5">
+          <h3 className="text-sm font-semibold text-[#101828] mb-4 flex items-center gap-2">
+            <span className="w-5 h-5 rounded-full bg-[#17960b] flex items-center justify-center text-white text-xs">2</span>
+            Present Address
+          </h3>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-[#364153] mb-2">City</label>
+              <input type="text" value={personalInfo.city} onChange={(e) => setPersonalInfo({ ...personalInfo, city: e.target.value })} className="w-full bg-[#f3f3f5] rounded-lg px-3 py-2.5 text-sm text-gray-900 border-0 outline-none focus:ring-2 focus:ring-[#17960b]" placeholder="Manila" />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-[#364153] mb-2">Province</label>
+              <input type="text" value={personalInfo.province} onChange={(e) => setPersonalInfo({ ...personalInfo, province: e.target.value })} className="w-full bg-[#f3f3f5] rounded-lg px-3 py-2.5 text-sm text-gray-900 border-0 outline-none focus:ring-2 focus:ring-[#17960b]" placeholder="Metro Manila" />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-[#364153] mb-2">Country</label>
+              <input type="text" value={personalInfo.country} onChange={(e) => setPersonalInfo({ ...personalInfo, country: e.target.value })} className="w-full bg-[#f3f3f5] rounded-lg px-3 py-2.5 text-sm text-gray-900 border-0 outline-none focus:ring-2 focus:ring-[#17960b]" placeholder="Philippines" />
+            </div>
+          </div>
+          <div className="mt-4">
+            <label className="block text-sm font-medium text-[#364153] mb-2">Contact Person</label>
+            <input type="text" value={personalInfo.presentContactPerson} onChange={(e) => setPersonalInfo({ ...personalInfo, presentContactPerson: e.target.value })} className="w-full bg-[#f3f3f5] rounded-lg px-3 py-2.5 text-sm text-gray-900 border-0 outline-none focus:ring-2 focus:ring-[#17960b]" placeholder="Full name (optional)" />
+          </div>
+        </div>
+
+      {/* Emergency Contact */}
+          <div className="bg-white border border-gray-200 rounded-lg p-5">
+            <h3 className="text-sm font-semibold text-[#101828] mb-4 flex items-center gap-2">
+              <span className="w-5 h-5 rounded-full bg-[#17960b] flex items-center justify-center text-white text-xs">3</span>
+              Emergency Contact
+            </h3>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-[#364153] mb-2">Contact Person</label>
+                <input type="text" value={personalInfo.emergencyName} onChange={(e) => setPersonalInfo({ ...personalInfo, emergencyName: e.target.value })} className="w-full bg-[#f3f3f5] rounded-lg px-3 py-2.5 text-sm text-gray-900 border-0 outline-none focus:ring-2 focus:ring-[#17960b]" placeholder="Full name" />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-[#364153] mb-2">Relationship</label>
+                <select value={personalInfo.emergencyRelationship} onChange={(e) => setPersonalInfo({ ...personalInfo, emergencyRelationship: e.target.value })} className="w-full bg-[#f3f3f5] rounded-lg px-3 py-2.5 text-sm text-gray-900 border-0 outline-none focus:ring-2 focus:ring-[#17960b]">
+                  <option value="">Select relationship</option>
+                  <option value="mother">Mother</option>
+                  <option value="father">Father</option>
+                  <option value="spouse">Spouse</option>
+                  <option value="sibling">Sibling</option>
+                  <option value="child">Child</option>
+                  <option value="guardian">Guardian</option>
+                  <option value="friend">Friend</option>
+                  <option value="other">Other</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-[#364153] mb-2">Mobile Number</label>
+                <input type="tel" value={personalInfo.emergencyPhone} onChange={(e) => setPersonalInfo({ ...personalInfo, emergencyPhone: e.target.value })} className="w-full bg-[#f3f3f5] rounded-lg px-3 py-2.5 text-sm text-gray-900 border-0 outline-none focus:ring-2 focus:ring-[#17960b]" placeholder="09XXXXXXXXX" />
+              </div>
+            </div>
+          </div>
+
+      {/* Provincial Address */}
+          <div className="bg-white border border-gray-200 rounded-lg p-5">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-sm font-semibold text-[#101828] flex items-center gap-2">
+                <span className="w-5 h-5 rounded-full bg-[#17960b] flex items-center justify-center text-white text-xs">4</span>
+                Provincial Address
+              </h3>
+              <label className="flex items-center gap-2 cursor-pointer text-sm text-gray-600">
+                <input
+                  type="checkbox"
+                  checked={sameAsPresent}
+                  onChange={(e) => {
+                    setSameAsPresent(e.target.checked);
+                    if (e.target.checked) {
+                      setPersonalInfo(prev => ({
+                        ...prev,
+                        provCity: prev.city,
+                        provProvince: prev.province,
+                        provCountry: prev.country,
+                        provContactPerson: prev.presentContactPerson,
+                        provMobile: prev.phone,
+                      }));
+                    }
+                  }}
+                  className="w-4 h-4 accent-[#17960b]"
+                  />
+                Same as present address
+              </label>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-[#364153] mb-2">City</label>
+                <input type="text" value={personalInfo.provCity} onChange={(e) => setPersonalInfo({ ...personalInfo, provCity: e.target.value })} disabled={sameAsPresent} className="w-full bg-[#f3f3f5] rounded-lg px-3 py-2.5 text-sm text-gray-900 border-0 outline-none focus:ring-2 focus:ring-[#17960b] disabled:opacity-50" placeholder="Cebu City" />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-[#364153] mb-2">Province</label>
+                <input type="text" value={personalInfo.provProvince} onChange={(e) => setPersonalInfo({ ...personalInfo, provProvince: e.target.value })} disabled={sameAsPresent} className="w-full bg-[#f3f3f5] rounded-lg px-3 py-2.5 text-sm text-gray-900 border-0 outline-none focus:ring-2 focus:ring-[#17960b] disabled:opacity-50" placeholder="Cebu" />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-[#364153] mb-2">Country</label>
+                <input type="text" value={personalInfo.provCountry} onChange={(e) => setPersonalInfo({ ...personalInfo, provCountry: e.target.value })} disabled={sameAsPresent} className="w-full bg-[#f3f3f5] rounded-lg px-3 py-2.5 text-sm text-gray-900 border-0 outline-none focus:ring-2 focus:ring-[#17960b] disabled:opacity-50" placeholder="Philippines" />
+              </div>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-4">
+              <div>
+                <label className="block text-sm font-medium text-[#364153] mb-2">Contact Person</label>
+                <input type="text" value={personalInfo.provContactPerson} onChange={(e) => setPersonalInfo({ ...personalInfo, provContactPerson: e.target.value })} disabled={sameAsPresent} className="w-full bg-[#f3f3f5] rounded-lg px-3 py-2.5 text-sm text-gray-900 border-0 outline-none focus:ring-2 focus:ring-[#17960b] disabled:opacity-50" placeholder="Full name" />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-[#364153] mb-2">Mobile Number</label>
+                <input type="tel" value={personalInfo.provMobile} onChange={(e) => setPersonalInfo({ ...personalInfo, provMobile: e.target.value })} disabled={sameAsPresent} className="w-full bg-[#f3f3f5] rounded-lg px-3 py-2.5 text-sm text-gray-900 border-0 outline-none focus:ring-2 focus:ring-[#17960b] disabled:opacity-50" placeholder="09XXXXXXXXX" />
+              </div>
+            </div>
+          </div>
+
+      {/* Passport Information */}
+          <div className="bg-white border border-gray-200 rounded-lg p-5">
+            <h3 className="text-sm font-semibold text-[#101828] mb-4 flex items-center gap-2">
+              <span className="w-5 h-5 rounded-full bg-[#17960b] flex items-center justify-center text-white text-xs">5</span>
+              Passport Information
+            </h3>
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-[#364153] mb-2">Upload Passport</label>
+              <div className="border-2 border-dashed border-gray-300 rounded-lg p-5 text-center hover:border-[#17960b] transition-colors">
+
+                <input
+                  type="file"
+                  id="passportFile"
+                  accept="image/*,.pdf"
+                  onChange={async (e) => {
+                    const file = e.target.files?.[0];
+                    if (!file || !account) return;
+                    try {
+                      const filePath = `passports/${account.applicant_id}/${file.name}`;
+                      const { error } = await supabase.storage
+                        .from('certificates') // reuse existing bucket, or swap for a dedicated 'passports' bucket if meron bago
+                        .upload(filePath, file, { upsert: true })
+                      if (error) throw error;
+                      const { data } = supabase.storage.from('certificates').getPublicUrl(filePath);
+                      setPersonalInfo(prev => ({ ...prev, passportPicLink: data.publicUrl }));
+                      setPassportUploaded(true);
+                    } catch (err) {
+                      console.error('Passport upload failed:', err);
+                      alert('Failed to upload passport image.');
+                    }
+                  }}
+                  className="hidden"
+                  />
+                <label htmlFor="passportFile" className="cursor-pointer flex flex-col items-center gap-2">
+                  {passportUploaded ? (
                   <>
-                    {/* Upload Resume Button */}
-                    <div className="mb-6">
-                      <button
-                        onClick={() => setShowUploadModal(true)}
-                        className="w-full bg-gradient-to-r from-[#ffca1a] to-[#ffd84d] hover:from-[#e6b617] hover:to-[#e6c43f] text-[#101828] px-4 py-3 sm:py-3.5 rounded-lg font-semibold flex items-center justify-center gap-2 shadow-md hover:shadow-lg transition-all duration-200"
-                      >
-                        <Upload className="w-5 h-5" />
-                        Upload Resume
-                      </button>
-                      <p className="text-xs sm:text-sm text-center text-[#4a5565] mt-2">
-                        Or fill in the form below to create a new resume
-                      </p>
-                    </div>
-
-                    {/* Hidden file input */}
-                    <input
-                      ref={fileInputRef}
-                      type="file"
-                      accept=".pdf,.jpg,.jpeg,.png,.webp"
-                      onChange={handleFileUpload}
-                      className="hidden"
-                    />
-
-                    <div className="mb-6 sm:mb-8">
-                      <p className="text-lg sm:text-xl font-semibold text-[#101828] mb-2">Fill In Your Personal Information</p>
-                      <p className="text-sm sm:text-base text-[#4a5565]">Help recruiters to get in touch with you.</p>
-                    </div>
-
-                    <div className="space-y-4 sm:space-y-5">
-                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                        <div className="sm:col-span-2">
-                          <label className="block text-sm font-medium text-[#364153] mb-2">First Name</label>
-                          <input
-                            type="text"
-                            value={personalInfo.firstName}
-                            onChange={(e) => setPersonalInfo({ ...personalInfo, firstName: e.target.value })}
-                            className="w-full bg-[#f3f3f5] rounded-lg px-3 py-2.5 text-sm text-gray-900 border-0 outline-none focus:ring-2 focus:ring-[#17960b]"
-                            placeholder="Juan"
-                          />
-                        </div>
-                        <div>
-                          <label className="block text-sm font-medium text-[#364153] mb-2">Middle Initial</label>
-                          <input
-                            type="text"
-                            value={personalInfo.middleInitial}
-                            onChange={(e) => setPersonalInfo({ ...personalInfo, middleInitial: e.target.value })}
-                            className="w-full bg-[#f3f3f5] rounded-lg px-3 py-2.5 text-sm text-gray-900 border-0 outline-none focus:ring-2 focus:ring-[#17960b]"
-                            placeholder="A"
-                            maxLength={1}
-                          />
-                        </div>
-                      </div>
-
-                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                          <div className="sm:col-span-2">
-                            <label className="block text-sm font-medium text-[#364153] mb-2">Last Name</label>
-                            <input
-                              type="text"
-                              value={personalInfo.lastName}
-                              onChange={(e) => setPersonalInfo({ ...personalInfo, lastName: e.target.value })}
-                              className="w-full bg-[#f3f3f5] rounded-lg px-3 py-2.5 text-sm text-gray-900 border-0 outline-none focus:ring-2 focus:ring-[#17960b]"
-                              placeholder="Dela Cruz"
-                              />
-                          </div>
-                          <div>
-                            <label className="block text-sm font-medium text-[#364153] mb-2">Suffix</label>
-                            <input
-                              type="text"
-                              value={personalInfo.suffix}
-                              onChange={(e) => setPersonalInfo({ ...personalInfo, suffix: e.target.value })}
-                              className="w-full bg-[#f3f3f5] rounded-lg px-3 py-2.5 text-sm text-gray-900 border-0 outline-none focus:ring-2 focus:ring-[#17960b]"
-                              placeholder="Jr"
-                              />
-                          </div>
-                        </div>
-
-                      <div>
-                        <label className="block text-sm font-medium text-[#364153] mb-2">Date of Birth</label>
-                        <div className="relative">
-                          <input
-                            type="date"
-                            value={personalInfo.dateOfBirth}
-                            onChange={(e) => setPersonalInfo({ ...personalInfo, dateOfBirth: e.target.value })}
-                            className="w-full bg-[#f3f3f5] rounded-lg pl-10 pr-3 py-2.5 text-sm text-gray-900 border-0 outline-none focus:ring-2 focus:ring-[#17960b]"
-                          />
-                          <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-500 pointer-events-none" />
-                        </div>
-                      </div>
-
-                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                        <div>
-                          <label className="block text-sm font-medium text-[#364153] mb-2">City</label>
-                          <input
-                            type="text"
-                            value={personalInfo.city}
-                            onChange={(e) => setPersonalInfo({ ...personalInfo, city: e.target.value })}
-                            className="w-full bg-[#f3f3f5] rounded-lg px-3 py-2.5 text-sm text-gray-900 border-0 outline-none focus:ring-2 focus:ring-[#17960b]"
-                            placeholder="Manila"
-                          />
-                        </div>
-                        <div>
-                          <label className="block text-sm font-medium text-[#364153] mb-2">Province</label>
-                          <input
-                            type="text"
-                            value={personalInfo.province}
-                            onChange={(e) => setPersonalInfo({ ...personalInfo, province: e.target.value })}
-                            className="w-full bg-[#f3f3f5] rounded-lg px-3 py-2.5 text-sm text-gray-900 border-0 outline-none focus:ring-2 focus:ring-[#17960b]"
-                            placeholder="Metro Manila"
-                          />
-                        </div>
-                        <div>
-                          <label className="block text-sm font-medium text-[#364153] mb-2">Country</label>
-                          <input
-                            type="text"
-                            value={personalInfo.country}
-                            onChange={(e) => setPersonalInfo({ ...personalInfo, country: e.target.value })}
-                            className="w-full bg-[#f3f3f5] rounded-lg px-3 py-2.5 text-sm text-gray-900 border-0 outline-none focus:ring-2 focus:ring-[#17960b]"
-                            placeholder="Philippines"
-                          />
-                        </div>
-                      </div>
-
-                      <div>
-                        <label className="block text-sm font-medium text-[#364153] mb-2">Email Address</label>
-                        <input
-                          type="email"
-                          value={personalInfo.email}
-                          onChange={(e) => setPersonalInfo({ ...personalInfo, email: e.target.value })}
-                          className="w-full bg-[#f3f3f5] rounded-lg px-3 py-2.5 text-sm text-gray-900 border-0 outline-none focus:ring-2 focus:ring-[#17960b]"
-                          placeholder="naomi@example.com"
-                        />
-                      </div>
-
-                      <div>
-                        <label className="block text-sm font-medium text-[#364153] mb-2">Phone Number</label>
-                        <input
-                          type="tel"
-                          value={personalInfo.phone}
-                          onChange={(e) => setPersonalInfo({ ...personalInfo, phone: e.target.value })}
-                          className="w-full bg-[#f3f3f5] rounded-lg px-3 py-2.5 text-sm text-gray-900 border-0 outline-none focus:ring-2 focus:ring-[#17960b]"
-                          placeholder="+63 9345234576"
-                        />
-                      </div>
-                    </div>
+                    <Check className="w-10 h-10 text-[#17960b]" />
+                    <p className="text-[#17960b] font-semibold text-sm">Passport uploaded successfully!</p>
+                    <p className="text-xs text-gray-500">Click to change</p>
+                  </>
+                ) : (
+                  <>
+                    <Upload className="w-10 h-10 text-gray-400" />
+                    <p className="text-sm text-gray-700 font-medium">Click to upload passport</p>
+                    <p className="text-xs text-gray-500">JPG, PNG or PDF (Max 5MB)</p>
                   </>
                 )}
+                </label>
+              </div>
+            </div>
+            {passportUploaded && (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-[#364153] mb-2">Passport Number</label>
+                  <input type="text" value={personalInfo.passportNumber} onChange={(e) => setPersonalInfo({ ...personalInfo, passportNumber: e.target.value })} className="w-full bg-[#f3f3f5] rounded-lg px-3 py-2.5 text-sm text-gray-900 border-0 outline-none focus:ring-2 focus:ring-[#17960b]" placeholder="P1234567" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-[#364153] mb-2">Place of Issue</label>
+                  <input type="text" value={personalInfo.passportPlace} onChange={(e) => setPersonalInfo({ ...personalInfo, passportPlace: e.target.value })} className="w-full bg-[#f3f3f5] rounded-lg px-3 py-2.5 text-sm text-gray-900 border-0 outline-none focus:ring-2 focus:ring-[#17960b]" placeholder="Manila, Philippines" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-[#364153] mb-2">Issue Date</label>
+                  <div className="relative">
+                    <input type="date" value={personalInfo.passportIssueDate} onChange={(e) => setPersonalInfo({ ...personalInfo, passportIssueDate: e.target.value })} className="w-full bg-[#f3f3f5] rounded-lg pl-10 pr-3 py-2.5 text-sm text-gray-900 border-0 outline-none focus:ring-2 focus:ring-[#17960b]" />
+                    <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-500 pointer-events-none" />
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-[#364153] mb-2">Expiry Date</label>
+                  <div className="relative">
+                    <input type="date" value={personalInfo.passportExpiryDate} onChange={(e) => setPersonalInfo({ ...personalInfo, passportExpiryDate: e.target.value })} className="w-full bg-[#f3f3f5] rounded-lg pl-10 pr-3 py-2.5 text-sm text-gray-900 border-0 outline-none focus:ring-2 focus:ring-[#17960b]" />
+                    <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-500 pointer-events-none" />
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      </>
+    )}
 
                 {/* Step 2: Work Experience */}
                 {currentStep === 2 && (
