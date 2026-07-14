@@ -150,7 +150,7 @@ function AppContent() {
        return (
          <JobApplication
            jobData={selectedJob}
-           onBack={() => setCurrentPage('jobpositions')}
+           onBack={() => setCurrentPage('jobs')}
            />
        );
       case 'savedjobs':
