@@ -580,22 +580,21 @@ export function ResumeBuilder({ onResumeSubmit }: ResumeBuilderProps = {}) {
   const [previewScale, setPreviewScale] = useState(0.4);
 
   useEffect(() => {
+    const container = previewContainerRef.current;
+    if (!container) return; 
+
     const updateScale = () => {
-      if (previewContainerRef.current) {
-        const containerWidth = previewContainerRef.current.offsetWidth - 32;
-        const scale = containerWidth / 794;
-        setPreviewScale(Math.min(scale, 1));
-      }
+      const containerWidth = container.offsetWidth - 32;
+      if (containerWidth <= 0) return;
+      const scale = containerWidth / 794;
+      setPreviewScale(Math.min(Math.max(scale, 0.1), 1));
     };
 
     updateScale();
-    const timeout = setTimeout(updateScale, 100);
-    
-    window.addEventListener('resize', updateScale);
-    return () => {
-      window.removeEventListener('resize', updateScale);
-      clearTimeout(timeout); 
-    };
+    const resizeObserver = new ResizeObserver(updateScale);
+    resizeObserver.observe(container);
+
+    return () => resizeObserver.disconnect();
   }, []);
 
   // Fetch existing resume data on mount
@@ -2258,19 +2257,19 @@ export function ResumeBuilder({ onResumeSubmit }: ResumeBuilderProps = {}) {
               {/* Page Preview Container */}
               <div
                 ref={previewContainerRef}
-                className="bg-gray-200 rounded-b-lg shadow-sm"
-                style={{ height: 'calc(100vh - 12rem)', overflowY: 'auto' }}
+                className="bg-gray-200 rounded-b-lg shadow-sm overflow-x-hidden"
+                style={{ height: 'calc(100dvh - 12rem)', overflowY: 'auto' }}
               >
                 <div className="flex justify-center py-4">
                   <div   
                     style={{
-                      width: '210mm',
-                      minHeight: '297mm',
+                      width: '794px',
+                      minHeight: '1123px',
                       background: 'white',
                       boxShadow: '0 4px 24px rgba(0,0,0,0.15)',
                       transform: `scale(${previewScale})`,
                       transformOrigin: 'top center',
-                      marginBottom: `${(previewScale - 1) * 297}mm`,
+                      marginBottom: `${(previewScale - 1) * 1123}px`,
                     }}
                   >
                     <ResumePreview
