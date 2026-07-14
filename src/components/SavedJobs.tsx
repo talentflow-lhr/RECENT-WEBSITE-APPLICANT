@@ -155,9 +155,9 @@ export function SavedJobs({ onApply }: SavedJobsProps) {
             {savedJobs.map((job) => (
               <Card
                 key={job.saved_id}
-                className="border-[#17960b]/20 hover:shadow-lg transition-shadow relative"
+                className="border-[#17960b]/20 hover:shadow-lg transition-shadow relative flex flex-col h-full"
               >
-                <CardContent className="p-4 md:p-6">
+                <CardContent className="p-4 md:p-6 flex flex-col flex-1">
                   {/* Saved Badge */}
                   <div className="absolute top-3 right-3 bg-[#ffca1a] text-gray-900 px-2 py-1 rounded-md text-xs font-semibold flex items-center gap-1">
                     <Bookmark className="w-3 h-3 fill-current" />
@@ -203,6 +203,7 @@ export function SavedJobs({ onApply }: SavedJobsProps) {
                     </span>
                   </div>
 
+                  <div className="mt-auto">
                   {/* Metadata */}
                   <div className="pt-3 md:pt-4 border-t border-gray-200 flex items-center justify-between text-xs md:text-sm mb-4">
                     <span className="text-gray-600">
@@ -238,6 +239,7 @@ export function SavedJobs({ onApply }: SavedJobsProps) {
                     >
                       <Trash2 className="w-4 h-4" />
                     </Button>
+                  </div>
                   </div>
                 </CardContent>
               </Card>
